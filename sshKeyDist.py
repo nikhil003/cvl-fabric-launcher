@@ -483,7 +483,7 @@ class KeyDist():
             return self._stop.isSet()
 
         def run(self):
-            from ssh_key_dialogs.KeyModel import KeyModel
+            from KeyModel import KeyModel
             threadid=threading.currentThread().ident
             threadname=threading.currentThread().name
             km = KeyModel(self.keydistObject.sshpaths.sshKeyPath)
