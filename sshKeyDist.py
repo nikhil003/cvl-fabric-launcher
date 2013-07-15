@@ -459,7 +459,7 @@ class KeyDist():
             os.close(fd)
             os.unlink(path)
             
-            ssh_cmd = '{sshbinary} -o IdentityFile={nonexistantpath} -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {login} {host} echo "success_testauth"'.format(sshbinary=self.keydistObject.sshpaths.sshBinary,
+            ssh_cmd = '{sshbinary} -o IdentityFile={nonexistantpath} -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {login} {host} echo "success_testauth"'.format(sshbinary=self.keydistObject.sshpaths.sshBinary,
                                                                                                                                                                                                              login=self.keydistObject.username,
                                                                                                                                                                                                              host=self.keydistObject.host,
                                                                                                                                                                                                              nonexistantpath=path)
