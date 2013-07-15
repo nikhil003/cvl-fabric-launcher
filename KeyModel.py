@@ -204,6 +204,10 @@ class KeyModel():
 
         success = False
 
+        if not os.path.exists(self.privateKeyFilePath):
+            privateKeyFileNotFoundCallback()
+            return success
+
         if sys.platform.startswith('win'):
             # The patched OpenSSH binary on Windows/cygwin allows us
             # to send the passphrase via STDIN.
