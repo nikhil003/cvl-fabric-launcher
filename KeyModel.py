@@ -249,9 +249,13 @@ class KeyModel():
             args = [self.privateKeyFilePath]
             lp = pexpect.spawn(self.sshPathsObject.sshAddBinary, args=args)
 
-            idx = lp.expect(["Enter passphrase"])
+            idx = lp.expect(["Enter passphrase", "Identity added"])
 
-            if idx == 0:
+            if idx == 1:
+                success = True
+                logger_debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
+                keyAddedSuccessfullyCallback()
+            elif idx == 0:
                 lp.sendline(passphrase)
 
                 idx = lp.expect(["Identity added", "Bad pass", pexpect.EOF])
