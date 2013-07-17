@@ -311,15 +311,15 @@ class InspectKeyDialog(wx.Dialog):
                 return
             else:
                 def keyAddedSuccessfullyCallback():
-                    message = "Key added successfully! :-)"
+                    message = "Key added successfully!"
                     logger_debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                 def passphraseIncorrectCallback():
-                    message = "Passphrase incorrect. :-("
+                    message = "Passphrase incorrect."
                     logger_debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                     dlg = wx.MessageDialog(self, message, "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
                 def privateKeyFileNotFoundCallback():
-                    message = "Private key file not found. :-("
+                    message = "Private key file not found."
                     logger_debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                     dlg = wx.MessageDialog(self, message, "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
@@ -348,9 +348,9 @@ class InspectKeyDialog(wx.Dialog):
             keyModelObject = KeyModel(self.privateKeyFilePath)
             success = keyModelObject.deleteKeyAndRemoveFromAgent()
             if success:
-                message = "Your Launcher key was successfully deleted! :-)"
+                message = "Your Launcher key was successfully deleted!"
             else:
-                message = "An error occured while attempting to delete your key. :-("
+                message = "An error occured while attempting to delete your key."
             dlg = wx.MessageDialog(self, 
                 message,
                 "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
@@ -363,7 +363,7 @@ class InspectKeyDialog(wx.Dialog):
         from ChangeKeyPassphraseDialog import ChangeKeyPassphraseDialog
         changeKeyPassphraseDialog = ChangeKeyPassphraseDialog(self, wx.ID_ANY, 'Change Key Passphrase', self.privateKeyFilePath)
         if changeKeyPassphraseDialog.ShowModal()==wx.ID_OK:
-            logger_debug("Passphrase changed successfully! :-)")
+            logger_debug("Passphrase changed successfully!")
 
     def onResetPassphrase(self, event):
         from ResetKeyPassphraseDialog import ResetKeyPassphraseDialog

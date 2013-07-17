@@ -236,7 +236,7 @@ class CreateNewKeyDialog(wx.Dialog):
     def onPassphraseFieldsModified(self, event):
         self.validPassphrase = False
         if len(self.passphraseField.GetValue())>0 and len(self.passphraseField.GetValue())<6:
-            self.passphraseStatusLabel1.SetLabel("Passphrase is too short.  :-(")
+            self.passphraseStatusLabel1.SetLabel("Passphrase is too short.")
             self.passphraseStatusLabel2.SetLabel("")
         elif self.passphraseField.GetValue()!=self.repeatPassphraseField.GetValue():
             if self.repeatPassphraseField.GetValue()=="":
@@ -244,10 +244,10 @@ class CreateNewKeyDialog(wx.Dialog):
                 self.passphraseStatusLabel2.SetLabel("Please enter your passphrase again.")
             else:
                 self.passphraseStatusLabel1.SetLabel("")
-                self.passphraseStatusLabel2.SetLabel("Passphrases don't match! :-(")
+                self.passphraseStatusLabel2.SetLabel("Passphrases don't match!")
         else:
             self.passphraseStatusLabel1.SetLabel("")
-            self.passphraseStatusLabel2.SetLabel("Passphrases match! :-)")
+            self.passphraseStatusLabel2.SetLabel("Passphrases match!")
             self.validPassphrase = True
 
     def onOK(self, event):
@@ -261,7 +261,7 @@ class CreateNewKeyDialog(wx.Dialog):
                 elif self.passphraseStatusLabel1.GetLabelText()!="":
                     message = self.passphraseStatusLabel1.GetLabelText()
                     self.passphraseField.SetFocus()
-                elif self.passphraseStatusLabel2.GetLabelText()!="" and self.passphraseStatusLabel2.GetLabelText()!="Passphrases match! :-)":
+                elif self.passphraseStatusLabel2.GetLabelText()!="" and self.passphraseStatusLabel2.GetLabelText()!="Passphrases match!":
                     message = self.passphraseStatusLabel2.GetLabelText()
                     self.repeatPassphraseField.SetFocus()
                 else:
@@ -277,16 +277,16 @@ class CreateNewKeyDialog(wx.Dialog):
             keyModelObject = KeyModel(self.getPrivateKeyFileLocation())
             keyComment = os.path.basename(self.getPrivateKeyFileLocation())
             def keyCreatedSuccessfullyCallback():
-                logger_debug("CreateNewKeyDialog callback: Key created successfully! :-)")
+                logger_debug("CreateNewKeyDialog callback: Key created successfully!")
             def keyFileAlreadyExistsCallback():
-                logger_debug("CreateNewKeyDialog callback: Key file already exists! :-(")
+                logger_debug("CreateNewKeyDialog callback: Key file already exists!")
             def passphraseTooShortCallback():
-                logger_debug("CreateNewKeyDialog callback: Passphrase was too short! :-(")
+                logger_debug("CreateNewKeyDialog callback: Passphrase was too short!")
             success = keyModelObject.generateNewKey(self.getPassphrase(),keyComment,keyCreatedSuccessfullyCallback,keyFileAlreadyExistsCallback,passphraseTooShortCallback)
             if success:
-                message = "Your Launcher key was created successfully! :-)"
+                message = "Your Launcher key was created successfully!"
             else:
-                message = "An error occured while attempting to create your key. :-("
+                message = "An error occured while attempting to create your key."
             dlg = wx.MessageDialog(self,
                 message,
                 "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)

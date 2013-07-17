@@ -164,7 +164,7 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
     def onPassphraseFieldsModified(self, event):
         self.validNewPassphrase = False
         if len(self.newPassphraseField.GetValue())>0 and len(self.newPassphraseField.GetValue())<6:
-            self.newPassphraseStatusLabel1.SetLabel("Passphrase is too short.  :-(")
+            self.newPassphraseStatusLabel1.SetLabel("Passphrase is too short.")
             self.newPassphraseStatusLabel2.SetLabel("")
         elif self.newPassphraseField.GetValue()!=self.repeatNewPassphraseField.GetValue():
             if self.repeatNewPassphraseField.GetValue()=="":
@@ -172,10 +172,10 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
                 self.newPassphraseStatusLabel2.SetLabel("Enter your new passphrase again.")
             else:
                 self.newPassphraseStatusLabel1.SetLabel("")
-                self.newPassphraseStatusLabel2.SetLabel("Passphrases don't match! :-(")
+                self.newPassphraseStatusLabel2.SetLabel("Passphrases don't match!")
         else:
             self.newPassphraseStatusLabel1.SetLabel("")
-            self.newPassphraseStatusLabel2.SetLabel("Passphrases match! :-)")
+            self.newPassphraseStatusLabel2.SetLabel("Passphrases match!")
             self.validNewPassphrase = True
 
     def onOK(self, event):
@@ -188,7 +188,7 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
             self.newPassphraseField.SetFocus()
             return
 
-        if self.newPassphraseStatusLabel2.GetLabelText()!="" and self.newPassphraseStatusLabel2.GetLabelText()!="Passphrases match! :-)":
+        if self.newPassphraseStatusLabel2.GetLabelText()!="" and self.newPassphraseStatusLabel2.GetLabelText()!="Passphrases match!":
             message = self.newPassphraseStatusLabel2.GetLabelText()
             dlg = wx.MessageDialog(self, message,
                             "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
@@ -207,7 +207,7 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
             self.existingPassphraseField.SetFocus()
 
         def passphraseUpdatedSuccessfullyCallback():
-            message = "Passphrase updated successfully! :-)"
+            message = "Passphrase updated successfully!"
             logger_debug(message)
             dlg = wx.MessageDialog(self, message,
                             "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
@@ -215,10 +215,10 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
 
         def newPassphraseTooShortCallback():
             # This should have been caught earlier:
-            logger_debug("Callback: New passphrase is too short. :-(")
+            logger_debug("Callback: New passphrase is too short.")
 
         def keyLockedCallback():
-            logger_debug("Callback: Key locked. :-(")
+            logger_debug("Callback: Key locked.")
             dlg = wx.MessageDialog(self, "Your key appears to be locked.",
                             "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
