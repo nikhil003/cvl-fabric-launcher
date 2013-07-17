@@ -9,48 +9,48 @@ from utilityFunctions import logger_debug
 
 from KeyModel import KeyModel
 
-class ResetKeyPassphraseDialog(wx.Dialog):
+class ResetKeyDialog(wx.Dialog):
     def __init__(self, parent, id, title, privateKeyFilePath, keyInAgent):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
-        self.resetKeyPassphraseDialogPanel = wx.Panel(self, wx.ID_ANY)
+        self.resetKeyDialogPanel = wx.Panel(self, wx.ID_ANY)
 
         self.privateKeyFilePath = privateKeyFilePath
         self.keyInAgent = keyInAgent
 
-        self.resetKeyPassphraseDialogPanelSizer = wx.FlexGridSizer(1,3, hgap=15, vgap=15)
-        self.resetKeyPassphraseDialogPanel.SetSizer(self.resetKeyPassphraseDialogPanelSizer)
+        self.resetKeyDialogPanelSizer = wx.FlexGridSizer(1,3, hgap=15, vgap=15)
+        self.resetKeyDialogPanel.SetSizer(self.resetKeyDialogPanelSizer)
 
-        self.resetKeyPassphraseDialogLeftPanel = wx.Panel(self.resetKeyPassphraseDialogPanel, wx.ID_ANY)
-        self.resetKeyPassphraseDialogPanelSizer.Add(self.resetKeyPassphraseDialogLeftPanel)
-        self.resetKeyPassphraseDialogMiddlePanel = wx.Panel(self.resetKeyPassphraseDialogPanel, wx.ID_ANY)
-        self.resetKeyPassphraseDialogPanelSizer.Add(self.resetKeyPassphraseDialogMiddlePanel, flag=wx.EXPAND)
-        self.resetKeyPassphraseDialogRightPanel = wx.Panel(self.resetKeyPassphraseDialogPanel, wx.ID_ANY)
-        self.resetKeyPassphraseDialogPanelSizer.Add(self.resetKeyPassphraseDialogRightPanel)
+        self.resetKeyDialogLeftPanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
+        self.resetKeyDialogPanelSizer.Add(self.resetKeyDialogLeftPanel)
+        self.resetKeyDialogMiddlePanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
+        self.resetKeyDialogPanelSizer.Add(self.resetKeyDialogMiddlePanel, flag=wx.EXPAND)
+        self.resetKeyDialogRightPanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
+        self.resetKeyDialogPanelSizer.Add(self.resetKeyDialogRightPanel)
 
-        self.resetKeyPassphraseDialogMiddlePanelSizer = wx.FlexGridSizer(3,1, hgap=15, vgap=15)
-        self.resetKeyPassphraseDialogMiddlePanel.SetSizer(self.resetKeyPassphraseDialogMiddlePanelSizer)
+        self.resetKeyDialogMiddlePanelSizer = wx.FlexGridSizer(3,1, hgap=15, vgap=15)
+        self.resetKeyDialogMiddlePanel.SetSizer(self.resetKeyDialogMiddlePanelSizer)
 
-        self.resetKeyPassphraseDialogTopPanel = wx.Panel(self.resetKeyPassphraseDialogMiddlePanel, wx.ID_ANY)
-        self.resetKeyPassphraseDialogMiddlePanelSizer.Add(self.resetKeyPassphraseDialogTopPanel)
-        self.resetKeyPassphraseDialogCenterPanel = wx.Panel(self.resetKeyPassphraseDialogMiddlePanel, wx.ID_ANY)
-        self.resetKeyPassphraseDialogMiddlePanelSizer.Add(self.resetKeyPassphraseDialogCenterPanel, flag=wx.EXPAND)
-        self.resetKeyPassphraseDialogBottomPanel = wx.Panel(self.resetKeyPassphraseDialogMiddlePanel, wx.ID_ANY)
-        self.resetKeyPassphraseDialogMiddlePanelSizer.Add(self.resetKeyPassphraseDialogBottomPanel)
+        self.resetKeyDialogTopPanel = wx.Panel(self.resetKeyDialogMiddlePanel, wx.ID_ANY)
+        self.resetKeyDialogMiddlePanelSizer.Add(self.resetKeyDialogTopPanel)
+        self.resetKeyDialogCenterPanel = wx.Panel(self.resetKeyDialogMiddlePanel, wx.ID_ANY)
+        self.resetKeyDialogMiddlePanelSizer.Add(self.resetKeyDialogCenterPanel, flag=wx.EXPAND)
+        self.resetKeyDialogBottomPanel = wx.Panel(self.resetKeyDialogMiddlePanel, wx.ID_ANY)
+        self.resetKeyDialogMiddlePanelSizer.Add(self.resetKeyDialogBottomPanel)
 
-        self.resetKeyPassphraseDialogCenterPanelSizer = wx.FlexGridSizer(8,1)
-        self.resetKeyPassphraseDialogCenterPanel.SetSizer(self.resetKeyPassphraseDialogCenterPanelSizer)
+        self.resetKeyDialogCenterPanelSizer = wx.FlexGridSizer(8,1)
+        self.resetKeyDialogCenterPanel.SetSizer(self.resetKeyDialogCenterPanelSizer)
 
-        self.instructionsLabel = wx.StaticText(self.resetKeyPassphraseDialogCenterPanel, wx.ID_ANY, 
+        self.instructionsLabel = wx.StaticText(self.resetKeyDialogCenterPanel, wx.ID_ANY, 
                         "A new key can be generated, replacing the existing key, allowing you to enter a new passphrase.\n\n" +
                         "Any servers you had access to without a password, will again require a password on the first\n" +
                         "login after resetting your key's passphrase.")
-        self.resetKeyPassphraseDialogCenterPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        self.resetKeyDialogCenterPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Passphrase panel
 
         self.validPassphrase = False
 
-        self.passphrasePanel = wx.Panel(self.resetKeyPassphraseDialogCenterPanel, wx.ID_ANY)
+        self.passphrasePanel = wx.Panel(self.resetKeyDialogCenterPanel, wx.ID_ANY)
 
         self.passphraseGroupBox = wx.StaticBox(self.passphrasePanel, wx.ID_ANY, label="Enter a new passphrase to protect your private key")
         self.passphraseGroupBoxSizer = wx.StaticBoxSizer(self.passphraseGroupBox, wx.VERTICAL)
@@ -86,15 +86,15 @@ class ResetKeyPassphraseDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.passphraseField.GetId())
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.repeatPassphraseField.GetId())
 
-        self.resetKeyPassphraseDialogCenterPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND)
+        self.resetKeyDialogCenterPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND)
 
         # Blank space
 
-        self.resetKeyPassphraseDialogCenterPanelSizer.Add(wx.StaticText(self.resetKeyPassphraseDialogCenterPanel, wx.ID_ANY, ""))
+        self.resetKeyDialogCenterPanelSizer.Add(wx.StaticText(self.resetKeyDialogCenterPanel, wx.ID_ANY, ""))
 
         # Buttons panel
 
-        self.buttonsPanel = wx.Panel(self.resetKeyPassphraseDialogCenterPanel, wx.ID_ANY)
+        self.buttonsPanel = wx.Panel(self.resetKeyDialogCenterPanel, wx.ID_ANY)
         self.buttonsPanelSizer = wx.FlexGridSizer(1,3, hgap=5, vgap=5)
         self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
         self.helpButton = wx.Button(self.buttonsPanel, wx.NewId(), "Help")
@@ -109,13 +109,13 @@ class ResetKeyPassphraseDialog(wx.Dialog):
         self.buttonsPanelSizer.Add(self.okButton, flag=wx.BOTTOM, border=5)
         self.buttonsPanel.Fit()
 
-        self.resetKeyPassphraseDialogCenterPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
+        self.resetKeyDialogCenterPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
 
         # Calculate positions on dialog, using sizers
 
-        self.resetKeyPassphraseDialogCenterPanel.Fit()
-        self.resetKeyPassphraseDialogMiddlePanel.Fit()
-        self.resetKeyPassphraseDialogPanel.Fit()
+        self.resetKeyDialogCenterPanel.Fit()
+        self.resetKeyDialogMiddlePanel.Fit()
+        self.resetKeyDialogPanel.Fit()
         self.Fit()
         self.CenterOnParent()
 
@@ -224,10 +224,10 @@ class ResetKeyPassphraseDialog(wx.Dialog):
 
 class MyApp(wx.App):
     def OnInit(self):
-        resetKeyPassphraseDialog = ResetKeyPassphraseDialog(None, wx.ID_ANY, 'Reset Key Passphrase')
-        resetKeyPassphraseDialog.Center()
-        if resetKeyPassphraseDialog.ShowModal()==wx.ID_OK:
-            logger_debug("Passphrase = " + resetKeyPassphraseDialog.getPassphrase())
+        resetKeyDialog = ResetKeyDialog(None, wx.ID_ANY, 'Reset Key')
+        resetKeyDialog.Center()
+        if resetKeyDialog.ShowModal()==wx.ID_OK:
+            logger_debug("Passphrase = " + resetKeyDialog.getPassphrase())
         else:
             logger_debug("User canceled.")
             return False

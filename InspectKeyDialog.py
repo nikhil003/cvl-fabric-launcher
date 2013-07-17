@@ -220,9 +220,9 @@ class InspectKeyDialog(wx.Dialog):
         self.buttonsPanelSizer.Add(self.changePassphraseButton, flag=wx.BOTTOM, border=5)
         self.Bind(wx.EVT_BUTTON, self.onChangePassphrase, id=self.changePassphraseButton.GetId())
 
-        self.resetPassphraseButton = wx.Button(self.buttonsPanel, wx.NewId(), "Reset Passphrase")
-        self.buttonsPanelSizer.Add(self.resetPassphraseButton, flag=wx.BOTTOM, border=5)
-        self.Bind(wx.EVT_BUTTON, self.onResetPassphrase, id=self.resetPassphraseButton.GetId())
+        self.resetKeyButton = wx.Button(self.buttonsPanel, wx.NewId(), "Reset Key")
+        self.buttonsPanelSizer.Add(self.resetKeyButton, flag=wx.BOTTOM, border=5)
+        self.Bind(wx.EVT_BUTTON, self.onResetKey, id=self.resetKeyButton.GetId())
 
         self.helpButton = wx.Button(self.buttonsPanel, wx.NewId(), "Help")
         self.buttonsPanelSizer.Add(self.helpButton, flag=wx.BOTTOM, border=5)
@@ -365,11 +365,11 @@ class InspectKeyDialog(wx.Dialog):
         if changeKeyPassphraseDialog.ShowModal()==wx.ID_OK:
             logger_debug("Passphrase changed successfully!")
 
-    def onResetPassphrase(self, event):
-        from ResetKeyPassphraseDialog import ResetKeyPassphraseDialog
+    def onResetKey(self, event):
+        from ResetKeyDialog import ResetKeyDialog
         keyInAgent = self.fingerprintInAgentField.GetValue()!=""
-        resetKeyPassphraseDialog = ResetKeyPassphraseDialog(self, wx.ID_ANY, 'Reset Key Passphrase', self.privateKeyFilePath, keyInAgent)
-        resetKeyPassphraseDialog.ShowModal()
+        resetKeyDialog = ResetKeyDialog(self, wx.ID_ANY, 'Reset Key', self.privateKeyFilePath, keyInAgent)
+        resetKeyDialog.ShowModal()
 
         self.reloadAllFields()
 
