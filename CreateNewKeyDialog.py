@@ -66,12 +66,6 @@ class CreateNewKeyDialog(wx.Dialog):
         self.savePrivateKeyAndSecureWithPassphraseRadioButton.SetValue(True)
         self.innerRadioButtonsPanelSizer.Add(self.savePrivateKeyAndSecureWithPassphraseRadioButton, flag=wx.EXPAND)
 
-        self.ID_SAVE_KEY_WITH_BLANK_PASSPHRASE = wx.NewId()
-        self.savePrivateKeyWithBlankPassphraseRadioButton = wx.RadioButton(self.innerRadioButtonsPanel, 
-            self.ID_SAVE_KEY_WITH_BLANK_PASSPHRASE,
-            "Save the private key for use in future Launcher sessions, using a blank passphrase (less secure).")
-        self.innerRadioButtonsPanelSizer.Add(self.savePrivateKeyWithBlankPassphraseRadioButton, flag=wx.EXPAND)
-
         self.DISCARD_KEY_UPON_EXIT = wx.NewId()
         self.discardPrivateKeyUponExitRadioButton = wx.RadioButton(self.innerRadioButtonsPanel, 
             self.DISCARD_KEY_UPON_EXIT,
@@ -79,10 +73,9 @@ class CreateNewKeyDialog(wx.Dialog):
         self.innerRadioButtonsPanelSizer.Add(self.discardPrivateKeyUponExitRadioButton, flag=wx.EXPAND)
 
         self.Bind(wx.EVT_RADIOBUTTON, self.onRadioButtonSelectionChanged, id=self.savePrivateKeyAndSecureWithPassphraseRadioButton.GetId())
-        self.Bind(wx.EVT_RADIOBUTTON, self.onRadioButtonSelectionChanged, id=self.savePrivateKeyWithBlankPassphraseRadioButton.GetId())
         self.Bind(wx.EVT_RADIOBUTTON, self.onRadioButtonSelectionChanged, id=self.discardPrivateKeyUponExitRadioButton.GetId())
 
-        self.instructionsLabel2 = wx.StaticText(self.innerRadioButtonsPanel, wx.ID_ANY, "If using a shared computer or a \"Guest\" account, you should choose the third option.")
+        self.instructionsLabel2 = wx.StaticText(self.innerRadioButtonsPanel, wx.ID_ANY, "If using a shared computer or a \"Guest\" account, you should choose the second option.")
         self.innerRadioButtonsPanelSizer.Add(self.instructionsLabel2, flag=wx.EXPAND|wx.TOP, border=10)
 
         self.innerRadioButtonsPanel.Fit()
@@ -330,8 +323,6 @@ class CreateNewKeyDialog(wx.Dialog):
         privateKeyLifetimeAndPassphraseChoice = -1 
         if self.savePrivateKeyAndSecureWithPassphraseRadioButton.GetValue()==True:
             privateKeyLifetimeAndPassphraseChoice = self.savePrivateKeyAndSecureWithPassphraseRadioButton.GetId()
-        elif self.savePrivateKeyWithBlankPassphraseRadioButton.GetValue()==True:
-            privateKeyLifetimeAndPassphraseChoice = self.savePrivateKeyWithBlankPassphraseRadioButton.GetId()
         elif self.discardPrivateKeyUponExitRadioButton.GetValue()==True:
             privateKeyLifetimeAndPassphraseChoice = self.discardPrivateKeyUponExitRadioButton.GetId()
 
