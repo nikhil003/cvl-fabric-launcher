@@ -799,7 +799,7 @@ class KeyDist():
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
     def getLoginPassword(self,prepend=""):
-        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Passphrase',prepend+"Please enter your login password for username %s at %s"%(self.username,self.host),"OK","Cancel")
+        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+"Please enter your login password for username %s at %s"%(self.username,self.host),"OK","Cancel")
         (canceled,password) = ppd.getPassword()
         if canceled:
             self.cancel()
