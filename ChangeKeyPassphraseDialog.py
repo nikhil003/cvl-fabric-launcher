@@ -163,7 +163,10 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
 
     def onPassphraseFieldsModified(self, event):
         self.validNewPassphrase = False
-        if len(self.newPassphraseField.GetValue())>0 and len(self.newPassphraseField.GetValue())<6:
+        if len(self.existingPassphraseField.GetValue())==0:
+            self.passphraseStatusLabel1.SetLabel("Please enter a passphrase.")
+            self.passphraseStatusLabel2.SetLabel("")
+        elif len(self.existingPassphraseField.GetValue())>0 and len(self.existingPassphraseField.GetValue())<6:
             self.newPassphraseStatusLabel1.SetLabel("Passphrase is too short.")
             self.newPassphraseStatusLabel2.SetLabel("")
         elif self.newPassphraseField.GetValue()!=self.repeatNewPassphraseField.GetValue():
@@ -179,6 +182,22 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
             self.validNewPassphrase = True
 
     def onOK(self, event):
+
+        if self.existingPassphraseField.GetValue().strip()=="":
+            message = "Please enter your existing passphrase."
+            dlg = wx.MessageDialog(self, message,
+                            "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.existingPassphraseField.SetFocus()
+            return
+
+        if self.newPassphraseField.GetValue().strip()=="":
+            message = "Please enter your new passphrase."
+            dlg = wx.MessageDialog(self, message,
+                            "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.newPassphraseField.SetFocus()
+            return
 
         if self.newPassphraseStatusLabel1.GetLabelText()!="":
             message = self.newPassphraseStatusLabel1.GetLabelText()

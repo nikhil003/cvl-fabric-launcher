@@ -121,7 +121,10 @@ class ResetKeyDialog(wx.Dialog):
 
     def onPassphraseFieldsModified(self, event):
         self.validPassphrase = False
-        if len(self.passphraseField.GetValue())>0 and len(self.passphraseField.GetValue())<6:
+        if len(self.passphraseField.GetValue())==0:
+            self.passphraseStatusLabel1.SetLabel("Please enter a passphrase.")
+            self.passphraseStatusLabel2.SetLabel("")
+        elif len(self.passphraseField.GetValue())>0 and len(self.passphraseField.GetValue())<6:
             self.passphraseStatusLabel1.SetLabel("Passphrase is too short. ")
             self.passphraseStatusLabel2.SetLabel("")
         elif self.passphraseField.GetValue()!=self.repeatPassphraseField.GetValue():
