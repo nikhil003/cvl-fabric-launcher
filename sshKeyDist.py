@@ -464,10 +464,16 @@ class KeyDist():
                                                                                                                                                                                                              host=self.keydistObject.host,
                                                                                                                                                                                                              nonexistantpath=path)
 
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = subprocess.SW_HIDE
- 
+            try:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+            except:
+                # On non-Windows systems the previous block will die with 
+                # "AttributeError: 'module' object has no attribute 'STARTUPINFO'" even though
+                # the code is inside the 'if' block, hence the use of a dodgy try/except block.
+                startupinfo = None
+
             logger_debug('testAuthThread: attempting: ' + ssh_cmd)
             ssh = subprocess.Popen(ssh_cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True, startupinfo=startupinfo)
             stdout, stderr = ssh.communicate()
