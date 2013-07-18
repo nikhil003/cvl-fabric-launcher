@@ -686,7 +686,7 @@ class KeyDist():
                 wx.CallAfter(event.keydist.GetKeyPassword)
             if (event.GetId() == KeyDist.EVT_KEYDIST_KEY_WRONGPASS):
                 logger_debug("received KEY_WRONGPASS event")
-                wx.CallAfter(event.keydist.GetKeyPassword,"Sorry that password was incorrect. ")
+                wx.CallAfter(event.keydist.GetKeyPassword,"Sorry, that passphrase was incorrect. ")
             event.Skip()
 
         def loadkey(event):
@@ -708,7 +708,7 @@ class KeyDist():
                     # if they key is loaded into the ssh agent, then authentication failed because the public key isn't on the server.
                     # *****TODO*****
                     # actually this might not be strictly true. gnome keychain (and possibly others) will report a key loaded even if its still locked
-                    # we probably need a button that says "I can't remember my old keys password, please generate a new keypair"
+                    # we probably need a button that says "I can't remember my old key's passphrase, please generate a new keypair"
                     if (event.keydist.keycopied.isSet()):
                         newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,event.keydist)
                         logger_debug("received AUTHFAIL event from thread %i %s posting TESTAUTH event in response"%(event.threadid,event.threadname))
@@ -789,12 +789,12 @@ class KeyDist():
 
     def GetKeyPassword(self,prepend=""):
         ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',prepend+"Please enter the passphrase for the key","OK","Cancel")
-        (canceled,password) = ppd.getPassword()
+        (canceled,passphrase) = ppd.getPassword()
         if (canceled):
-            self.cancel("Sorry, I can't continue without the password for that key. If you've forgotten the password, you could remove the key and generate a new one. The key probably located in ~/.ssh/MassiveKey*")
+            self.cancel("Sorry, I can't continue without the passphrase for that key. If you've forgotten the passphrase, you could remove the key and generate a new one. The key is probably located in ~/.ssh/MassiveLauncherKey*")
             return
         else:
-            self.password = password
+            self.password = passphrase
             event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
@@ -810,12 +810,14 @@ class KeyDist():
 
     def getNewPassphrase_stage1(self,prepend=""):
         ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'New Passphrase',prepend+"Please enter a new passphrase","OK","Cancel")
-        (canceled,password) = ppd.getPassword()
+        (canceled,passphrase) = ppd.getPassword()
         if (not canceled):
-            if (password != None and len(password) < 6 and len(password)>0):
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"The password was too short. ")
+            if (passphrase != None and len(passphrase) == 0):
+                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"Empty passphrases are forbidden. ")
+            elif (passphrase != None and len(passphrase) < 6):
+                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"The passphrase was too short. ")
             else:
-                self.password = password
+                self.password = passphrase
                 event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_RPT,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
         else:
@@ -829,7 +831,7 @@ class KeyDist():
         if (phrase == self.password):
             event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
         else:
-            event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"The passwords didn't match. ")
+            event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"The passphrases didn't match. ")
         wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
 
