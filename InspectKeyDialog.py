@@ -14,7 +14,7 @@ if os.path.abspath("..") not in sys.path:
 from sshKeyDist import KeyDist
 from sshKeyDist import sshpaths
 
-from utilityFunctions import logger_debug, configureLogger
+from logger.Logger import logger
 
 class InspectKeyDialog(wx.Dialog):
     def __init__(self, parent, id, title, privateKeyFilePath):
@@ -312,20 +312,20 @@ class InspectKeyDialog(wx.Dialog):
             else:
                 def keyAddedSuccessfullyCallback():
                     message = "Key added successfully!"
-                    logger_debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
+                    logger.debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                 def passphraseIncorrectCallback():
                     message = "Passphrase incorrect."
-                    logger_debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
+                    logger.debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                     dlg = wx.MessageDialog(self, message, "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
                 def privateKeyFileNotFoundCallback():
                     message = "Private key file not found."
-                    logger_debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
+                    logger.debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                     dlg = wx.MessageDialog(self, message, "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
                 def failedToConnectToAgentCallback():
                     message = "Could not open a connection to your authentication agent."
-                    logger_debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
+                    logger.debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                     dlg = wx.MessageDialog(self, message, "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
                 success = keyModelObject.addKeyToAgent(passphrase, keyAddedSuccessfullyCallback, passphraseIncorrectCallback, privateKeyFileNotFoundCallback, failedToConnectToAgentCallback)
@@ -363,7 +363,7 @@ class InspectKeyDialog(wx.Dialog):
         from ChangeKeyPassphraseDialog import ChangeKeyPassphraseDialog
         changeKeyPassphraseDialog = ChangeKeyPassphraseDialog(self, wx.ID_ANY, 'Change Key Passphrase', self.privateKeyFilePath)
         if changeKeyPassphraseDialog.ShowModal()==wx.ID_OK:
-            logger_debug("Passphrase changed successfully!")
+            logger.debug("Passphrase changed successfully!")
 
     def onResetKey(self, event):
         from ResetKeyDialog import ResetKeyDialog
@@ -401,17 +401,15 @@ class InspectKeyDialog(wx.Dialog):
                         agentenv = match.group('socket')
                         os.environ['SSH_AUTH_SOCK'] = agentenv
                 if agent is None:
-                    logger_debug("I tried to start an ssh agent, but failed with the error message %s"%str(stdout))
+                    logger.debug("I tried to start an ssh agent, but failed with the error message %s"%str(stdout))
                     return
             except Exception as e:
-                logger_debug(message="I tried to start an ssh agent, but failed with the error message %s" % str(e))
+                logger.debug(message="I tried to start an ssh agent, but failed with the error message %s" % str(e))
                 return
 
 
 class MyApp(wx.App):
     def OnInit(self):
-
-        configureLogger('launcher')
 
         import appdirs
         import ConfigParser
@@ -458,12 +456,12 @@ class MyApp(wx.App):
                 createNewKeyDialog = CreateNewKeyDialog(None, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key')
                 createNewKeyDialog.Center()
                 if createNewKeyDialog.ShowModal()==wx.ID_OK:
-                    logger_debug("User pressed OK from CreateNewKeyDialog.")
+                    logger.debug("User pressed OK from CreateNewKeyDialog.")
                 else:
-                    logger_debug("User canceled from CreateNewKeyDialog.")
+                    logger.debug("User canceled from CreateNewKeyDialog.")
                     return False
             else:
-                logger_debug("User said they didn't want to create a key now.")
+                logger.debug("User said they didn't want to create a key now.")
                 return False
 
         inspectKeyDialog = InspectKeyDialog(None, wx.ID_ANY, 'MASSIVE/CVL Launcher Key Properties', massiveLauncherPrivateKeyPath)

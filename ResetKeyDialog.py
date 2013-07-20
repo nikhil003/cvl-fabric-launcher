@@ -5,7 +5,7 @@ import wx.html
 import os
 import sys
 
-from utilityFunctions import logger_debug
+from logger.Logger import logger
 
 from KeyModel import KeyModel
 
@@ -162,25 +162,25 @@ class ResetKeyDialog(wx.Dialog):
         keyModelObject = KeyModel(self.privateKeyFilePath)
         success = keyModelObject.deleteKeyAndRemoveFromAgent()
         if success:
-            logger_debug("Existing Launcher key was successfully deleted!")
+            logger.debug("Existing Launcher key was successfully deleted!")
 
             # Now create a new key to replace it.
 
             keyComment = os.path.basename(self.privateKeyFilePath)
             def keyCreatedSuccessfullyCallback():
-                logger_debug("ResetPassphraseDialog callback: Key created successfully!")
+                logger.debug("ResetPassphraseDialog callback: Key created successfully!")
             def keyFileAlreadyExistsCallback():
-                logger_debug("ResetPassphraseDialog callback: Key file already exists!")
+                logger.debug("ResetPassphraseDialog callback: Key file already exists!")
             def passphraseTooShortCallback():
-                logger_debug("ResetPassphraseDialog callback: Passphrase was too short!")
+                logger.debug("ResetPassphraseDialog callback: Passphrase was too short!")
             success = keyModelObject.generateNewKey(self.getPassphrase(),keyComment,keyCreatedSuccessfullyCallback,keyFileAlreadyExistsCallback,passphraseTooShortCallback)
             if success and self.keyInAgent:
                 def keyAddedSuccessfullyCallback():
-                    logger_debug("ResetPassphraseDialog.onAddKeyToOrRemoveFromAgent callback: Key added successfully!")
+                    logger.debug("ResetPassphraseDialog.onAddKeyToOrRemoveFromAgent callback: Key added successfully!")
                 def passphraseIncorrectCallback():
-                    logger_debug("ResetPassphraseDialog.onAddKeyToOrRemoveFromAgent callback: Passphrase incorrect.")
+                    logger.debug("ResetPassphraseDialog.onAddKeyToOrRemoveFromAgent callback: Passphrase incorrect.")
                 def privateKeyFileNotFoundCallback():
-                    logger_debug("ResetPassphraseDialog.onAddKeyToOrRemoveFromAgent callback: Private key file not found.")
+                    logger.debug("ResetPassphraseDialog.onAddKeyToOrRemoveFromAgent callback: Private key file not found.")
                 def failedToConnectToAgentCallback():
                     dlg = wx.MessageDialog(self,
                         "Could not open a connection to your authentication agent.",
@@ -189,19 +189,19 @@ class ResetKeyDialog(wx.Dialog):
                 success = keyModelObject.addKeyToAgent(self.passphraseField.GetValue(), keyAddedSuccessfullyCallback, passphraseIncorrectCallback, privateKeyFileNotFoundCallback, failedToConnectToAgentCallback)
                 if success:
                     message = "Adding key to agent succeeded."
-                    logger_debug(message)
+                    logger.debug(message)
                 else:
                     message = "Adding key to agent failed."
-                    logger_debug(message)
+                    logger.debug(message)
             if success:
                 message = "Your passphrase was reset successfully!"
-                logger_debug(message)
+                logger.debug(message)
             else:
                 message = "An error occured while attempting to reset your passphrase."
-                logger_debug(message)
+                logger.debug(message)
         else:
             message = "An error occured while attempting to delete your existing key."
-            logger_debug(message)
+            logger.debug(message)
 
         dlg = wx.MessageDialog(self,
             message,
@@ -230,9 +230,9 @@ class MyApp(wx.App):
         resetKeyDialog = ResetKeyDialog(None, wx.ID_ANY, 'Reset Key')
         resetKeyDialog.Center()
         if resetKeyDialog.ShowModal()==wx.ID_OK:
-            logger_debug("Passphrase = " + resetKeyDialog.getPassphrase())
+            logger.debug("Passphrase = " + resetKeyDialog.getPassphrase())
         else:
-            logger_debug("User canceled.")
+            logger.debug("User canceled.")
             return False
 
         return True

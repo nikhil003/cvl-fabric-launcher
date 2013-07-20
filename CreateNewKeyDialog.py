@@ -7,7 +7,7 @@ import sys
 
 from KeyModel import KeyModel
 
-from utilityFunctions import logger_debug
+from logger.Logger import logger
 
 class CreateNewKeyDialog(wx.Dialog):
     def __init__(self, parent, id, title):
@@ -280,11 +280,11 @@ class CreateNewKeyDialog(wx.Dialog):
             keyModelObject = KeyModel(self.getPrivateKeyFileLocation())
             keyComment = os.path.basename(self.getPrivateKeyFileLocation())
             def keyCreatedSuccessfullyCallback():
-                logger_debug("CreateNewKeyDialog callback: Key created successfully!")
+                logger.debug("CreateNewKeyDialog callback: Key created successfully!")
             def keyFileAlreadyExistsCallback():
-                logger_debug("CreateNewKeyDialog callback: Key file already exists!")
+                logger.debug("CreateNewKeyDialog callback: Key file already exists!")
             def passphraseTooShortCallback():
-                logger_debug("CreateNewKeyDialog callback: Passphrase was too short!")
+                logger.debug("CreateNewKeyDialog callback: Passphrase was too short!")
             success = keyModelObject.generateNewKey(self.getPassphrase(),keyComment,keyCreatedSuccessfullyCallback,keyFileAlreadyExistsCallback,passphraseTooShortCallback)
             if success:
                 message = "Your Launcher key was created successfully!"
@@ -340,9 +340,9 @@ class MyApp(wx.App):
         createNewKeyDialog.Center()
         if createNewKeyDialog.ShowModal()==wx.ID_OK:
             if createNewKeyDialog.getPrivateKeyLifetimeAndPassphraseChoice()==createNewKeyDialog.ID_SAVE_KEY_WITH_PASSPHRASE:
-                logger_debug("Passphrase = " + createNewKeyDialog.getPassphrase())
+                logger.debug("Passphrase = " + createNewKeyDialog.getPassphrase())
         else:
-            logger_debug("User canceled.")
+            logger.debug("User canceled.")
             return False
 
         import appdirs
@@ -381,11 +381,11 @@ class MyApp(wx.App):
                 massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
 
         if privateKeyLifetimeAndPassphraseChoice==createNewKeyDialog.ID_SAVE_KEY_WITH_PASSPHRASE:
-            logger_debug("From local settings: createNewKeyDialog.ID_SAVE_KEY_WITH_PASSPHRASE")
+            logger.debug("From local settings: createNewKeyDialog.ID_SAVE_KEY_WITH_PASSPHRASE")
         elif privateKeyLifetimeAndPassphraseChoice==createNewKeyDialog.ID_SAVE_KEY_WITH_BLANK_PASSPHRASE:
-            logger_debug("From local settings: createNewKeyDialog.ID_SAVE_KEY_WITH_BLANK_PASSPHRASE")
+            logger.debug("From local settings: createNewKeyDialog.ID_SAVE_KEY_WITH_BLANK_PASSPHRASE")
         elif privateKeyLifetimeAndPassphraseChoice==createNewKeyDialog.DISCARD_KEY_UPON_EXIT:
-            logger_debug("From local settings: createNewKeyDialog.DISCARD_KEY_UPON_EXIT")
+            logger.debug("From local settings: createNewKeyDialog.DISCARD_KEY_UPON_EXIT")
 
         massiveLauncherPrivateKeyPath = os.path.join(os.path.expanduser('~'), '.ssh', "MassiveLauncherKey")
         if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_launcher_private_key_path"):
@@ -396,7 +396,7 @@ class MyApp(wx.App):
             with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
                 massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
 
-        logger_debug("From local settings: massiveLauncherPrivateKeyPath = " + massiveLauncherPrivateKeyPath)
+        logger.debug("From local settings: massiveLauncherPrivateKeyPath = " + massiveLauncherPrivateKeyPath)
 
         leaveKeyInAgentAfterExit = True
         if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit"):
@@ -406,7 +406,7 @@ class MyApp(wx.App):
             with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
                 massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
 
-        logger_debug("From local settings: Leave key in agent after exit = " + str(leaveKeyInAgentAfterExit))
+        logger.debug("From local settings: Leave key in agent after exit = " + str(leaveKeyInAgentAfterExit))
 
         return True
 

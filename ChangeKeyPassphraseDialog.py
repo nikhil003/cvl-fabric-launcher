@@ -10,7 +10,7 @@ if os.path.abspath("..") not in sys.path:
 from sshKeyDist import sshpaths
 from sshKeyDist import double_quote
 
-from utilityFunctions import logger_debug
+from logger.Logger import logger
 
 class ChangeKeyPassphraseDialog(wx.Dialog):
     def __init__(self, parent, id, title, privateKeyFilePath):
@@ -227,17 +227,17 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
 
         def passphraseUpdatedSuccessfullyCallback():
             message = "Passphrase updated successfully!"
-            logger_debug(message)
+            logger.debug(message)
             dlg = wx.MessageDialog(self, message,
                             "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
 
         def newPassphraseTooShortCallback():
             # This should have been caught earlier:
-            logger_debug("Callback: New passphrase is too short.")
+            logger.debug("Callback: New passphrase is too short.")
 
         def keyLockedCallback():
-            logger_debug("Callback: Key locked.")
+            logger.debug("Callback: Key locked.")
             dlg = wx.MessageDialog(self, "Your key appears to be locked.",
                             "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
@@ -272,9 +272,9 @@ class MyApp(wx.App):
         changeKeyPassphraseDialog = ChangeKeyPassphraseDialog(None, wx.ID_ANY, 'Change Key Passphrase', os.path.join(os.path.expanduser('~'), '.ssh', "MassiveLauncherKey"))
         changeKeyPassphraseDialog.Center()
         if changeKeyPassphraseDialog.ShowModal()==wx.ID_OK:
-            logger_debug("New passphrase = " + changeKeyPassphraseDialog.getNewPassphrase())
+            logger.debug("New passphrase = " + changeKeyPassphraseDialog.getNewPassphrase())
         else:
-            logger_debug("User canceled.")
+            logger.debug("User canceled.")
             return False
 
         return True

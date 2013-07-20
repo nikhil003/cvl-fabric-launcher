@@ -11,7 +11,7 @@ if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))
 from sshKeyDist import sshpaths
 
-from utilityFunctions import logger_debug
+from logger.Logger import logger
 
 class KeyModel():
 
@@ -37,7 +37,7 @@ class KeyModel():
             stdout, stderr = proc.communicate('\r\n')
 
             if stdout is None or str(stdout).strip() == '':
-                logger_debug('(1) Got EOF from ssh-keygen binary')
+                logger.debug('(1) Got EOF from ssh-keygen binary')
             elif "Your identification has been saved" in stdout:
                 success = True
                 keyCreatedSuccessfullyCallback()
@@ -46,11 +46,11 @@ class KeyModel():
             elif 'already exists' in stdout:
                 keyFileAlreadyExistsCallback()
             elif 'Could not open a connection to your authentication agent' in stdout:
-                logger_debug("Could not open a connection to your authentication agent.")
+                logger.debug("Could not open a connection to your authentication agent.")
                 failedToConnectToAgentCallback()
             else:
-                logger_debug('Got unknown error from ssh-keygen binary')
-                logger_debug(stdout)
+                logger.debug('Got unknown error from ssh-keygen binary')
+                logger.debug(stdout)
         else:
             # On Linux or BSD/OSX we can use pexpect to talk to ssh-keygen.
 
@@ -71,14 +71,14 @@ class KeyModel():
                     keyCreatedSuccessfullyCallback()
                 elif idx == 1:
                     # This shouldn't happen.
-                    logger_debug("Passphrases do not match")
+                    logger.debug("Passphrases do not match")
                 elif idx == 2:
                     passphraseTooShortCallback()
             elif idx == 1:
                 keyFileAlreadyExistsCallback()
             else:
-                #logger_debug("1 returning KEY_LOCKED %s %s"%(lp.before,lp.after))
-                logger_debug("Unexpected result from attempt to create new key.")
+                #logger.debug("1 returning KEY_LOCKED %s %s"%(lp.before,lp.after))
+                logger.debug("Unexpected result from attempt to create new key.")
             lp.close()
         return success
 
@@ -101,7 +101,7 @@ class KeyModel():
             stdout, stderr = proc.communicate(input=existingPassphrase + '\r\n')
 
             if stdout is None or str(stdout).strip() == '':
-                logger_debug('(1) Got EOF from ssh-keygen binary')
+                logger.debug('(1) Got EOF from ssh-keygen binary')
                 keyLockedCallback()
             if "Your identification has been saved" in stdout:
                 success = True
@@ -109,14 +109,14 @@ class KeyModel():
             elif "passphrase too short" in stdout:
                 newPassphraseTooShortCallback()
             elif 'Bad pass' in stdout or 'load failed' in stdout:
-                logger_debug("changePassphrase %i %s: Got \"Bad pass\" from ssh-keygen binary"%(threading.currentThread().ident,threading.currentThread().name))
+                logger.debug("changePassphrase %i %s: Got \"Bad pass\" from ssh-keygen binary"%(threading.currentThread().ident,threading.currentThread().name))
                 if existingPassphrase == '':
                     keyLockedCallback()
                 else:
                     existingPassphraseIncorrectCallback()
             else:
-                logger_debug("changePassphrase %i %s: Got unknown error from ssh-keygen binary"%(threading.currentThread().ident,threading.currentThread().name))
-                logger_debug(stdout)
+                logger.debug("changePassphrase %i %s: Got unknown error from ssh-keygen binary"%(threading.currentThread().ident,threading.currentThread().name))
+                logger.debug(stdout)
                 keyLockedCallback()
         else:
             # On Linux or BSD/OSX we can use pexpect to talk to ssh-keygen.
@@ -129,7 +129,7 @@ class KeyModel():
             idx = lp.expect(["Enter old passphrase", "Key has comment"])
 
             if idx == 0:
-                logger_debug("changePassphrase %i %s: sending passphrase to "%(threading.currentThread().ident,threading.currentThread().name) + self.sshPathsObject.sshKeyGenBinary + " -f " + self.privateKeyFilePath + " -p")
+                logger.debug("changePassphrase %i %s: sending passphrase to "%(threading.currentThread().ident,threading.currentThread().name) + self.sshPathsObject.sshKeyGenBinary + " -f " + self.privateKeyFilePath + " -p")
                 lp.sendline(existingPassphrase)
 
             idx = lp.expect(["Enter new passphrase", "Bad pass", "load failed", pexpect.EOF])
@@ -148,14 +148,14 @@ class KeyModel():
                     # so repeated newPassphrase should have 
                     # already been checked before changePassphrase
                     # is called.
-                    logger_debug("changePassphrase %i %s: Passphrases do not match"%(threading.currentThread().ident,threading.currentThread().name))
+                    logger.debug("changePassphrase %i %s: Passphrases do not match"%(threading.currentThread().ident,threading.currentThread().name))
                 elif idx == 2:
                     newPassphraseTooShortCallback()
             elif idx == 1 or idx == 2:
                 existingPassphraseIncorrectCallback()
             else:
-                #logger_debug("1 returning KEY_LOCKED %s %s"%(lp.before,lp.after))
-                logger_debug("changePassphase %i %s: Unexpected result from attempt to change passphrase."%(threading.currentThread().ident,threading.currentThread().name))
+                #logger.debug("1 returning KEY_LOCKED %s %s"%(lp.before,lp.after))
+                logger.debug("changePassphase %i %s: Unexpected result from attempt to change passphrase."%(threading.currentThread().ident,threading.currentThread().name))
             lp.close()
         return success
 
@@ -177,7 +177,7 @@ class KeyModel():
 
             # Remove key(s) from SSH agent:
 
-            logger_debug("Removing Launcher public key(s) from agent.")
+            logger.debug("Removing Launcher public key(s) from agent.")
 
             publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
@@ -190,12 +190,12 @@ class KeyModel():
                         removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
                         stdout, stderr = removePublicKeyFromAgent.communicate()
                         if stderr is not None and len(stderr) > 0:
-                            logger_debug(stderr)
+                            logger.debug(stderr)
                         success = ("Identity removed" in stdout)
                     finally:
                         os.unlink(tempPublicKeyFile.name)
         except:
-            logger_debug(traceback.format_exc())
+            logger.debug(traceback.format_exc())
             return False
 
         return True
@@ -212,7 +212,7 @@ class KeyModel():
             # The patched OpenSSH binary on Windows/cygwin allows us
             # to send the passphrase via STDIN.
             cmdList = [self.sshPathsObject.sshAddBinary.strip('"'), self.privateKeyFilePath]
-            logger_debug('on Windows, so running: ' + str(cmdList))
+            logger.debug('on Windows, so running: ' + str(cmdList))
             proc = subprocess.Popen(cmdList,
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE,
@@ -221,26 +221,26 @@ class KeyModel():
             stdout, stderr = proc.communicate(input=passphrase + '\r\n')
 
             if stdout is None or str(stdout).strip() == '':
-                logger_debug('(1) Got EOF from ssh-add binary, probably because an empty passphrase was entered for a passphrase-locked key.')
+                logger.debug('(1) Got EOF from ssh-add binary, probably because an empty passphrase was entered for a passphrase-locked key.')
                 passphraseIncorrectCallback()
             elif stdout is not None and "No such file or directory" in stdout:
-                logger_debug("addKeyToAgent couldn't find a private key")
+                logger.debug("addKeyToAgent couldn't find a private key")
                 privateKeyFileNotFoundCallback()
                 return False
             elif "Identity added" in stdout:
                 success = True
-                logger_debug("addKeyToAgent succesfully added a key to the agent")
+                logger.debug("addKeyToAgent succesfully added a key to the agent")
                 keyAddedSuccessfullyCallback()
             elif 'Bad pass' in stdout:
-                logger_debug('Got "Bad pass" from ssh-add binary')
+                logger.debug('Got "Bad pass" from ssh-add binary')
                 proc.kill()
                 passphraseIncorrectCallback()
             elif 'Could not open a connection to your authentication agent' in stdout:
-                logger_debug("Could not open a connection to your authentication agent.")
+                logger.debug("Could not open a connection to your authentication agent.")
                 failedToConnectToAgentCallback()
             else:
-                logger_debug('Got unknown error from ssh-add binary')
-                logger_debug(stdout)
+                logger.debug('Got unknown error from ssh-add binary')
+                logger.debug(stdout)
         else:
             # On Linux or BSD/OSX we can use pexpect to talk to ssh-add.
 
@@ -253,7 +253,7 @@ class KeyModel():
 
             if idx == 1:
                 success = True
-                logger_debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
+                logger.debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
                 keyAddedSuccessfullyCallback()
             elif idx == 0:
                 lp.sendline(passphrase)
@@ -261,11 +261,11 @@ class KeyModel():
                 idx = lp.expect(["Identity added", "Bad pass", pexpect.EOF])
                 if idx == 0:
                     success = True
-                    logger_debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
+                    logger.debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
                     keyAddedSuccessfullyCallback()
                 elif idx == 1:
                     lp.kill(0)
-                    logger_debug("addKeyToAgent %i %s determined the passphrase was incorrect, calling passphraseIncorrectCallback"%(threading.currentThread().ident,threading.currentThread().name))
+                    logger.debug("addKeyToAgent %i %s determined the passphrase was incorrect, calling passphraseIncorrectCallback"%(threading.currentThread().ident,threading.currentThread().name))
                     passphraseIncorrectCallback()
                     success = False
                     return success
@@ -277,7 +277,7 @@ class KeyModel():
                     success = False
                     return success
             else:
-                logger_debug("Unexpected result from attempt to add key.")
+                logger.debug("Unexpected result from attempt to add key.")
             lp.close()
         return success
 
@@ -292,7 +292,7 @@ class KeyModel():
         try:
             # Remove key(s) from SSH agent:
 
-            logger_debug("Removing Launcher public key(s) from agent.")
+            logger.debug("Removing Launcher public key(s) from agent.")
 
             publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
@@ -305,12 +305,12 @@ class KeyModel():
                         removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
                         stdout, stderr = removePublicKeyFromAgent.communicate()
                         if stderr is not None and len(stderr) > 0:
-                            logger_debug(stderr)
+                            logger.debug(stderr)
                         success = ("Identity removed" in stdout)
                     finally:
                         os.unlink(tempPublicKeyFile.name)
         except:
-            logger_debug(traceback.format_exc())
+            logger.debug(traceback.format_exc())
             return False
 
         return True
