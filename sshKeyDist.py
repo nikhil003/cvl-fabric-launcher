@@ -569,6 +569,8 @@ class KeyDist():
                 return
             except socket.error as e:
                 logger.debug('CopyIDThread: socket.error : ' + str(e))
+                if str(e) == '[Errno 101] Network is unreachable':
+                    e = 'Network error, could not contact login host.'
                 self.keydistObject.cancel(message=str(e))
                 return
             except ssh.AuthenticationException as e:
