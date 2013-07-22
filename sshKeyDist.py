@@ -484,7 +484,11 @@ class KeyDist():
             logger.debug("testAuthThread %i: stdout of ssh command: "%threadid + str(stdout))
             logger.debug("testAuthThread %i: stderr of ssh command: "%threadid + str(stderr))
 
-            if 'success_testauth' in stdout:
+
+            if 'Could not resolve hostname' in stdout:
+                logger.debug('Network error.')
+                newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NETWORK_ERROR,self.keydistObject)
+            elif 'success_testauth' in stdout:
                 logger.debug("testAuthThread %i: got success_testauth in stdout :)"%threadid)
                 self.keydistObject.authentication_success = True
                 newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_AUTHSUCCESS,self.keydistObject)
@@ -639,7 +643,7 @@ class KeyDist():
                 if (len(event.string)>0):
                     pass
                 if (event.keydist.callback_fail != None):
-                    event.keydist.callback_fail()
+                    event.keydist.callback_fail(event.string)
             else:
                 event.Skip()
 
@@ -682,6 +686,13 @@ class KeyDist():
             else:
                 event.Skip()
 
+        def networkError(event):
+            if (event.GetId() == KeyDist.EVT_KEYDIST_NETWORK_ERROR):
+                event.keydist.cancel(message='Network error, could not contact login host.')
+                return
+            else:
+                event.Skip()
+            
         def keylocked(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_KEY_LOCKED):
                 logger.debug("received KEY_LOCKED event")
@@ -755,6 +766,7 @@ class KeyDist():
         KeyDist.EVT_KEYDIST_KEY_WRONGPASS = wx.NewId()
         KeyDist.EVT_KEYDIST_SCANHOSTKEYS = wx.NewId()
         KeyDist.EVT_KEYDIST_LOADKEY = wx.NewId()
+        KeyDist.EVT_KEYDIST_NETWORK_ERROR = wx.NewId()
 
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.cancel)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.success)
@@ -768,6 +780,7 @@ class KeyDist():
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.keylocked)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.scanhostkeys)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.loadkey)
+        notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.networkError)
 
         self.completed=Event()
         self.parentWindow = parentWindow
@@ -786,6 +799,7 @@ class KeyDist():
         self.authentication_success = False
         self.callback_success=None
         self.callback_fail=None
+        self.callback_error = None
         self._canceled=Event()
         self.removeKey=Event()
 
@@ -837,11 +851,11 @@ class KeyDist():
         wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
 
-    def distributeKey(self,callback_success=None,callback_fail=None):
+    def distributeKey(self,callback_success=None, callback_fail=None):
         event = KeyDist.sshKeyDistEvent(self.EVT_KEYDIST_START, self)
         wx.PostEvent(self.notifywindow.GetEventHandler(), event)
-        self.callback_fail=callback_fail
-        self.callback_success=callback_success
+        self.callback_fail      = callback_fail
+        self.callback_success   = callback_success
         
     def canceled(self):
         return self._canceled.isSet()
@@ -850,6 +864,7 @@ class KeyDist():
         if (not self.canceled()):
             self._canceled.set()
             newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_CANCEL, self)
+            newevent.string = message
             logger.debug('Sending EVT_KEYDIST_CANCEL event.')
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
 
