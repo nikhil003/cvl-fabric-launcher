@@ -181,7 +181,7 @@ class KeyDist():
 
             self.dataPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
             self.dataPanelSizer.Add(self.label,flag=wx.ALL,border=5)
-            self.dataPanelSizer.Add(self.PassphraseField,flag=wx.EXPAND|wx.ALL,border=5)
+            self.dataPanelSizer.Add(self.PassphraseField,proportion=1,flag=wx.ALL,border=5)
 
             self.buttonPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
             self.buttonPanelSizer.Add(self.Cancel,0,wx.ALL,5)
@@ -492,6 +492,9 @@ class KeyDist():
                 logger.debug("testAuthThread %i: got success_testauth in stdout :)"%threadid)
                 self.keydistObject.authentication_success = True
                 newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_AUTHSUCCESS,self.keydistObject)
+            elif 'Agent admitted' in stdout:
+                logger.debug("testAuthThread %i: the ssh agent has an error. Try rebooting the computer")
+                newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_CANCEL,self.keydistObject,"Sorry, there is a problem with the SSH agent.\nThis sort of thing usually occurs if you delete your key and create a new one.\nThe easiest solution is to reboot your computer and try again.")
             else:
                 logger.debug("testAuthThread %i: did not see success_testauth in stdout, posting EVT_KEYDIST_AUTHFAIL event"%threadid)
                 newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_AUTHFAIL,self.keydistObject)
@@ -746,7 +749,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,username,host,notifywindow,sshPaths):
+    def __init__(self,parentWindow,username,host,configName,notifywindow,sshPaths,passwdPrompt=None):
         KeyDist.myEVT_CUSTOM_SSHKEYDIST=wx.NewEventType()
         KeyDist.EVT_CUSTOM_SSHKEYDIST=wx.PyEventBinder(self.myEVT_CUSTOM_SSHKEYDIST,1)
         KeyDist.EVT_KEYDIST_START = wx.NewId()
@@ -788,6 +791,8 @@ class KeyDist():
         self.parentWindow = parentWindow
         self.username = username
         self.host = host
+        self.configName = configName
+        self.passwdPrompt = passwdPrompt
         self.notifywindow = notifywindow
         self.sshKeyPath = ""
         self.threads=[]
@@ -817,7 +822,12 @@ class KeyDist():
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
     def getLoginPassword(self,prepend=""):
-        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+"Please enter your login password for username %s at %s"%(self.username,self.host),"OK","Cancel")
+        if (self.passwdPrompt != None):
+            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+self.passwdPrompt.format(**self.__dict__),"OK","Cancel")
+        elif (self.configName!= None):
+            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+"Please enter your login password for username %s at %s"%(self.username,self.configName),"OK","Cancel")
+        else:
+            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+"Please enter your login password for username %s at %s"%(self.username,self.host),"OK","Cancel")
         (canceled,password) = ppd.getPassword()
         if canceled:
             self.cancel()
