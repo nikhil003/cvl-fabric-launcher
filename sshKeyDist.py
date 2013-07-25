@@ -156,6 +156,91 @@ class KeyDist():
         returnval = self.completed.isSet()
         return returnval
 
+    class pass2Dialog(wx.Dialog):
+
+        def __init__(self, parent, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
+            #wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER | wx.STAY_ON_TOP)
+            wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+
+            self.closedProgressDialog = False
+            self.parent = parent
+            if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
+                launcherMainFrame = parent
+                if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
+                    launcherMainFrame.progressDialog.Show(False)
+                    self.closedProgressDialog = True
+
+            self.SetTitle(title)
+            self.label = wx.StaticText(self, -1, text)
+            self.PassphraseField = wx.TextCtrl(self, wx.ID_ANY,style=wx.TE_PASSWORD ^ wx.TE_PROCESS_ENTER)
+            self.Passphrase2Field = wx.TextCtrl(self, wx.ID_ANY,style=wx.TE_PASSWORD ^ wx.TE_PROCESS_ENTER)
+            self.PassphraseField.SetFocus()
+            self.canceled=True
+            self.Cancel = wx.Button(self,-1,label=cancelString)
+            self.OK = wx.Button(self,-1,label=okString)
+            self.Help = wx.Button(self,-1,label=helpString)
+
+            self.dataPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
+            self.fieldsSizer = wx.BoxSizer(wx.VERTICAL)
+            self.dataPanelSizer.Add(self.label,flag=wx.ALL,border=5)
+            self.fieldsSizer.Add(self.PassphraseField,proportion=1,flag=wx.ALL,border=5)
+            self.fieldsSizer.Add(self.Passphrase2Field,proportion=1,flag=wx.ALL,border=5)
+            self.dataPanelSizer.Add(self.fieldsSizer)
+
+            self.buttonPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
+            self.buttonPanelSizer.Add(self.Cancel,0,wx.ALL,5)
+            self.buttonPanelSizer.Add(self.Help,0,wx.ALL,5)
+            self.buttonPanelSizer.AddStretchSpacer(prop=1)
+            self.buttonPanelSizer.Add(self.OK,0,wx.ALL,5)
+
+            self.sizer = wx.BoxSizer(wx.VERTICAL)
+            self.sizer.Add(self.dataPanelSizer,flag=wx.EXPAND)
+            self.sizer.Add(self.buttonPanelSizer,flag=wx.EXPAND)
+            self.PassphraseField.Bind(wx.EVT_TEXT_ENTER,self.onEnter)
+            self.OK.Bind(wx.EVT_BUTTON,self.onEnter)
+            self.Cancel.Bind(wx.EVT_BUTTON,self.onEnter)
+            self.Help.Bind(wx.EVT_BUTTON,self.onHelp)
+#
+            self.border = wx.BoxSizer(wx.VERTICAL)
+            self.border.Add(self.sizer, 0, wx.EXPAND|wx.ALL, 15)
+            self.CentreOnParent(wx.BOTH)
+            self.SetSizer(self.border)
+            self.Fit()
+
+        def onEnter(self,e):
+            self.canceled=True
+            if (e.GetId() == self.Cancel.GetId()):
+                logger.debug('onEnter: canceled = True')
+                self.pass1=None
+                self.pass2=None
+                self.canceled = True
+                self.password = None
+            else:
+                logger.debug('onEnter: canceled = False')
+                self.canceled = False
+                self.pass1 = self.PassphraseField.GetValue()
+                self.pass2 = self.Passphrase2Field.GetValue()
+            self.Close()
+
+            if self.closedProgressDialog:
+                if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
+                    launcherMainFrame = self.parent
+                    if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
+                        launcherMainFrame.progressDialog.Show(True)
+ 
+        def onHelp(self,e):
+            from help.HelpController import helpController
+            helpController.Display("Authentication Overview")
+
+
+        def getPassword(self):
+            val = self.ShowModal()
+            pass1 = self.pass1
+            pass2 = self.pass2
+            canceled = self.canceled
+            self.Destroy()
+            return (canceled,pass1,pass2)
+
     class passphraseDialog(wx.Dialog):
 
         def __init__(self, parent, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
@@ -526,15 +611,15 @@ class KeyDist():
                 password=self.keydistObject.password
                 newevent1 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_KEY_WRONGPASS, self.keydistObject)
             else:
+                newevent1 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_KEY_LOCKED, self.keydistObject)
                 password=""
-            newevent2 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_KEY_LOCKED, self.keydistObject)
-            incorrectCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent2)
-            newevent3 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_GETPUBKEY, self.keydistObject)
-            loadedCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent3)
-            newevent4 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self.keydistObject)
-            notFoundCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent4)
-            newevent5 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEEDAGENT,self.keydistObject)
-            failedToConnectToAgentCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent5)
+            incorrectCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent1)
+            newevent2 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_GETPUBKEY, self.keydistObject)
+            loadedCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent2)
+            newevent3 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self.keydistObject)
+            notFoundCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent3)
+            newevent4 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEEDAGENT,self.keydistObject)
+            failedToConnectToAgentCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent4)
             km.addKeyToAgent(password,loadedCallback,incorrectCallback,notFoundCallback,failedToConnectToAgentCallback)
 
 
@@ -589,17 +674,18 @@ class KeyDist():
 
 
     class sshKeyDistEvent(wx.PyCommandEvent):
-        def __init__(self,id,keydist,string=""):
+        def __init__(self,id,keydist,arg=None):
             wx.PyCommandEvent.__init__(self,KeyDist.myEVT_CUSTOM_SSHKEYDIST,id)
             self.keydist = keydist
-            self.string = string
+            self.arg = arg
             self.threadid = threading.currentThread().ident
             self.threadname = threading.currentThread().name
 
         def newkey(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_REQ):
                 logger.debug("received NEWPASS_REQ event")
-                wx.CallAfter(event.keydist.getNewPassphrase_stage1,event.string)
+                #wx.CallAfter(event.keydist.getNewPassphrase_stage1,event.string)
+                wx.CallAfter(event.keydist.getPassphrase,event.arg)
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_RPT):
                 logger.debug("received NEWPASS_RPT event")
                 wx.CallAfter(event.keydist.getNewPassphrase_stage2)
@@ -614,7 +700,7 @@ class KeyDist():
         def copyid(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_COPYID_NEEDPASS):
                 logger.debug("received COPYID_NEEDPASS event")
-                wx.CallAfter(event.keydist.getLoginPassword,event.string)
+                wx.CallAfter(event.keydist.getLoginPassword,event.arg)
             elif (event.GetId() == KeyDist.EVT_KEYDIST_COPYID):
                 logger.debug("received COPYID event")
                 t = KeyDist.CopyIDThread(event.keydist)
@@ -645,10 +731,10 @@ class KeyDist():
             if (event.GetId() == KeyDist.EVT_KEYDIST_CANCEL):
                 event.keydist._canceled.set()
                 event.keydist.shutdownReal()
-                if (len(event.string)>0):
+                if event.arg!=None:
                     pass
                 if (event.keydist.callback_fail != None):
-                    event.keydist.callback_fail(event.string)
+                    event.keydist.callback_fail(event.arg)
             else:
                 event.Skip()
 
@@ -704,7 +790,7 @@ class KeyDist():
                 wx.CallAfter(event.keydist.GetKeyPassword)
             if (event.GetId() == KeyDist.EVT_KEYDIST_KEY_WRONGPASS):
                 logger.debug("received KEY_WRONGPASS event")
-                wx.CallAfter(event.keydist.GetKeyPassword,"Sorry, that passphrase was incorrect. ")
+                wx.CallAfter(event.keydist.GetKeyPassword,incorrect=True)
             event.Skip()
 
         def loadkey(event):
@@ -749,7 +835,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,username,host,configName,notifywindow,sshPaths,passwdPrompt=None):
+    def __init__(self,parentWindow,username,host,configName,notifywindow,sshPaths,displayStrings=None):
         KeyDist.myEVT_CUSTOM_SSHKEYDIST=wx.NewEventType()
         KeyDist.EVT_CUSTOM_SSHKEYDIST=wx.PyEventBinder(self.myEVT_CUSTOM_SSHKEYDIST,1)
         KeyDist.EVT_KEYDIST_START = wx.NewId()
@@ -792,7 +878,7 @@ class KeyDist():
         self.username = username
         self.host = host
         self.configName = configName
-        self.passwdPrompt = passwdPrompt
+        self.displayStrings=displayStrings
         self.notifywindow = notifywindow
         self.sshKeyPath = ""
         self.threads=[]
@@ -810,8 +896,11 @@ class KeyDist():
         self._canceled=Event()
         self.removeKey=Event()
 
-    def GetKeyPassword(self,prepend=""):
-        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',prepend+"Please enter the passphrase for the key","OK","Cancel")
+    def GetKeyPassword(self,incorrect=False):
+        if (incorrect):
+            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePromptIncorrect,"OK","Cancel")
+        else:
+            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePrompt,"OK","Cancel")
         (canceled,passphrase) = ppd.getPassword()
         if (canceled):
             self.cancel("Sorry, I can't continue without the passphrase for that key. If you've forgotten the passphrase, you could remove the key and generate a new one. The key is probably located in ~/.ssh/MassiveLauncherKey*")
@@ -821,13 +910,12 @@ class KeyDist():
             event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
-    def getLoginPassword(self,prepend=""):
-        if (self.passwdPrompt != None):
-            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+self.passwdPrompt.format(**self.__dict__),"OK","Cancel")
-        elif (self.configName!= None):
-            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+"Please enter your login password for username %s at %s"%(self.username,self.configName),"OK","Cancel")
+
+    def getLoginPassword(self,incorrect=False):
+        if (not incorrect):
+            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPrompt.format(**self.__dict__),"OK","Cancel")
         else:
-            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',prepend+"Please enter your login password for username %s at %s"%(self.username,self.host),"OK","Cancel")
+            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPromptIncorrect.format(**self.__dict__),"OK","Cancel")
         (canceled,password) = ppd.getPassword()
         if canceled:
             self.cancel()
@@ -836,8 +924,35 @@ class KeyDist():
         event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COPYID,self)
         wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
-    def getNewPassphrase_stage1(self,prepend=""):
-        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'New Passphrase',prepend+"Please enter a new passphrase","OK","Cancel")
+    def getPassphrase(self,reason=None):
+        if (reason!=None):
+            if (reason.has_key('forbiden')):
+                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseEmptyForbiden,"OK","Cancel")
+            elif(reason.has_key('short')):
+                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseTooShort,"OK","Cancel")
+            elif(reason.has_key('mismatch')):
+                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseMismatch,"OK","Cancel")
+            else:
+                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphrase,"OK","Cancel")
+        else:
+            ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphrase,"OK","Cancel")
+        (canceled,passphrase1,passphrase2) = ppd.getPassword()
+        if (not canceled):
+            if (passphrase1 != None and len(passphrase1) == 0):
+                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('forbiden',True)]))
+            elif (passphrase1 != None and len(passphrase1) < 6):
+                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('short',True)]))
+            elif (passphrase1 != passphrase2):
+                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('mismatch',True)]))
+            else:
+                self.password=passphrase1
+                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
+            wx.PostEvent(self.notifywindow.GetEventHandler(),event)
+        else:
+            self.cancel()
+
+    def getNewPassphrase_stage1(self):
+        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'New Passphrase',self.displayStrings('newPassphrase'),"OK","Cancel")
         (canceled,passphrase) = ppd.getPassword()
         if (not canceled):
             if (passphrase != None and len(passphrase) == 0):
@@ -876,7 +991,7 @@ class KeyDist():
         if (not self.canceled()):
             self._canceled.set()
             newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_CANCEL, self)
-            newevent.string = message
+            newevent.arg = message
             logger.debug('Sending EVT_KEYDIST_CANCEL event.')
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
 
