@@ -919,33 +919,6 @@ class KeyDist():
         else:
             self.cancel()
 
-    def getNewPassphrase_stage1(self):
-        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'New Passphrase',self.displayStrings('newPassphrase'),"OK","Cancel")
-        (canceled,passphrase) = ppd.getPassword()
-        if (not canceled):
-            if (passphrase != None and len(passphrase) == 0):
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"Empty passphrases are forbidden. ")
-            elif (passphrase != None and len(passphrase) < 6):
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"The passphrase was too short. ")
-            else:
-                self.password = passphrase
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_RPT,self)
-            wx.PostEvent(self.notifywindow.GetEventHandler(),event)
-        else:
-            self.cancel()
-
-    def getNewPassphrase_stage2(self):
-        ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'New Passphrase',"Please repeat the new passphrase","OK","Cancel")
-        (canceled,phrase) = ppd.getPassword()
-        if (phrase == None and not canceled):
-            phrase = ""
-        if (phrase == self.password):
-            event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
-        else:
-            event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,"The passphrases didn't match. ")
-        wx.PostEvent(self.notifywindow.GetEventHandler(),event)
-
-
     def distributeKey(self,callback_success=None, callback_fail=None):
         event = KeyDist.sshKeyDistEvent(self.EVT_KEYDIST_START, self)
         wx.PostEvent(self.notifywindow.GetEventHandler(), event)
