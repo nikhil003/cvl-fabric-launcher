@@ -6,6 +6,7 @@ import os
 import sys
 import subprocess
 import re
+import traceback
 
 from KeyModel import KeyModel
 
@@ -389,6 +390,7 @@ class InspectKeyDialog(wx.Dialog):
         try:
             agentenv = os.environ['SSH_AUTH_SOCK']
         except:
+            logger.debug(traceback.format_exc())
             try:
                 agent = subprocess.Popen(self.sshPathsObject.sshAgentBinary.strip('"'),stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
                 stdout = agent.stdout.readlines()

@@ -315,6 +315,7 @@ class KeyDist():
             try:
                 agentenv = os.environ['SSH_AUTH_SOCK']
             except:
+                logger.debug(traceback.format_exc())
                 try:
                     agent = subprocess.Popen(self.keydistObject.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
                     stdout = agent.stdout.readlines()
@@ -522,6 +523,7 @@ class KeyDist():
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 startupinfo.wShowWindow = subprocess.SW_HIDE
             except:
+                logger.debug(traceback.format_exc())
                 # On non-Windows systems the previous block will die with 
                 # "AttributeError: 'module' object has no attribute 'STARTUPINFO'" even though
                 # the code is inside the 'if' block, hence the use of a dodgy try/except block.
