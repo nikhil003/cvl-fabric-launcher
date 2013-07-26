@@ -57,9 +57,9 @@ class sshpaths():
         if sys.platform.startswith('win'):
             # Assume that our InnoSetup script will set appropriate permissions on the "tmp" directory.
 
-             if hasattr(sys, 'frozen'):
+            if hasattr(sys, 'frozen'):
                 f = lambda x: os.path.join(os.path.dirname(sys.executable), OPENSSH_BUILD_DIR, 'bin', x)
-             else:
+            else:
                 launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
                 f = lambda x: os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', x)
 
