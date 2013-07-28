@@ -20,7 +20,15 @@ from logger.Logger import logger
 class InspectKeyDialog(wx.Dialog):
     def __init__(self, parent, id, title, privateKeyFilePath):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
+
+        self.inspectKeyDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
+        self.SetSizer(self.inspectKeyDialogSizer)
+
         self.inspectKeyDialogPanel = wx.Panel(self, wx.ID_ANY)
+        self.inspectKeyDialogPanelSizer = wx.FlexGridSizer(10,1)
+        self.inspectKeyDialogPanel.SetSizer(self.inspectKeyDialogPanelSizer)
+
+        self.inspectKeyDialogSizer.Add(self.inspectKeyDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
         self.privateKeyFilePath = privateKeyFilePath
 
@@ -28,43 +36,16 @@ class InspectKeyDialog(wx.Dialog):
         # sshKeyDist.sshpaths currently assumes that private key is in ~/.ssh
         self.sshPathsObject = sshpaths(self.privateKeyFileName)
 
-        # I really miss Java Swing's BorderLayout and
-        # BorderFactory.createEmptyBorder(...) sometimes.
-        # All of this border stuff should be encapsulated in a class.
-
-        self.inspectKeyDialogPanelSizer = wx.FlexGridSizer(1,3, hgap=15, vgap=15)
-        self.inspectKeyDialogPanel.SetSizer(self.inspectKeyDialogPanelSizer)
-
-        self.inspectKeyDialogLeftPanel = wx.Panel(self.inspectKeyDialogPanel, wx.ID_ANY)
-        self.inspectKeyDialogPanelSizer.Add(self.inspectKeyDialogLeftPanel)
-        self.inspectKeyDialogMiddlePanel = wx.Panel(self.inspectKeyDialogPanel, wx.ID_ANY)
-        self.inspectKeyDialogPanelSizer.Add(self.inspectKeyDialogMiddlePanel, flag=wx.EXPAND)
-        self.inspectKeyDialogRightPanel = wx.Panel(self.inspectKeyDialogPanel, wx.ID_ANY)
-        self.inspectKeyDialogPanelSizer.Add(self.inspectKeyDialogRightPanel)
-
-        self.inspectKeyDialogMiddlePanelSizer = wx.FlexGridSizer(3,1, hgap=15, vgap=15)
-        self.inspectKeyDialogMiddlePanel.SetSizer(self.inspectKeyDialogMiddlePanelSizer)
-
-        self.inspectKeyDialogTopPanel = wx.Panel(self.inspectKeyDialogMiddlePanel, wx.ID_ANY)
-        self.inspectKeyDialogMiddlePanelSizer.Add(self.inspectKeyDialogTopPanel)
-        self.inspectKeyDialogCenterPanel = wx.Panel(self.inspectKeyDialogMiddlePanel, wx.ID_ANY)
-        self.inspectKeyDialogMiddlePanelSizer.Add(self.inspectKeyDialogCenterPanel, flag=wx.EXPAND)
-        self.inspectKeyDialogBottomPanel = wx.Panel(self.inspectKeyDialogMiddlePanel, wx.ID_ANY)
-        self.inspectKeyDialogMiddlePanelSizer.Add(self.inspectKeyDialogBottomPanel)
-
-        self.inspectKeyDialogCenterPanelSizer = wx.FlexGridSizer(10,1)
-        self.inspectKeyDialogCenterPanel.SetSizer(self.inspectKeyDialogCenterPanelSizer)
-
         # Instructions label
 
-        self.instructionsLabel = wx.StaticText(self.inspectKeyDialogCenterPanel, wx.ID_ANY, 
+        self.instructionsLabel = wx.StaticText(self.inspectKeyDialogPanel, wx.ID_ANY, 
             "The Launcher needs a private key to authenticate against remote servers such as MASSIVE.\n\n" + 
             "Here, you can inspect the properties of your MASSIVE Launcher key.")
-        self.inspectKeyDialogCenterPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        self.inspectKeyDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Key properties panel
 
-        self.keyPropertiesPanel = wx.Panel(self.inspectKeyDialogCenterPanel, wx.ID_ANY)
+        self.keyPropertiesPanel = wx.Panel(self.inspectKeyDialogPanel, wx.ID_ANY)
 
         self.keyPropertiesGroupBox = wx.StaticBox(self.keyPropertiesPanel, wx.ID_ANY, label="Key properties")
         self.keyPropertiesGroupBoxSizer = wx.StaticBoxSizer(self.keyPropertiesGroupBox, wx.VERTICAL)
@@ -135,20 +116,20 @@ class InspectKeyDialog(wx.Dialog):
         self.keyPropertiesGroupBoxSizer.Add(self.innerKeyPropertiesPanel, flag=wx.EXPAND)
         self.keyPropertiesPanel.Fit()
 
-        self.inspectKeyDialogCenterPanelSizer.Add(self.keyPropertiesPanel, flag=wx.EXPAND)
+        self.inspectKeyDialogPanelSizer.Add(self.keyPropertiesPanel, flag=wx.EXPAND)
 
         # Key in agent explanation label
 
-        self.keyInAgentExplanationLabel = wx.StaticText(self.inspectKeyDialogCenterPanel, wx.ID_ANY, 
+        self.keyInAgentExplanationLabel = wx.StaticText(self.inspectKeyDialogPanel, wx.ID_ANY, 
             "When you log into a remote server, the Launcher will add your key to an SSH agent,\n" +
             "if it has not been added already. If SSH_AUTH_SOCK is non-empty and the Launcher's\n" +
             "public key fingerprint is present in the SSH agent, then the Launcher key has been\n" +
             "successfully added to the SSH agent.")
-        self.inspectKeyDialogCenterPanelSizer.Add(self.keyInAgentExplanationLabel, flag=wx.EXPAND|wx.BOTTOM|wx.TOP, border=15)
+        self.inspectKeyDialogPanelSizer.Add(self.keyInAgentExplanationLabel, flag=wx.EXPAND|wx.BOTTOM|wx.TOP, border=15)
 
         # SSH Agent Properties
 
-        self.agentPropertiesPanel = wx.Panel(self.inspectKeyDialogCenterPanel, wx.ID_ANY)
+        self.agentPropertiesPanel = wx.Panel(self.inspectKeyDialogPanel, wx.ID_ANY)
 
         self.agentPropertiesGroupBox = wx.StaticBox(self.agentPropertiesPanel, wx.ID_ANY, label="Agent properties")
         self.agentPropertiesGroupBoxSizer = wx.StaticBoxSizer(self.agentPropertiesGroupBox, wx.VERTICAL)
@@ -184,7 +165,7 @@ class InspectKeyDialog(wx.Dialog):
 
         self.innerAgentPropertiesPanelSizer.Add(self.fingerprintInAgentField, flag=wx.EXPAND)
 
-        self.inspectKeyDialogCenterPanelSizer.Add(self.agentPropertiesPanel, flag=wx.EXPAND)
+        self.inspectKeyDialogPanelSizer.Add(self.agentPropertiesPanel, flag=wx.EXPAND)
 
         # Blank space
 
@@ -205,11 +186,11 @@ class InspectKeyDialog(wx.Dialog):
 
         # Blank space
 
-        self.inspectKeyDialogCenterPanelSizer.Add(wx.StaticText(self.inspectKeyDialogCenterPanel, wx.ID_ANY, ""))
+        self.inspectKeyDialogPanelSizer.Add(wx.StaticText(self.inspectKeyDialogPanel, wx.ID_ANY, ""))
 
         # Buttons panel
 
-        self.buttonsPanel = wx.Panel(self.inspectKeyDialogCenterPanel, wx.ID_ANY)
+        self.buttonsPanel = wx.Panel(self.inspectKeyDialogPanel, wx.ID_ANY)
         self.buttonsPanelSizer = wx.FlexGridSizer(1,5, hgap=5, vgap=5)
         self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
 
@@ -236,12 +217,10 @@ class InspectKeyDialog(wx.Dialog):
 
         self.buttonsPanel.Fit()
 
-        self.inspectKeyDialogCenterPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
+        self.inspectKeyDialogPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
 
         # Calculate positions on dialog, using sizers
 
-        self.inspectKeyDialogCenterPanel.Fit()
-        self.inspectKeyDialogMiddlePanel.Fit()
         self.inspectKeyDialogPanel.Fit()
         self.Fit()
         self.CenterOnParent()
