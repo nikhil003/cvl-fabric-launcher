@@ -15,7 +15,15 @@ from logger.Logger import logger
 class ChangeKeyPassphraseDialog(wx.Dialog):
     def __init__(self, parent, id, title, privateKeyFilePath):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
+
+        self.changeKeyPassphraseDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
+        self.SetSizer(self.changeKeyPassphraseDialogSizer)
+
         self.changeKeyPassphraseDialogPanel = wx.Panel(self, wx.ID_ANY)
+        self.changeKeyPassphraseDialogPanelSizer = wx.FlexGridSizer(8,1)
+        self.changeKeyPassphraseDialogPanel.SetSizer(self.changeKeyPassphraseDialogPanelSizer)
+
+        self.changeKeyPassphraseDialogSizer.Add(self.changeKeyPassphraseDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
         self.privateKeyFilePath = privateKeyFilePath
 
@@ -23,39 +31,16 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         # sshKeyDist.sshpaths currently assumes that private key is in ~/.ssh
         self.sshPathsObject = sshpaths(self.privateKeyFileName)
 
-        self.changeKeyPassphraseDialogPanelSizer = wx.FlexGridSizer(1,3, hgap=15, vgap=15)
-        self.changeKeyPassphraseDialogPanel.SetSizer(self.changeKeyPassphraseDialogPanelSizer)
-
-        self.changeKeyPassphraseDialogLeftPanel = wx.Panel(self.changeKeyPassphraseDialogPanel, wx.ID_ANY)
-        self.changeKeyPassphraseDialogPanelSizer.Add(self.changeKeyPassphraseDialogLeftPanel)
-        self.changeKeyPassphraseDialogMiddlePanel = wx.Panel(self.changeKeyPassphraseDialogPanel, wx.ID_ANY)
-        self.changeKeyPassphraseDialogPanelSizer.Add(self.changeKeyPassphraseDialogMiddlePanel, flag=wx.EXPAND)
-        self.changeKeyPassphraseDialogRightPanel = wx.Panel(self.changeKeyPassphraseDialogPanel, wx.ID_ANY)
-        self.changeKeyPassphraseDialogPanelSizer.Add(self.changeKeyPassphraseDialogRightPanel)
-
-        self.changeKeyPassphraseDialogMiddlePanelSizer = wx.FlexGridSizer(3,1, hgap=15, vgap=15)
-        self.changeKeyPassphraseDialogMiddlePanel.SetSizer(self.changeKeyPassphraseDialogMiddlePanelSizer)
-
-        self.changeKeyPassphraseDialogTopPanel = wx.Panel(self.changeKeyPassphraseDialogMiddlePanel, wx.ID_ANY)
-        self.changeKeyPassphraseDialogMiddlePanelSizer.Add(self.changeKeyPassphraseDialogTopPanel)
-        self.changeKeyPassphraseDialogCenterPanel = wx.Panel(self.changeKeyPassphraseDialogMiddlePanel, wx.ID_ANY)
-        self.changeKeyPassphraseDialogMiddlePanelSizer.Add(self.changeKeyPassphraseDialogCenterPanel, flag=wx.EXPAND)
-        self.changeKeyPassphraseDialogBottomPanel = wx.Panel(self.changeKeyPassphraseDialogMiddlePanel, wx.ID_ANY)
-        self.changeKeyPassphraseDialogMiddlePanelSizer.Add(self.changeKeyPassphraseDialogBottomPanel)
-
-        self.changeKeyPassphraseDialogCenterPanelSizer = wx.FlexGridSizer(8,1)
-        self.changeKeyPassphraseDialogCenterPanel.SetSizer(self.changeKeyPassphraseDialogCenterPanelSizer)
-
-        self.instructionsLabel = wx.StaticText(self.changeKeyPassphraseDialogCenterPanel, wx.ID_ANY, 
+        self.instructionsLabel = wx.StaticText(self.changeKeyPassphraseDialogPanel, wx.ID_ANY, 
                         "To change your passphrase, you will first need to enter your existing passphrase,\n" +
                         "then you will need to enter your new passphrase twice.\n\n"+
                         "You will still be able to access servers without a password if you have connected\n" +
                         "to them previously with the Launcher.")
-        self.changeKeyPassphraseDialogCenterPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        self.changeKeyPassphraseDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Existing passphrase panel
 
-        self.existingPassphrasePanel = wx.Panel(self.changeKeyPassphraseDialogCenterPanel, wx.ID_ANY)
+        self.existingPassphrasePanel = wx.Panel(self.changeKeyPassphraseDialogPanel, wx.ID_ANY)
 
         self.existingPassphraseGroupBox = wx.StaticBox(self.existingPassphrasePanel, wx.ID_ANY, label="Enter your existing passphrase")
         self.existingPassphraseGroupBoxSizer = wx.StaticBoxSizer(self.existingPassphraseGroupBox, wx.VERTICAL)
@@ -76,17 +61,17 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         self.existingPassphraseGroupBoxSizer.Add(self.innerExistingPassphrasePanel, flag=wx.EXPAND)
         self.existingPassphrasePanel.Fit()
 
-        self.changeKeyPassphraseDialogCenterPanelSizer.Add(self.existingPassphrasePanel, flag=wx.EXPAND)
+        self.changeKeyPassphraseDialogPanelSizer.Add(self.existingPassphrasePanel, flag=wx.EXPAND)
 
         # Blank space
 
-        self.changeKeyPassphraseDialogCenterPanelSizer.Add(wx.StaticText(self.changeKeyPassphraseDialogCenterPanel, wx.ID_ANY, ""))
+        self.changeKeyPassphraseDialogPanelSizer.Add(wx.StaticText(self.changeKeyPassphraseDialogPanel, wx.ID_ANY, ""))
 
         # New passphrase panel
 
         self.validNewPassphrase = False
 
-        self.newPassphrasePanel = wx.Panel(self.changeKeyPassphraseDialogCenterPanel, wx.ID_ANY)
+        self.newPassphrasePanel = wx.Panel(self.changeKeyPassphraseDialogPanel, wx.ID_ANY)
 
         self.newPassphraseGroupBox = wx.StaticBox(self.newPassphrasePanel, wx.ID_ANY, label="Enter a new passphrase to protect your private key")
         self.newPassphraseGroupBoxSizer = wx.StaticBoxSizer(self.newPassphraseGroupBox, wx.VERTICAL)
@@ -125,15 +110,15 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.newPassphraseField.GetId())
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.repeatNewPassphraseField.GetId())
 
-        self.changeKeyPassphraseDialogCenterPanelSizer.Add(self.newPassphrasePanel, flag=wx.EXPAND)
+        self.changeKeyPassphraseDialogPanelSizer.Add(self.newPassphrasePanel, flag=wx.EXPAND)
 
         # Blank space
 
-        self.changeKeyPassphraseDialogCenterPanelSizer.Add(wx.StaticText(self.changeKeyPassphraseDialogCenterPanel, wx.ID_ANY, ""))
+        self.changeKeyPassphraseDialogPanelSizer.Add(wx.StaticText(self.changeKeyPassphraseDialogPanel, wx.ID_ANY, ""))
 
         # Buttons panel
 
-        self.buttonsPanel = wx.Panel(self.changeKeyPassphraseDialogCenterPanel, wx.ID_ANY)
+        self.buttonsPanel = wx.Panel(self.changeKeyPassphraseDialogPanel, wx.ID_ANY)
         self.buttonsPanelSizer = wx.FlexGridSizer(1,3, hgap=5, vgap=5)
         self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
         self.helpButton = wx.Button(self.buttonsPanel, wx.NewId(), "Help")
@@ -148,12 +133,10 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         self.buttonsPanelSizer.Add(self.okButton, flag=wx.BOTTOM, border=5)
         self.buttonsPanel.Fit()
 
-        self.changeKeyPassphraseDialogCenterPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
+        self.changeKeyPassphraseDialogPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
 
         # Calculate positions on dialog, using sizers
 
-        self.changeKeyPassphraseDialogCenterPanel.Fit()
-        self.changeKeyPassphraseDialogMiddlePanel.Fit()
         self.changeKeyPassphraseDialogPanel.Fit()
         self.Fit()
         self.CenterOnParent()
