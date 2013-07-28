@@ -12,43 +12,24 @@ from logger.Logger import logger
 class CreateNewKeyDialog(wx.Dialog):
     def __init__(self, parent, id, title):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
+
+        self.createNewKeyDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
+        self.SetSizer(self.createNewKeyDialogSizer)
+
         self.createNewKeyDialogPanel = wx.Panel(self, wx.ID_ANY)
-
-        # I really miss Java Swing's BorderLayout and
-        # BorderFactory.createEmptyBorder(...) sometimes.
-        # All of this border stuff should be encapsulated in a class.
-
-        self.createNewKeyDialogPanelSizer = wx.FlexGridSizer(1,3, hgap=15, vgap=15)
+        self.createNewKeyDialogPanelSizer = wx.FlexGridSizer(8,1)
         self.createNewKeyDialogPanel.SetSizer(self.createNewKeyDialogPanelSizer)
 
-        self.createNewKeyDialogLeftPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
-        self.createNewKeyDialogPanelSizer.Add(self.createNewKeyDialogLeftPanel)
-        self.createNewKeyDialogMiddlePanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
-        self.createNewKeyDialogPanelSizer.Add(self.createNewKeyDialogMiddlePanel, flag=wx.EXPAND)
-        self.createNewKeyDialogRightPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
-        self.createNewKeyDialogPanelSizer.Add(self.createNewKeyDialogRightPanel)
+        self.createNewKeyDialogSizer.Add(self.createNewKeyDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
-        self.createNewKeyDialogMiddlePanelSizer = wx.FlexGridSizer(3,1, hgap=15, vgap=15)
-        self.createNewKeyDialogMiddlePanel.SetSizer(self.createNewKeyDialogMiddlePanelSizer)
-
-        self.createNewKeyDialogTopPanel = wx.Panel(self.createNewKeyDialogMiddlePanel, wx.ID_ANY)
-        self.createNewKeyDialogMiddlePanelSizer.Add(self.createNewKeyDialogTopPanel)
-        self.createNewKeyDialogCenterPanel = wx.Panel(self.createNewKeyDialogMiddlePanel, wx.ID_ANY)
-        self.createNewKeyDialogMiddlePanelSizer.Add(self.createNewKeyDialogCenterPanel, flag=wx.EXPAND)
-        self.createNewKeyDialogBottomPanel = wx.Panel(self.createNewKeyDialogMiddlePanel, wx.ID_ANY)
-        self.createNewKeyDialogMiddlePanelSizer.Add(self.createNewKeyDialogBottomPanel)
-
-        self.createNewKeyDialogCenterPanelSizer = wx.FlexGridSizer(8,1)
-        self.createNewKeyDialogCenterPanel.SetSizer(self.createNewKeyDialogCenterPanelSizer)
-
-        self.instructionsLabel1 = wx.StaticText(self.createNewKeyDialogCenterPanel, wx.ID_ANY, 
+        self.instructionsLabel1 = wx.StaticText(self.createNewKeyDialogPanel, wx.ID_ANY, 
             "The Launcher needs to create a private key to authenticate against remote servers such as MASSIVE.\n" + 
             "If in doubt, you can use the default values provided for the fields below.")
-        self.createNewKeyDialogCenterPanelSizer.Add(self.instructionsLabel1, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        self.createNewKeyDialogPanelSizer.Add(self.instructionsLabel1, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Radio buttons panel
 
-        self.radioButtonsPanel = wx.Panel(self.createNewKeyDialogCenterPanel, wx.ID_ANY)
+        self.radioButtonsPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
 
         self.radioButtonsGroupBox = wx.StaticBox(self.radioButtonsPanel, wx.ID_ANY, label="Private key lifetime and passphrase")
         self.radioButtonsGroupBoxSizer = wx.StaticBoxSizer(self.radioButtonsGroupBox, wx.VERTICAL)
@@ -82,13 +63,13 @@ class CreateNewKeyDialog(wx.Dialog):
         self.radioButtonsGroupBoxSizer.Add(self.innerRadioButtonsPanel, flag=wx.EXPAND)
         self.radioButtonsPanel.Fit()
 
-        self.createNewKeyDialogCenterPanelSizer.Add(self.radioButtonsPanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        self.createNewKeyDialogPanelSizer.Add(self.radioButtonsPanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Passphrase panel
 
         self.validPassphrase = False
 
-        self.passphrasePanel = wx.Panel(self.createNewKeyDialogCenterPanel, wx.ID_ANY)
+        self.passphrasePanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
 
         self.passphraseGroupBox = wx.StaticBox(self.passphrasePanel, wx.ID_ANY, label="Enter a passphrase to protect your private key")
         self.passphraseGroupBoxSizer = wx.StaticBoxSizer(self.passphraseGroupBox, wx.VERTICAL)
@@ -124,11 +105,11 @@ class CreateNewKeyDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.passphraseField.GetId())
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.repeatPassphraseField.GetId())
 
-        self.createNewKeyDialogCenterPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        self.createNewKeyDialogPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Private key location
 
-        self.privateKeyLocationPanel = wx.Panel(self.createNewKeyDialogCenterPanel, wx.ID_ANY)
+        self.privateKeyLocationPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
 
         self.privateKeyLocationGroupBox = wx.StaticBox(self.privateKeyLocationPanel, wx.ID_ANY, label="Choose a location for your private key")
         self.privateKeyLocationGroupBoxSizer = wx.StaticBoxSizer(self.privateKeyLocationGroupBox, wx.VERTICAL)
@@ -158,22 +139,22 @@ class CreateNewKeyDialog(wx.Dialog):
         self.privateKeyLocationGroupBoxSizer.Add(self.innerPrivateKeyLocationPanel, flag=wx.EXPAND)
         self.privateKeyLocationPanel.Fit()
 
-        self.createNewKeyDialogCenterPanelSizer.Add(self.privateKeyLocationPanel, flag=wx.EXPAND)
+        self.createNewKeyDialogPanelSizer.Add(self.privateKeyLocationPanel, flag=wx.EXPAND)
 
         # Keep SSH Agent running checkbox.
 
-        self.leaveKeyInAgentAfterExitCheckBox = wx.CheckBox(self.createNewKeyDialogCenterPanel, wx.ID_ANY, 
+        self.leaveKeyInAgentAfterExitCheckBox = wx.CheckBox(self.createNewKeyDialogPanel, wx.ID_ANY, 
             "Allow my SSH Agent to continue managing my key after the Launcher exits, so I don't need to enter my passphrase next time.")
         self.leaveKeyInAgentAfterExitCheckBox.SetValue(True)
-        self.createNewKeyDialogCenterPanelSizer.Add(self.leaveKeyInAgentAfterExitCheckBox, flag=wx.EXPAND|wx.TOP|wx.BOTTOM, border=15)
+        self.createNewKeyDialogPanelSizer.Add(self.leaveKeyInAgentAfterExitCheckBox, flag=wx.EXPAND|wx.TOP|wx.BOTTOM, border=15)
 
         # Blank space
 
-        #self.createNewKeyDialogCenterPanelSizer.Add(wx.StaticText(self.createNewKeyDialogCenterPanel, wx.ID_ANY, ""))
+        #self.createNewKeyDialogPanelSizer.Add(wx.StaticText(self.createNewKeyDialogPanel, wx.ID_ANY, ""))
 
         # Buttons panel
 
-        self.buttonsPanel = wx.Panel(self.createNewKeyDialogCenterPanel, wx.ID_ANY)
+        self.buttonsPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
         self.buttonsPanelSizer = wx.FlexGridSizer(1,3, hgap=5, vgap=5)
         self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
         self.helpButton = wx.Button(self.buttonsPanel, wx.NewId(), "Help")
@@ -188,12 +169,10 @@ class CreateNewKeyDialog(wx.Dialog):
         self.buttonsPanelSizer.Add(self.okButton, flag=wx.BOTTOM, border=5)
         self.buttonsPanel.Fit()
 
-        self.createNewKeyDialogCenterPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
+        self.createNewKeyDialogPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
 
         # Calculate positions on dialog, using sizers
 
-        self.createNewKeyDialogCenterPanel.Fit()
-        self.createNewKeyDialogMiddlePanel.Fit()
         self.createNewKeyDialogPanel.Fit()
         self.Fit()
         self.CenterOnParent()
@@ -206,8 +185,6 @@ class CreateNewKeyDialog(wx.Dialog):
             self.leaveKeyInAgentAfterExitCheckBox.SetValue(True)
             self.leaveKeyInAgentAfterExitCheckBox.Show(True)
 
-            self.createNewKeyDialogCenterPanel.Fit()
-            self.createNewKeyDialogMiddlePanel.Fit()
             self.createNewKeyDialogPanel.Fit()
             self.Fit()
 
@@ -223,8 +200,6 @@ class CreateNewKeyDialog(wx.Dialog):
                 self.leaveKeyInAgentAfterExitCheckBox.SetValue(True)
                 self.leaveKeyInAgentAfterExitCheckBox.Show(True)
 
-            self.createNewKeyDialogCenterPanel.Fit()
-            self.createNewKeyDialogMiddlePanel.Fit()
             self.createNewKeyDialogPanel.Fit()
             self.Fit()
 
