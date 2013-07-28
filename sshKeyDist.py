@@ -126,7 +126,7 @@ class KeyDist():
 
         def __init__(self, parent, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
             #wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER | wx.STAY_ON_TOP)
-            wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+            wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_DIALOG_STYLE ^ wx.RESIZE_BORDER)
 
             self.closedProgressDialog = False
             self.parent = parent
@@ -211,7 +211,7 @@ class KeyDist():
 
         def __init__(self, parent, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
             #wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER | wx.STAY_ON_TOP)
-            wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+            wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_DIALOG_STYLE ^ wx.RESIZE_BORDER)
 
             self.closedProgressDialog = False
             self.parent = parent
