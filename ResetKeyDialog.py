@@ -12,45 +12,30 @@ from KeyModel import KeyModel
 class ResetKeyDialog(wx.Dialog):
     def __init__(self, parent, id, title, privateKeyFilePath, keyInAgent):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
+
+        self.resetKeyDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
+        self.SetSizer(self.resetKeyDialogSizer)
+
         self.resetKeyDialogPanel = wx.Panel(self, wx.ID_ANY)
+        self.resetKeyDialogPanelSizer = wx.FlexGridSizer(8,1)
+        self.resetKeyDialogPanel.SetSizer(self.resetKeyDialogPanelSizer)
+
+        self.resetKeyDialogSizer.Add(self.resetKeyDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
         self.privateKeyFilePath = privateKeyFilePath
         self.keyInAgent = keyInAgent
 
-        self.resetKeyDialogPanelSizer = wx.FlexGridSizer(1,3, hgap=15, vgap=15)
-        self.resetKeyDialogPanel.SetSizer(self.resetKeyDialogPanelSizer)
-
-        self.resetKeyDialogLeftPanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
-        self.resetKeyDialogPanelSizer.Add(self.resetKeyDialogLeftPanel)
-        self.resetKeyDialogMiddlePanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
-        self.resetKeyDialogPanelSizer.Add(self.resetKeyDialogMiddlePanel, flag=wx.EXPAND)
-        self.resetKeyDialogRightPanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
-        self.resetKeyDialogPanelSizer.Add(self.resetKeyDialogRightPanel)
-
-        self.resetKeyDialogMiddlePanelSizer = wx.FlexGridSizer(3,1, hgap=15, vgap=15)
-        self.resetKeyDialogMiddlePanel.SetSizer(self.resetKeyDialogMiddlePanelSizer)
-
-        self.resetKeyDialogTopPanel = wx.Panel(self.resetKeyDialogMiddlePanel, wx.ID_ANY)
-        self.resetKeyDialogMiddlePanelSizer.Add(self.resetKeyDialogTopPanel)
-        self.resetKeyDialogCenterPanel = wx.Panel(self.resetKeyDialogMiddlePanel, wx.ID_ANY)
-        self.resetKeyDialogMiddlePanelSizer.Add(self.resetKeyDialogCenterPanel, flag=wx.EXPAND)
-        self.resetKeyDialogBottomPanel = wx.Panel(self.resetKeyDialogMiddlePanel, wx.ID_ANY)
-        self.resetKeyDialogMiddlePanelSizer.Add(self.resetKeyDialogBottomPanel)
-
-        self.resetKeyDialogCenterPanelSizer = wx.FlexGridSizer(8,1)
-        self.resetKeyDialogCenterPanel.SetSizer(self.resetKeyDialogCenterPanelSizer)
-
-        self.instructionsLabel = wx.StaticText(self.resetKeyDialogCenterPanel, wx.ID_ANY, 
+        self.instructionsLabel = wx.StaticText(self.resetKeyDialogPanel, wx.ID_ANY, 
                         "A new key can be generated, replacing the existing key, allowing you to enter a new passphrase.\n\n" +
                         "Any servers you had access to without a password, will again require a password on the first\n" +
                         "login after resetting your key's passphrase.")
-        self.resetKeyDialogCenterPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        self.resetKeyDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Passphrase panel
 
         self.validPassphrase = False
 
-        self.passphrasePanel = wx.Panel(self.resetKeyDialogCenterPanel, wx.ID_ANY)
+        self.passphrasePanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
 
         self.passphraseGroupBox = wx.StaticBox(self.passphrasePanel, wx.ID_ANY, label="Enter a new passphrase to protect your private key")
         self.passphraseGroupBoxSizer = wx.StaticBoxSizer(self.passphraseGroupBox, wx.VERTICAL)
@@ -86,15 +71,15 @@ class ResetKeyDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.passphraseField.GetId())
         self.Bind(wx.EVT_TEXT, self.onPassphraseFieldsModified, id=self.repeatPassphraseField.GetId())
 
-        self.resetKeyDialogCenterPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND)
+        self.resetKeyDialogPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND)
 
         # Blank space
 
-        self.resetKeyDialogCenterPanelSizer.Add(wx.StaticText(self.resetKeyDialogCenterPanel, wx.ID_ANY, ""))
+        self.resetKeyDialogPanelSizer.Add(wx.StaticText(self.resetKeyDialogPanel, wx.ID_ANY, ""))
 
         # Buttons panel
 
-        self.buttonsPanel = wx.Panel(self.resetKeyDialogCenterPanel, wx.ID_ANY)
+        self.buttonsPanel = wx.Panel(self.resetKeyDialogPanel, wx.ID_ANY)
         self.buttonsPanelSizer = wx.FlexGridSizer(1,3, hgap=5, vgap=5)
         self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
         self.helpButton = wx.Button(self.buttonsPanel, wx.NewId(), "Help")
@@ -109,12 +94,10 @@ class ResetKeyDialog(wx.Dialog):
         self.buttonsPanelSizer.Add(self.okButton, flag=wx.BOTTOM, border=5)
         self.buttonsPanel.Fit()
 
-        self.resetKeyDialogCenterPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
+        self.resetKeyDialogPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
 
         # Calculate positions on dialog, using sizers
 
-        self.resetKeyDialogCenterPanel.Fit()
-        self.resetKeyDialogMiddlePanel.Fit()
         self.resetKeyDialogPanel.Fit()
         self.Fit()
         self.CenterOnParent()
