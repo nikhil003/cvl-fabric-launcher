@@ -134,6 +134,8 @@ class CreateNewKeyDialog(wx.Dialog):
 
         self.createNewKeyDialogPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT)
 
+        self.Bind(wx.EVT_CLOSE, self.onCancel)
+
         # Calculate positions on dialog, using sizers
 
         self.createNewKeyDialogPanel.Fit()
@@ -219,7 +221,7 @@ class CreateNewKeyDialog(wx.Dialog):
 
     def onCancel(self, event):
         #self.Show(False)
-        self.reopenProgressDialogIfNecessary()
+        #self.reopenProgressDialogIfNecessary()
         self.EndModal(wx.ID_CANCEL)
 
     def onHelp(self, event):
