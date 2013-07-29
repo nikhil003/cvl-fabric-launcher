@@ -164,6 +164,7 @@ class KeyDist():
             self.sizer.Add(self.buttonPanelSizer,flag=wx.EXPAND)
             self.PassphraseField.Bind(wx.EVT_TEXT_ENTER,self.onEnter)
             self.OK.Bind(wx.EVT_BUTTON,self.onEnter)
+            self.OK.SetDefault()
             self.Cancel.Bind(wx.EVT_BUTTON,self.onEnter)
             self.Help.Bind(wx.EVT_BUTTON,self.onHelp)
 #
@@ -245,6 +246,7 @@ class KeyDist():
             self.sizer.Add(self.buttonPanelSizer,flag=wx.EXPAND)
             self.PassphraseField.Bind(wx.EVT_TEXT_ENTER,self.onEnter)
             self.OK.Bind(wx.EVT_BUTTON,self.onEnter)
+            self.OK.SetDefault()
             self.Cancel.Bind(wx.EVT_BUTTON,self.onEnter)
             self.Help.Bind(wx.EVT_BUTTON,self.onHelp)
 #
@@ -571,6 +573,7 @@ class KeyDist():
             return self._stop.isSet()
 
         def run(self):
+
             from KeyModel import KeyModel
             threadid=threading.currentThread().ident
             threadname=threading.currentThread().name
@@ -650,14 +653,26 @@ class KeyDist():
             self.threadname = threading.currentThread().name
 
         def newkey(event):
+            usingOneTimePassphrase = False
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_REQ):
                 logger.debug("received NEWPASS_REQ event")
                 #wx.CallAfter(event.keydist.getNewPassphrase_stage1,event.string)
-                wx.CallAfter(event.keydist.getPassphrase,event.arg)
+                if event.keydist.parentWindow is not None and event.keydist.parentWindow.__class__.__name__=="LauncherMainFrame":
+                    launcherMainFrame = event.keydist.parentWindow
+                    if 'public_mode' in launcherMainFrame.vncOptions and launcherMainFrame.vncOptions['public_mode']:
+                        usingOneTimePassphrase = True
+                if usingOneTimePassphrase:
+                    import string
+                    import random
+                    oneTimePassphrase=''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(10))
+                    logger.debug("sshKeyDistEvent.newkey: oneTimePassphrase: " + oneTimePassphrase)
+                    event.keydist.password = oneTimePassphrase
+                else:
+                    wx.CallAfter(event.keydist.getPassphrase,event.arg)
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_RPT):
                 logger.debug("received NEWPASS_RPT event")
                 wx.CallAfter(event.keydist.getNewPassphrase_stage2)
-            if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE):
+            if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE or usingOneTimePassphrase):
                 logger.debug("received NEWPASS_COMPLETE event")
                 t = KeyDist.genkeyThread(event.keydist)
                 t.setDaemon(True)
@@ -691,12 +706,14 @@ class KeyDist():
 
         def shutdownEvent(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_SHUTDOWN):
+                logger.debug("received EVT_KEYDIST_SHUTDOWN event")
                 event.keydist.shutdownReal()
             else:
-                skip()
+                event.Skip()
 
         def cancel(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_CANCEL):
+                logger.debug("received EVT_KEYDIST_CANCEL event")
                 event.keydist._canceled.set()
                 event.keydist.shutdownReal()
                 if event.arg!=None:
@@ -755,10 +772,10 @@ class KeyDist():
         def keylocked(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_KEY_LOCKED):
                 logger.debug("received KEY_LOCKED event")
-                wx.CallAfter(event.keydist.GetKeyPassword)
+                wx.CallAfter(event.keydist.GetKeyPassphrase)
             if (event.GetId() == KeyDist.EVT_KEYDIST_KEY_WRONGPASS):
                 logger.debug("received KEY_WRONGPASS event")
-                wx.CallAfter(event.keydist.GetKeyPassword,incorrect=True)
+                wx.CallAfter(event.keydist.GetKeyPassphrase,incorrect=True)
             event.Skip()
 
         def loadkey(event):
@@ -777,9 +794,9 @@ class KeyDist():
                     newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,event.keydist)
                     wx.PostEvent(event.keydist.notifywindow.GetEventHandler(),newevent)
                 else:
-                    # if they key is loaded into the ssh agent, then authentication failed because the public key isn't on the server.
+                    # If the key is loaded into the ssh agent, then authentication failed because the public key isn't on the server.
                     # *****TODO*****
-                    # actually this might not be strictly true. gnome keychain (and possibly others) will report a key loaded even if its still locked
+                    # Actually this might not be strictly true. GNOME Keychain (and possibly others) will report a key loaded even if its still locked
                     # we probably need a button that says "I can't remember my old key's passphrase, please generate a new keypair"
                     if (event.keydist.keycopied.isSet()):
                         newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,event.keydist)
@@ -804,6 +821,9 @@ class KeyDist():
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
     def __init__(self,parentWindow,username,host,configName,notifywindow,sshPaths,displayStrings=None):
+
+        logger.debug("KeyDist.__init__")
+
         KeyDist.myEVT_CUSTOM_SSHKEYDIST=wx.NewEventType()
         KeyDist.EVT_CUSTOM_SSHKEYDIST=wx.PyEventBinder(self.myEVT_CUSTOM_SSHKEYDIST,1)
         KeyDist.EVT_KEYDIST_START = wx.NewId()
@@ -828,6 +848,7 @@ class KeyDist():
         KeyDist.EVT_KEYDIST_NETWORK_ERROR = wx.NewId()
 
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.cancel)
+        notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.shutdownEvent)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.success)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.needagent)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.listpubkeys)
@@ -864,7 +885,7 @@ class KeyDist():
         self._canceled=Event()
         self.removeKey=Event()
 
-    def GetKeyPassword(self,incorrect=False):
+    def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):
             ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePromptIncorrect,"OK","Cancel")
         else:
@@ -937,12 +958,23 @@ class KeyDist():
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
 
     def shutdownReal(self):
-        if (self.removeKey.isSet()):
-            pass
-            #t=KeyDist.removeKeyFromAgentThread(event.keydist)
-            #t.setDaemon(False)
-            #t.start()
-            #event.keydist.threads.append(t)
+        #if (self.removeKey.isSet()):
+        if self.parentWindow is not None and self.parentWindow.__class__.__name__=="LauncherMainFrame":
+            logger.debug("sshKeyDist.shutdownReal found parentWindow of class LauncherMainFrame.")
+            launcherMainFrame = self.parentWindow
+            if 'public_mode' in launcherMainFrame.vncOptions and launcherMainFrame.vncOptions['public_mode']:
+                from KeyModel import KeyModel
+                km = KeyModel(self.sshpaths.sshKeyPath)
+                logger.debug("sshKeyDist.shutdownReal: Running in 'public_mode', so removing key from agent and from ~/.ssh/")
+                km.deleteKeyAndRemoveFromAgent()
+            else:
+                if launcherMainFrame.vncOptions['public_mode'] is not None:
+                    logger.debug("sshKeyDist.shutdownReal: launcherMainFrame.vncOptions['public_mode'] = " + str(launcherMainFrame.vncOptions['public_mode']))
+                else:
+                    logger.debug("sshKeyDist.shutdownReal: launcherMainFrame.vncOptions['public_mode'] is None.")
+                logger.debug("sshKeyDist.shutdownReal: Not running in 'public_mode', so not removing key from agent or from ~/.ssh/")
+        else:
+            logger.debug("sshKeyDist.shutdownReal didn't find parentWindow of class LauncherMainFrame.")
         for t in self.threads:
             try:
                 t.stop()
@@ -956,3 +988,4 @@ class KeyDist():
             newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_SHUTDOWN, self)
             logger.debug('Sending EVT_KEYDIST_SHUTDOWN event.')
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
+
