@@ -162,7 +162,7 @@ class KeyDist():
             self.sizer = wx.BoxSizer(wx.VERTICAL)
             self.sizer.Add(self.dataPanelSizer,flag=wx.EXPAND)
             self.sizer.Add(self.buttonPanelSizer,flag=wx.EXPAND)
-            self.PassphraseField.Bind(wx.EVT_TEXT_ENTER,self.onEnter)
+            self.Passphrase2Field.Bind(wx.EVT_TEXT_ENTER,self.onEnter)
             self.OK.Bind(wx.EVT_BUTTON,self.onEnter)
             self.OK.SetDefault()
             self.Cancel.Bind(wx.EVT_BUTTON,self.onEnter)
@@ -174,20 +174,24 @@ class KeyDist():
             self.SetSizer(self.border)
             self.Fit()
 
+            # User can click close icon in title bar:
+            self.Bind(wx.EVT_CLOSE,self.onEnter)
+
         def onEnter(self,e):
             self.canceled=True
-            if (e.GetId() == self.Cancel.GetId()):
+            if (e.GetId() == self.OK.GetId() or e.GetId() == self.Passphrase2Field.GetId()):
+                logger.debug('onEnter: canceled = False')
+                self.canceled = False
+                self.pass1 = self.PassphraseField.GetValue()
+                self.pass2 = self.Passphrase2Field.GetValue()
+                self.EndModal(wx.ID_OK)
+            else:
                 logger.debug('onEnter: canceled = True')
                 self.pass1=None
                 self.pass2=None
                 self.canceled = True
                 self.password = None
-            else:
-                logger.debug('onEnter: canceled = False')
-                self.canceled = False
-                self.pass1 = self.PassphraseField.GetValue()
-                self.pass2 = self.Passphrase2Field.GetValue()
-            self.Close()
+                self.EndModal(wx.ID_CANCEL)
 
             if self.closedProgressDialog:
                 if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
@@ -256,17 +260,21 @@ class KeyDist():
             self.SetSizer(self.border)
             self.Fit()
 
+            # User can click close icon in title bar:
+            self.Bind(wx.EVT_CLOSE,self.onEnter)
+
         def onEnter(self,e):
             self.canceled=True
-            if (e.GetId() == self.Cancel.GetId()):
-                logger.debug('onEnter: canceled = True')
-                self.canceled = True
-                self.password = None
-            else:
+            if (e.GetId() == self.OK.GetId() or e.GetId() == self.PassphraseField.GetId()):
                 logger.debug('onEnter: canceled = False')
                 self.canceled = False
                 self.password = self.PassphraseField.GetValue()
-            self.Close()
+                self.EndModal(wx.ID_OK)
+            else:
+                logger.debug('onEnter: canceled = True')
+                self.canceled = True
+                self.password = None
+                self.EndModal(wx.ID_CANCEL)
 
             if self.closedProgressDialog:
                 if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":

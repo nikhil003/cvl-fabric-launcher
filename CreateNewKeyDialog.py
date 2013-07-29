@@ -29,41 +29,42 @@ class CreateNewKeyDialog(wx.Dialog):
 
         # Radio buttons panel
 
-        self.radioButtonsPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
-
-        self.radioButtonsGroupBox = wx.StaticBox(self.radioButtonsPanel, wx.ID_ANY, label="Private key lifetime and passphrase")
-        self.radioButtonsGroupBoxSizer = wx.StaticBoxSizer(self.radioButtonsGroupBox, wx.VERTICAL)
-        self.radioButtonsPanel.SetSizer(self.radioButtonsGroupBoxSizer)
-
-        self.innerRadioButtonsPanel = wx.Panel(self.radioButtonsPanel, wx.ID_ANY)
-        self.innerRadioButtonsPanelSizer = wx.FlexGridSizer(4,1)
-        self.innerRadioButtonsPanel.SetSizer(self.innerRadioButtonsPanelSizer)
-
         self.ID_SAVE_KEY_WITH_PASSPHRASE = wx.NewId()
-        self.savePrivateKeyAndSecureWithPassphraseRadioButton = wx.RadioButton(self.innerRadioButtonsPanel, 
-            self.ID_SAVE_KEY_WITH_PASSPHRASE,
-            "Save the private key for use in future Launcher sessions and secure the key with a passphrase (recommended).", 
-            style=wx.RB_GROUP)
-        self.savePrivateKeyAndSecureWithPassphraseRadioButton.SetValue(True)
-        self.innerRadioButtonsPanelSizer.Add(self.savePrivateKeyAndSecureWithPassphraseRadioButton, flag=wx.EXPAND)
-
         self.DISCARD_KEY_UPON_EXIT = wx.NewId()
-        self.discardPrivateKeyUponExitRadioButton = wx.RadioButton(self.innerRadioButtonsPanel, 
-            self.DISCARD_KEY_UPON_EXIT,
-            "Discard the private key when the Launcher exits. (A random passphrase will be generated for this session.)")
-        self.innerRadioButtonsPanelSizer.Add(self.discardPrivateKeyUponExitRadioButton, flag=wx.EXPAND)
 
-        self.Bind(wx.EVT_RADIOBUTTON, self.onRadioButtonSelectionChanged, id=self.savePrivateKeyAndSecureWithPassphraseRadioButton.GetId())
-        self.Bind(wx.EVT_RADIOBUTTON, self.onRadioButtonSelectionChanged, id=self.discardPrivateKeyUponExitRadioButton.GetId())
+        #self.radioButtonsPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
 
-        self.instructionsLabel2 = wx.StaticText(self.innerRadioButtonsPanel, wx.ID_ANY, "If using a shared computer or a \"Guest\" account, you should choose the second option.")
-        self.innerRadioButtonsPanelSizer.Add(self.instructionsLabel2, flag=wx.EXPAND|wx.TOP, border=10)
+        #self.radioButtonsGroupBox = wx.StaticBox(self.radioButtonsPanel, wx.ID_ANY, label="Private key lifetime and passphrase")
+        #self.radioButtonsGroupBoxSizer = wx.StaticBoxSizer(self.radioButtonsGroupBox, wx.VERTICAL)
+        #self.radioButtonsPanel.SetSizer(self.radioButtonsGroupBoxSizer)
 
-        self.innerRadioButtonsPanel.Fit()
-        self.radioButtonsGroupBoxSizer.Add(self.innerRadioButtonsPanel, flag=wx.EXPAND)
-        self.radioButtonsPanel.Fit()
+        #self.innerRadioButtonsPanel = wx.Panel(self.radioButtonsPanel, wx.ID_ANY)
+        #self.innerRadioButtonsPanelSizer = wx.FlexGridSizer(4,1)
+        #self.innerRadioButtonsPanel.SetSizer(self.innerRadioButtonsPanelSizer)
 
-        self.createNewKeyDialogPanelSizer.Add(self.radioButtonsPanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+        #self.savePrivateKeyAndSecureWithPassphraseRadioButton = wx.RadioButton(self.innerRadioButtonsPanel, 
+            #self.ID_SAVE_KEY_WITH_PASSPHRASE,
+            #"Save the private key for use in future Launcher sessions and secure the key with a passphrase (recommended).", 
+            #style=wx.RB_GROUP)
+        #self.savePrivateKeyAndSecureWithPassphraseRadioButton.SetValue(True)
+        #self.innerRadioButtonsPanelSizer.Add(self.savePrivateKeyAndSecureWithPassphraseRadioButton, flag=wx.EXPAND)
+
+        #self.discardPrivateKeyUponExitRadioButton = wx.RadioButton(self.innerRadioButtonsPanel, 
+            #self.DISCARD_KEY_UPON_EXIT,
+            #"Discard the private key when the Launcher exits. (A random passphrase will be generated for this session.)")
+        #self.innerRadioButtonsPanelSizer.Add(self.discardPrivateKeyUponExitRadioButton, flag=wx.EXPAND)
+
+        #self.Bind(wx.EVT_RADIOBUTTON, self.onRadioButtonSelectionChanged, id=self.savePrivateKeyAndSecureWithPassphraseRadioButton.GetId())
+        #self.Bind(wx.EVT_RADIOBUTTON, self.onRadioButtonSelectionChanged, id=self.discardPrivateKeyUponExitRadioButton.GetId())
+
+        #self.instructionsLabel2 = wx.StaticText(self.innerRadioButtonsPanel, wx.ID_ANY, "If using a shared computer or a \"Guest\" account, you should choose the second option.")
+        #self.innerRadioButtonsPanelSizer.Add(self.instructionsLabel2, flag=wx.EXPAND|wx.TOP, border=10)
+
+        #self.innerRadioButtonsPanel.Fit()
+        #self.radioButtonsGroupBoxSizer.Add(self.innerRadioButtonsPanel, flag=wx.EXPAND)
+        #self.radioButtonsPanel.Fit()
+
+        #self.createNewKeyDialogPanelSizer.Add(self.radioButtonsPanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Passphrase panel
 
@@ -139,18 +140,14 @@ class CreateNewKeyDialog(wx.Dialog):
         self.privateKeyLocationGroupBoxSizer.Add(self.innerPrivateKeyLocationPanel, flag=wx.EXPAND)
         self.privateKeyLocationPanel.Fit()
 
-        self.createNewKeyDialogPanelSizer.Add(self.privateKeyLocationPanel, flag=wx.EXPAND)
+        self.createNewKeyDialogPanelSizer.Add(self.privateKeyLocationPanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Keep SSH Agent running checkbox.
 
-        self.leaveKeyInAgentAfterExitCheckBox = wx.CheckBox(self.createNewKeyDialogPanel, wx.ID_ANY, 
-            "Allow my SSH Agent to continue managing my key after the Launcher exits, so I don't need to enter my passphrase next time.")
-        self.leaveKeyInAgentAfterExitCheckBox.SetValue(True)
-        self.createNewKeyDialogPanelSizer.Add(self.leaveKeyInAgentAfterExitCheckBox, flag=wx.EXPAND|wx.TOP|wx.BOTTOM, border=15)
-
-        # Blank space
-
-        #self.createNewKeyDialogPanelSizer.Add(wx.StaticText(self.createNewKeyDialogPanel, wx.ID_ANY, ""))
+        #self.leaveKeyInAgentAfterExitCheckBox = wx.CheckBox(self.createNewKeyDialogPanel, wx.ID_ANY, 
+            #"Allow my SSH Agent to continue managing my key after the Launcher exits, so I don't need to enter my passphrase next time.")
+        #self.leaveKeyInAgentAfterExitCheckBox.SetValue(True)
+        #self.createNewKeyDialogPanelSizer.Add(self.leaveKeyInAgentAfterExitCheckBox, flag=wx.EXPAND|wx.TOP|wx.BOTTOM, border=15)
 
         # Buttons panel
 
@@ -229,7 +226,8 @@ class CreateNewKeyDialog(wx.Dialog):
             self.validPassphrase = True
 
     def onOK(self, event):
-        privateKeyLifetimeAndPassphraseChoice = self.getPrivateKeyLifetimeAndPassphraseChoice()
+        #privateKeyLifetimeAndPassphraseChoice = self.getPrivateKeyLifetimeAndPassphraseChoice()
+        privateKeyLifetimeAndPassphraseChoice = self.ID_SAVE_KEY_WITH_PASSPHRASE
         if privateKeyLifetimeAndPassphraseChoice==self.ID_SAVE_KEY_WITH_PASSPHRASE:
             # If we're using a passphrase, make sure it is valid.
             if self.passphraseField.GetValue().strip()=="" or not self.validPassphrase:
@@ -251,7 +249,7 @@ class CreateNewKeyDialog(wx.Dialog):
                 dlg.ShowModal()
                 return
 
-        if self.getPrivateKeyLifetimeAndPassphraseChoice()==self.ID_SAVE_KEY_WITH_PASSPHRASE:
+        if privateKeyLifetimeAndPassphraseChoice==self.ID_SAVE_KEY_WITH_PASSPHRASE:
             keyModelObject = KeyModel(self.getPrivateKeyFileLocation())
             keyComment = os.path.basename(self.getPrivateKeyFileLocation())
             def keyCreatedSuccessfullyCallback():
@@ -285,11 +283,14 @@ class CreateNewKeyDialog(wx.Dialog):
                           "Error", wx.OK|wx.ICON_EXCLAMATION)
 
     def onBrowse(self, event):
-        saveFileDialog = wx.FileDialog (self, message = 'MASSIVE Launcher private key file...', defaultDir=self.privateKeyDir, defaultFile=self.privateKeyFilename, style = wx.SAVE)
-        if saveFileDialog.ShowModal() == wx.ID_OK:
-            privateKeyFilePath = saveFileDialog.GetPath()
-            (self.privateKeyDir, self.privateKeyFilename) = os.path.split(privateKeyFilePath)
-            self.privateKeyLocationField.SetValue(privateKeyFilePath)
+        wx.MessageBox("For now, you must use the Launcher's default private key location.",
+                      "MASSIVE/CVL Launcher", wx.OK|wx.ICON_EXCLAMATION)
+        return
+        #saveFileDialog = wx.FileDialog (self, message = 'MASSIVE Launcher private key file...', defaultDir=self.privateKeyDir, defaultFile=self.privateKeyFilename, style = wx.SAVE)
+        #if saveFileDialog.ShowModal() == wx.ID_OK:
+            #privateKeyFilePath = saveFileDialog.GetPath()
+            #(self.privateKeyDir, self.privateKeyFilename) = os.path.split(privateKeyFilePath)
+            #self.privateKeyLocationField.SetValue(privateKeyFilePath)
 
     def getPassphrase(self):
         return self.passphraseField.GetValue()
@@ -341,7 +342,7 @@ class MyApp(wx.App):
 
         massiveLauncherConfig.set("MASSIVE Launcher Preferences", "private_key_lifetime_and_passphrase_choice", createNewKeyDialog.getPrivateKeyLifetimeAndPassphraseChoice())
         massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_launcher_private_key_path", createNewKeyDialog.getPrivateKeyFileLocation())
-        massiveLauncherConfig.set("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit", createNewKeyDialog.getWhetherToLeaveKeyInAgentAfterExit())
+        #massiveLauncherConfig.set("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit", createNewKeyDialog.getWhetherToLeaveKeyInAgentAfterExit())
         with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
             massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
 
@@ -373,15 +374,15 @@ class MyApp(wx.App):
 
         logger.debug("From local settings: massiveLauncherPrivateKeyPath = " + massiveLauncherPrivateKeyPath)
 
-        leaveKeyInAgentAfterExit = True
-        if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit"):
-            leaveKeyInAgentAfterExit = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit")
-        else:
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit", True)
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
+        #leaveKeyInAgentAfterExit = True
+        #if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit"):
+            #leaveKeyInAgentAfterExit = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit")
+        #else:
+            #massiveLauncherConfig.set("MASSIVE Launcher Preferences", "leave_key_in_agent_after_exit", True)
+            #with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
+                #massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
 
-        logger.debug("From local settings: Leave key in agent after exit = " + str(leaveKeyInAgentAfterExit))
+        #logger.debug("From local settings: Leave key in agent after exit = " + str(leaveKeyInAgentAfterExit))
 
         return True
 
