@@ -348,6 +348,32 @@ class KeyDist():
             if (not self.stopped()):
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent)
 
+    class loadkeyThread(Thread):
+        def __init__(self,keydistObject):
+            Thread.__init__(self)
+            self.keydistObject = keydistObject
+            self._stop = Event()
+
+        def stop(self):
+            self._stop.set()
+        
+        def stopped(self):
+            return self._stop.isSet()
+
+        def run(self):
+            logger.debug("loadkeyThread: started")
+            try:
+                logger.debug("loadkeyThread: Trying to open the key file")
+                with open(self.keydistObject.sshpaths.sshKeyPath,'r'): pass
+                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
+            except Exception as e:
+                logger.error("loadkeyThread: Failed to open the key file %s" % str(e))
+                self.keydistObject.cancel("Failed to open the key file %s" % str(e))
+                return
+            if (not self.stopped()):
+                logger.debug("loadkeyThread: generating LOADKEY event from loadkeyThread")
+                wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),event)
+
     class genkeyThread(Thread):
         def __init__(self,keydistObject):
             Thread.__init__(self)
@@ -681,8 +707,16 @@ class KeyDist():
                 logger.debug("received NEWPASS_RPT event")
                 wx.CallAfter(event.keydist.getNewPassphrase_stage2)
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE or usingOneTimePassphrase):
-                logger.debug("received NEWPASS_COMPLETE event")
-                t = KeyDist.genkeyThread(event.keydist)
+                if event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE:
+                    logger.debug("received NEWPASS_COMPLETE event")
+                if usingOneTimePassphrase:
+                    logger.debug("Using one-time passphrase.")
+                usingCreateNewKeyDialogInsteadOfPass2Dialog = True
+                if usingCreateNewKeyDialogInsteadOfPass2Dialog:
+                    logger.debug("Calling KeyDist.loadkeyThread instead of KeyDist.genkeyThread, because ssh-keygen has already been done by CreateNewKeyDialog (via KeyModel).")
+                    t = KeyDist.loadkeyThread(event.keydist)
+                else:
+                    t = KeyDist.genkeyThread(event.keydist)
                 t.setDaemon(True)
                 t.start()
                 event.keydist.threads.append(t)
@@ -922,30 +956,46 @@ class KeyDist():
         wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
     def getPassphrase(self,reason=None):
-        if (reason!=None):
-            if (reason.has_key('forbiden')):
-                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseEmptyForbiden,"OK","Cancel")
-            elif(reason.has_key('short')):
-                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseTooShort,"OK","Cancel")
-            elif(reason.has_key('mismatch')):
-                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseMismatch,"OK","Cancel")
+        usingCreateNewKeyDialogInsteadOfPass2Dialog = True
+        if usingCreateNewKeyDialogInsteadOfPass2Dialog:
+            from CreateNewKeyDialog import CreateNewKeyDialog
+            createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.displayStrings, displayMessageBoxReportingSuccess=False)
+            canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
+        else:
+            if (reason!=None):
+                if (reason.has_key('forbidden')):
+                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseEmptyForbidden,"OK","Cancel")
+                elif(reason.has_key('short')):
+                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseTooShort,"OK","Cancel")
+                elif(reason.has_key('mismatch')):
+                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseMismatch,"OK","Cancel")
+                else:
+                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphrase,"OK","Cancel")
             else:
                 ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphrase,"OK","Cancel")
-        else:
-            ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphrase,"OK","Cancel")
-        (canceled,passphrase1,passphrase2) = ppd.getPassword()
+            (canceled,passphrase1,passphrase2) = ppd.getPassword()
         if (not canceled):
-            if (passphrase1 != None and len(passphrase1) == 0):
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('forbiden',True)]))
-            elif (passphrase1 != None and len(passphrase1) < 6):
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('short',True)]))
-            elif (passphrase1 != passphrase2):
-                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('mismatch',True)]))
+            if usingCreateNewKeyDialogInsteadOfPass2Dialog:
+                logger.debug("User didn't cancel from CreateNewKeyDialog.")
+                self.password=createNewKeyDialog.getPassphrase()
             else:
-                self.password=passphrase1
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
+                logger.debug("User didn't cancel from pass2Dialog.")
+                if (passphrase1 != None and len(passphrase1) == 0):
+                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('forbidden',True)]))
+                elif (passphrase1 != None and len(passphrase1) < 6):
+                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('short',True)]))
+                elif (passphrase1 != passphrase2):
+                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('mismatch',True)]))
+                else:
+                    self.password=passphrase1
+                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
+            event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
         else:
+            if usingCreateNewKeyDialogInsteadOfPass2Dialog:
+                logger.debug("KeyDist.getPassphrase: User canceled from CreateNewKeyDialog.")
+            else:
+                logger.debug("KeyDist.getPassphrase: User canceled from pass2Dialog.")
             self.cancel()
 
     def distributeKey(self,callback_success=None, callback_fail=None):
