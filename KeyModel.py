@@ -164,16 +164,25 @@ class KeyModel():
 
         # Should we ask for the passphrase before deleting the key?
 
+        logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: self.privateKeyFilePath = " + self.privateKeyFilePath)
+
         (self.privateKeyDirectory, self.privateKeyFileName) = os.path.split(self.privateKeyFilePath)
         # sshKeyDist.sshpaths currently assumes that private key is in ~/.ssh
         self.sshPathsObject = sshpaths(self.privateKeyFileName)
 
         try:
 
+            logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Deleting private key...")
             os.unlink(self.privateKeyFilePath)
+            logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Deleted private key!")
 
+            logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Looking for public key...")
             if os.path.exists(self.privateKeyFilePath + ".pub"):
+                logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Found public key: " + self.privateKeyFilePath + ".pub")
+                logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Deleting public key...")
                 os.unlink(self.privateKeyFilePath + ".pub")
+            else:
+                logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Public key not found.")
 
             # Remove key(s) from SSH agent:
 
@@ -194,6 +203,7 @@ class KeyModel():
                         success = ("Identity removed" in stdout)
                     finally:
                         os.unlink(tempPublicKeyFile.name)
+            logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Finished removing Launcher public key(s) from agent.")
         except:
             logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: " + traceback.format_exc())
             return False
