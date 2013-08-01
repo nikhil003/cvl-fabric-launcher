@@ -388,10 +388,22 @@ class KeyDist():
 
         def run(self):
             logger.debug("genkeyThread: started")
+            if os.path.exists(self.keydistObject.sshpaths.sshKeyPath):
+                # This is most likely to happen if using a temporary private key file, i.e. when using "public mode".
+                logger.debug("Found an existing file in the private key file path we got from tempfile.NamedTemporaryFile: " + self.keydistObject.sshpaths.sshKeyPath)
+                logger.debug("Deleting : " + self.keydistObject.sshpaths.sshKeyPath)
+                os.unlink(self.keydistObject.sshpaths.sshKeyPath)
+                logger.debug("Deleted : " + self.keydistObject.sshpaths.sshKeyPath)
+            logger.debug("Private key will be saved to " + self.keydistObject.sshpaths.sshKeyPath)
+
             cmd = '{sshkeygen} -q -f "{keyfilename}" -C "{keycomment}" -N \"{password}\"'.format(sshkeygen=self.keydistObject.sshpaths.sshKeyGenBinary,
                                                                                                  keyfilename=self.keydistObject.sshpaths.sshKeyPath,
                                                                                                  keycomment=self.keydistObject.launcherKeyComment,
                                                                                                  password=self.keydistObject.password)
+            # FIXME!!!!!!!!!!
+            # We shouldn't be logging something which displays the user's passphrase in plain text,
+            # but it might be useful to uncomment this for private testing by developers.
+            # logger.debug("genKeyThread: cmd: " + cmd)
             try:
                 keygen_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
                 (stdout,stderr) = keygen_proc.communicate("\n\n")
@@ -540,7 +552,7 @@ class KeyDist():
             # I have a problem where I have multiple identity files in my ~/.ssh, and I want to use only identities loaded into the agent
             # since openssh does not seem to have an option to use only an agent we have a workaround, 
             # by passing the -o IdentityFile option a path that does not exist, openssh can't use any other identities, and can only use the agent.
-            # This is a little "racy" in that a tempfile with the same path could concievably be created between the unlink and openssh attempting to use it
+            # This is a little "racy" in that a tempfile with the same path could conceivably be created between the unlink and openssh attempting to use it
             # but since the pub key is extracted from the agent not the identity file I can't see anyway an attacker could use this to trick a user into uploading the attackers key.
             threadid = threading.currentThread().ident
             logger.debug("testAuthThread %i: started"%threadid)
@@ -712,10 +724,19 @@ class KeyDist():
                 if usingOneTimePassphrase:
                     logger.debug("Using one-time passphrase.")
                 usingCreateNewKeyDialogInsteadOfPass2Dialog = True
-                if usingCreateNewKeyDialogInsteadOfPass2Dialog:
+                if usingCreateNewKeyDialogInsteadOfPass2Dialog and not usingOneTimePassphrase:
                     logger.debug("Calling KeyDist.loadkeyThread instead of KeyDist.genkeyThread, because ssh-keygen has already been done by CreateNewKeyDialog (via KeyModel).")
                     t = KeyDist.loadkeyThread(event.keydist)
                 else:
+                    logger.debug("We need to generate a new key.")
+                    if usingOneTimePassphrase:
+                        logger.debug("We need to generate a temporary key, because we're running in 'public mode'.")
+                        import tempfile
+                        temporaryPrivateKeyFile = tempfile.NamedTemporaryFile(mode='w+b', prefix='MassiveLauncherKey_', delete=False)
+                        event.keydist.sshpaths.sshKeyPath = temporaryPrivateKeyFile.name
+                        logger.debug("Using temporary private key for 'public mode': " + event.keydist.sshpaths.sshKeyPath)
+                    else:
+                        logger.debug("We will generate a persistent key in: " + event.keydist.sshpaths.sshKeyPath)
                     t = KeyDist.genkeyThread(event.keydist)
                 t.setDaemon(True)
                 t.start()
