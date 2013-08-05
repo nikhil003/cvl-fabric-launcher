@@ -16,6 +16,7 @@ import traceback
 import socket
 from utilityFunctions import HelpDialog
 import pkgutil
+import signal
 
 from logger.Logger import logger
 
@@ -331,6 +332,7 @@ class KeyDist():
                     self.keydistObject.sshAgentProcess = subprocess.Popen(self.keydistObject.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
                     stdout = self.keydistObject.sshAgentProcess.stdout.readlines()
                     for line in stdout:
+                        logger.debug("startAgentThread: line = " + line)
                         if sys.platform.startswith('win'):
                             match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
                         else:
@@ -338,6 +340,10 @@ class KeyDist():
                         if match:
                             agentenv = match.group('socket')
                             os.environ['SSH_AUTH_SOCK'] = agentenv
+                        match2 = re.search("^SSH_AGENT_PID=(?P<pid>.*);.*$",line)
+                        if match2:
+                            pid = match2.group('pid')
+                            os.environ['SSH_AGENT_PID'] = pid
                     if self.keydistObject.sshAgentProcess is None:
                         self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message %s"%str(stdout))
                         return
@@ -1047,8 +1053,13 @@ class KeyDist():
                     logger.debug("sshKeyDist.shutdownReal: Pageant.exe will be left running.")
                 else:
                     logger.debug("sshKeyDist.shutdownReal: Pageant.exe doesn't seem to be running!  This is unexpected, but it doesn't affect shutdown of key dist tasks.")
-                logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process: " + self.sshpaths.sshAgentBinary)
-                self.sshAgentProcess.terminate()
+                try:
+                    logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process: " + self.sshpaths.sshAgentBinary)
+                    logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process PID: " + os.environ['SSH_AGENT_PID'])
+                    os.kill(int(os.environ['SSH_AGENT_PID']), signal.SIGTERM)
+                    logger.debug("sshKeyDist.shutdownReal: Succeeded in terminating SSH Agent process.")
+                except:
+                    logger.debug(traceback.format_exc())
 
         if self.parentWindow is not None and self.parentWindow.__class__.__name__=="LauncherMainFrame":
             logger.debug("sshKeyDist.shutdownReal found parentWindow of class LauncherMainFrame.")
