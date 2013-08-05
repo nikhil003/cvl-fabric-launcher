@@ -322,13 +322,14 @@ class KeyDist():
 
         def run(self):
             agentenv = None
+            self.keydistObject.sshAgentProcess = None
             try:
                 agentenv = os.environ['SSH_AUTH_SOCK']
             except:
                 logger.debug(traceback.format_exc())
                 try:
-                    agent = subprocess.Popen(self.keydistObject.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
-                    stdout = agent.stdout.readlines()
+                    self.keydistObject.sshAgentProcess = subprocess.Popen(self.keydistObject.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
+                    stdout = self.keydistObject.sshAgentProcess.stdout.readlines()
                     for line in stdout:
                         if sys.platform.startswith('win'):
                             match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
@@ -337,7 +338,7 @@ class KeyDist():
                         if match:
                             agentenv = match.group('socket')
                             os.environ['SSH_AUTH_SOCK'] = agentenv
-                    if agent is None:
+                    if self.keydistObject.sshAgentProcess is None:
                         self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message %s"%str(stdout))
                         return
                 except Exception as e:
@@ -1038,6 +1039,17 @@ class KeyDist():
 
     def shutdownReal(self):
         #if (self.removeKey.isSet()):
+
+        if sys.platform.startswith('win'):
+            # Terminate charade.exe, but leave pageant.exe running:
+            if hasattr(self,"sshAgentProcess") and self.sshAgentProcess is not None:
+                if is_pageant_running()
+                    logger.debug("sshKeyDist.shutdownReal: Pageant.exe will be left running.")
+                else:
+                    logger.debug("sshKeyDist.shutdownReal: Pageant.exe doesn't seem to be running!  This is unexpected, but it doesn't affect shutdown of key dist tasks.")
+                logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process: " + self.sshAgentBinary)
+                self.sshAgentProcess.terminate()
+
         if self.parentWindow is not None and self.parentWindow.__class__.__name__=="LauncherMainFrame":
             logger.debug("sshKeyDist.shutdownReal found parentWindow of class LauncherMainFrame.")
             launcherMainFrame = self.parentWindow
