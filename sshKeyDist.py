@@ -1047,7 +1047,7 @@ class KeyDist():
                     logger.debug("sshKeyDist.shutdownReal: Pageant.exe will be left running.")
                 else:
                     logger.debug("sshKeyDist.shutdownReal: Pageant.exe doesn't seem to be running!  This is unexpected, but it doesn't affect shutdown of key dist tasks.")
-                logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process: " + self.sshAgentBinary)
+                logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process: " + self.sshpaths.sshAgentBinary)
                 self.sshAgentProcess.terminate()
 
         if self.parentWindow is not None and self.parentWindow.__class__.__name__=="LauncherMainFrame":
