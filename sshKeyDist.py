@@ -1043,7 +1043,7 @@ class KeyDist():
         if sys.platform.startswith('win'):
             # Terminate charade.exe, but leave pageant.exe running:
             if hasattr(self,"sshAgentProcess") and self.sshAgentProcess is not None:
-                if is_pageant_running()
+                if is_pageant_running():
                     logger.debug("sshKeyDist.shutdownReal: Pageant.exe will be left running.")
                 else:
                     logger.debug("sshKeyDist.shutdownReal: Pageant.exe doesn't seem to be running!  This is unexpected, but it doesn't affect shutdown of key dist tasks.")
