@@ -26,7 +26,7 @@ if not sys.platform.startswith('win'):
 
 def is_pageant_running():
     username = os.path.split(os.path.expanduser('~'))[-1]
-    return 'PAGEANT.EXE' in os.popen('tasklist /FI "USERNAME eq %s"' % username).read()
+    return 'PAGEANT.EXE' in os.popen('tasklist /FI "USERNAME eq %s"' % username).read().upper()
 
 def start_pageant():
     if is_pageant_running():
