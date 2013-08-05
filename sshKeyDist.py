@@ -1056,7 +1056,7 @@ class KeyDist():
             if 'public_mode' in launcherMainFrame.vncOptions and launcherMainFrame.vncOptions['public_mode']:
                 from KeyModel import KeyModel
                 km = KeyModel(self.sshpaths.sshKeyPath)
-                logger.debug("sshKeyDist.shutdownReal: Running in 'public_mode', so removing key from agent and from ~/.ssh/")
+                logger.debug("sshKeyDist.shutdownReal: Running in 'public_mode', so removing key from agent and from " + self.sshpaths.sshKeyPath)
                 km.deleteKeyAndRemoveFromAgent()
             else:
                 if launcherMainFrame.vncOptions['public_mode'] is not None:
