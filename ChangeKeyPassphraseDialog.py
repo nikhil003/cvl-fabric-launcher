@@ -7,13 +7,12 @@ import sys
 
 if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))
-from sshKeyDist import sshpaths
-from sshKeyDist import double_quote
+#from sshKeyDist import sshpaths
 
 from logger.Logger import logger
 
 class ChangeKeyPassphraseDialog(wx.Dialog):
-    def __init__(self, parent, id, title, privateKeyFilePath):
+    def __init__(self, parent, id, title, sshpaths):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.changeKeyPassphraseDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
@@ -29,7 +28,7 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
 
         (self.privateKeyDirectory, self.privateKeyFileName) = os.path.split(self.privateKeyFilePath)
         # sshKeyDist.sshpaths currently assumes that private key is in ~/.ssh
-        self.sshPathsObject = sshpaths(self.privateKeyFileName)
+        self.sshPathsObject = sshpaths
 
         self.instructionsLabel = wx.StaticText(self.changeKeyPassphraseDialogPanel, wx.ID_ANY, 
                         "To change your passphrase, you will first need to enter your existing passphrase,\n" +

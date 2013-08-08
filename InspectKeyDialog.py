@@ -13,12 +13,11 @@ from KeyModel import KeyModel
 if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))
 from sshKeyDist import KeyDist
-from sshKeyDist import sshpaths
 
 from logger.Logger import logger
 
 class InspectKeyDialog(wx.Dialog):
-    def __init__(self, parent, id, title, privateKeyFilePath):
+    def __init__(self, parent, id, title, sshpaths):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.inspectKeyDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
@@ -30,11 +29,7 @@ class InspectKeyDialog(wx.Dialog):
 
         self.inspectKeyDialogSizer.Add(self.inspectKeyDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
-        self.privateKeyFilePath = privateKeyFilePath
-
-        (self.privateKeyDirectory, self.privateKeyFileName) = os.path.split(self.privateKeyFilePath)
-        # sshKeyDist.sshpaths currently assumes that private key is in ~/.ssh
-        self.sshPathsObject = sshpaths(self.privateKeyFileName)
+        self.sshPathsObject = sshpaths
 
         # Instructions label
 
