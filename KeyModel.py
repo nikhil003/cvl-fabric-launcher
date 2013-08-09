@@ -142,13 +142,15 @@ class KeyModel():
     def stopAgent(self):
         if self.pagaent!=None:
             self.pagaent.kill()
+            self.pagaent=None
         if self.sshAgentProcess!=None:
             self.sshAgentProcess.kill()
+            self.sshAgentProcess=None
 
     def startAgent(self):
         if sys.platform.startswith('win'):
             self.start_pageant()
-        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
+        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False, universal_newlines=True)
         stdout = self.sshAgentProcess.stdout.readlines()
         for line in stdout:
             logger.debug("startAgentThread: line = " + line)
