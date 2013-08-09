@@ -10,7 +10,7 @@ from KeyModel import KeyModel
 from logger.Logger import logger
 
 class CreateNewKeyDialog(wx.Dialog):
-    def __init__(self, parent, id, title, displayStrings=None,displayMessageBoxReportingSuccess=True):
+    def __init__(self, parent, id, title, keyModel, displayStrings,displayMessageBoxReportingSuccess=True):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.displayStrings = displayStrings
@@ -81,6 +81,8 @@ class CreateNewKeyDialog(wx.Dialog):
 
         self.createNewKeyDialogPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
+        self.keyModel = keyModel
+
         # Private key location
 
         self.privateKeyLocationPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
@@ -98,9 +100,7 @@ class CreateNewKeyDialog(wx.Dialog):
         self.innerPrivateKeyLocationPanelSizer.Add(self.privateKeyLocationLabel)
 
         self.privateKeyLocationField = wx.TextCtrl(self.innerPrivateKeyLocationPanel, wx.ID_ANY, style=wx.TE_READONLY)
-        defaultPrivateKeyLocation = os.path.join(os.path.expanduser('~'), '.ssh', "MassiveLauncherKey")
-        self.privateKeyDir = os.path.join(os.path.expanduser('~'), '.ssh')
-        self.privateKeyFilename = "MassiveLauncherKey"
+        defaultPrivateKeyLocation = self.keyModel.getPrivateKeyFilePath()
         self.privateKeyLocationField.SetValue(defaultPrivateKeyLocation)
 
         self.innerPrivateKeyLocationPanelSizer.Add(self.privateKeyLocationField, flag=wx.EXPAND)
