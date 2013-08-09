@@ -149,7 +149,7 @@ class KeyDist():
                 if match:
                     keycomment = match.group('keycomment')
                     if self.keydistObject.keyModel.isTemporaryKey():
-                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.keyModel.getPrivateKeyFilePath()),keycomment)
+                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.keydistObject.keyModel.getPrivateKeyFilePath())),keycomment)
                     else:
                         correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.keyModel.getLauncherKeyComment()),keycomment)
                     if correctKey:
