@@ -7,12 +7,11 @@ import sys
 
 if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))
-#from sshKeyDist import sshpaths
 
 from logger.Logger import logger
 
 class ChangeKeyPassphraseDialog(wx.Dialog):
-    def __init__(self, parent, id, title, sshpaths):
+    def __init__(self, parent, id, title, keyModel):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.changeKeyPassphraseDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
@@ -24,11 +23,8 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
 
         self.changeKeyPassphraseDialogSizer.Add(self.changeKeyPassphraseDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
-        self.privateKeyFilePath = privateKeyFilePath
 
-        (self.privateKeyDirectory, self.privateKeyFileName) = os.path.split(self.privateKeyFilePath)
-        # sshKeyDist.sshpaths currently assumes that private key is in ~/.ssh
-        self.sshPathsObject = sshpaths
+        self.keyModel = keyModel
 
         self.instructionsLabel = wx.StaticText(self.changeKeyPassphraseDialogPanel, wx.ID_ANY, 
                         "To change your passphrase, you will first need to enter your existing passphrase,\n" +
@@ -197,8 +193,6 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
             self.repeatNewPassphraseField.SetFocus()
             return
 
-        from KeyModel import KeyModel
-        keyModelObject = KeyModel(self.privateKeyFilePath)
 
         def existingPassphraseIncorrect():
             dlg = wx.MessageDialog(self, "Your existing passphrase appears to be incorrect.\nPlease enter it again.",
@@ -226,7 +220,7 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
             self.existingPassphraseField.SetSelection(-1,-1)
             self.existingPassphraseField.SetFocus()
 
-        success = keyModelObject.changePassphrase(self.existingPassphraseField.GetValue(), self.newPassphraseField.GetValue(),
+        success = self.keyModel.changePassphrase(self.existingPassphraseField.GetValue(), self.newPassphraseField.GetValue(),
             passphraseUpdatedSuccessfullyCallback,
             existingPassphraseIncorrect,
             newPassphraseTooShortCallback,

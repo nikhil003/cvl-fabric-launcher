@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import traceback
 import threading
+import re
 
 if os.path.abspath("..") not in sys.path:
     sys.path.append(os.path.abspath(".."))
@@ -94,6 +95,77 @@ class KeyModel():
         self.keyComment = "Massive Launcher Key"
         if self.temporaryKey:
             self.keyComment+=" (temporary key)"
+        self.startedPagaent=threading.Event()
+        self.startedAgent=threading.Event()
+        self.pagaent=None
+
+    def fingerprintPrivateKeyFile(self):
+        proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.getPrivateKeyFilePath()], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        stdout,stderr = proc.communicate()
+        return stdout
+
+    OPENSSH_BUILD_DIR = 'openssh-cygwin-stdin-build'
+
+    def is_pageant_running(self):
+        username = os.path.split(os.path.expanduser('~'))[-1]
+        return 'PAGEANT.EXE' in os.popen('tasklist /FI "USERNAME eq %s"' % username).read().upper()
+
+    def start_pageant(self):
+        if self.is_pageant_running():
+            # Pageant pops up a dialog box if we try to run a second
+            # instance, so leave immediately.
+            return
+
+        if hasattr(sys, 'frozen'):
+            pageant = os.path.join(os.path.dirname(sys.executable), self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
+        else:
+            launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+            pageant = os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
+
+        import win32process
+        self.pagaent = subprocess.Popen([pageant], creationflags=win32process.DETACHED_PROCESS)
+        self.startedPagaent.set()
+
+
+
+    def stopAgent(self):
+        if self.pagent!=None:
+            self.pagent.kill()
+        if self.sshAgentProcess!=None:
+            self.sshAgentProcess.kill()
+
+    def startAgent(self):
+        if sys.platform.startswith('win'):
+            self.start_pageant()
+        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
+        stdout = self.sshAgentProcess.stdout.readlines()
+        for line in stdout:
+            logger.debug("startAgentThread: line = " + line)
+            if sys.platform.startswith('win'):
+                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
+            else:
+                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*); export SSH_AUTH_SOCK;$",line)
+            if match:
+                agentenv = match.group('socket')
+                os.environ['SSH_AUTH_SOCK'] = agentenv
+            match2 = re.search("^SSH_AGENT_PID=(?P<pid>.*);.*$",line)
+            if match2:
+                pid = match2.group('pid')
+                os.environ['SSH_AGENT_PID'] = pid
+                self.agentPid=pid
+        if self.sshAgentProcess is None:
+            raise Exception(str(stdout))
+        self.startedAgent.set()
+
+    def fingerprintAgent(self):
+        proc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-l"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        stdout,stderr = proc.communicate()
+        for line in stdout.splitlines(True):
+            if (self.keyComment in line or self.getPrivateKeyFilePath() in line):
+                return line
+
+    def privateKeyExists(self):
+        return os.path.exists(self.getPrivateKeyFilePath())
 
     def getPrivateKeyFilePath(self):
         return self.sshPathsObject.sshKeyPath
@@ -117,7 +189,6 @@ class KeyModel():
 
         if keyComment!=None:
             self.keyComment = keyComment
-        print "creating key with key comment %s"%self.keyComment
         if sys.platform.startswith('win'):
             cmdList = [self.sshPathsObject.sshKeyGenBinary.strip('"'), "-f", self.getPrivateKeyFilePath(), "-C", self.keyComment, "-N", passphrase]
             proc = subprocess.Popen(cmdList,
@@ -346,16 +417,19 @@ class KeyModel():
             args = [self.sshPathsObject.sshKeyPath]
             lp = pexpect.spawn(self.sshPathsObject.sshAddBinary, args=args)
 
-            idx = lp.expect(["Enter passphrase", "Identity added"])
+            idx = lp.expect(["Enter passphrase", "Identity added",'Could not open a connection to your authentication agent'])
 
             if idx == 1:
                 success = True
                 logger.debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
                 keyAddedSuccessfullyCallback()
+            elif idx == 2:
+                failedToConnectToAgentCallback()
+                return False
             elif idx == 0:
                 lp.sendline(passphrase)
 
-                idx = lp.expect(["Identity added", "Bad pass", pexpect.EOF])
+                idx = lp.expect(["Identity added", "Bad pass",pexpect.EOF])
                 if idx == 0:
                     success = True
                     logger.debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))

@@ -21,30 +21,9 @@ import signal
 from logger.Logger import logger
 from PassphraseDialog import passphraseDialog
 
-OPENSSH_BUILD_DIR = 'openssh-cygwin-stdin-build'
 
 if not sys.platform.startswith('win'):
     import pexpect
-
-def is_pageant_running():
-    username = os.path.split(os.path.expanduser('~'))[-1]
-    return 'PAGEANT.EXE' in os.popen('tasklist /FI "USERNAME eq %s"' % username).read().upper()
-
-def start_pageant():
-    if is_pageant_running():
-        # Pageant pops up a dialog box if we try to run a second
-        # instance, so leave immediately.
-        return
-
-    if hasattr(sys, 'frozen'):
-        pageant = os.path.join(os.path.dirname(sys.executable), OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
-    else:
-        #pageant = os.path.join(os.getcwd(), OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
-        launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
-        pageant = os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
-
-    import win32process
-    subprocess.Popen([pageant], creationflags=win32process.DETACHED_PROCESS)
 
 
 class KeyDist():
@@ -53,20 +32,6 @@ class KeyDist():
         returnval = self.completed.isSet()
         return returnval
 
-
-    class stopAgentThread(Thread):
-        def __init__(self,keydistObject):
-            Thread.__init__(self)
-            self.keydistObject = keydistObject
-            self._stop = Event()
-
-        def stop(self):
-            self._stop.set()
-
-        def run(self):
-            if self.keydistObject.agentPid != None:
-                return os.kill(int(self.keydistObject.agentPid), signal.SIGTERM)
-            return 1
 
     class startAgentThread(Thread):
         def __init__(self,keydistObject):
@@ -91,25 +56,7 @@ class KeyDist():
                 self.keydistObject.stopAgentOnExit.set()
                 logger.debug(traceback.format_exc())
                 try:
-                    self.keydistObject.sshAgentProcess = subprocess.Popen(self.keydistObject.keyModel.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
-                    stdout = self.keydistObject.sshAgentProcess.stdout.readlines()
-                    for line in stdout:
-                        logger.debug("startAgentThread: line = " + line)
-                        if sys.platform.startswith('win'):
-                            match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
-                        else:
-                            match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*); export SSH_AUTH_SOCK;$",line)
-                        if match:
-                            agentenv = match.group('socket')
-                            os.environ['SSH_AUTH_SOCK'] = agentenv
-                        match2 = re.search("^SSH_AGENT_PID=(?P<pid>.*);.*$",line)
-                        if match2:
-                            pid = match2.group('pid')
-                            os.environ['SSH_AGENT_PID'] = pid
-                            self.agentPid=pid
-                    if self.keydistObject.sshAgentProcess is None:
-                        self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message %s"%str(stdout))
-                        return
+                    self.keydistObject.keyModel.startAgent()
                 except Exception as e:
                     self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message %s" % str(e))
                     return
@@ -738,15 +685,20 @@ class KeyDist():
             # TODO
             # These should be in their own thread. Both of these actions cause disk acceses.
             if self.keyCreated.isSet():
-                self.keyModel.deleteKey()
-            self.keyModel.removeKeyFromAgent()
+                t=threading.Thread(target=self.keyModel.deleteKey)
+                t.start()
+                self.threads.append(t)
+            t=threading.Thread(target=self.keyModel.removeKeyFromAgent)
+            t.start()
+            self.threads.append(t)
             # TODO
             # delete the key from the server as well.
         else:
             logger.debug("sshKeyDist.shutdownReal: removeKeyOnExit is not set. No action taken")
         if self.stopAgentOnExit.isSet():
             logger.debug("sshKeyDist.shutdownReal: stopAgentOnExit is set, creating a thread to kill the agent")
-            t = KeyDist.stopAgentThread(self)
+            t=threading.Thread(target=self.keyModel.stopAgent)
+            t.start()
             self.threads.append(t)
         else:
             logger.debug("sshKeyDist.shutdownReal: stopAgentOnExit is not set. No action taken")

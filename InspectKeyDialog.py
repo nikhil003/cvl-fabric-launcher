@@ -17,7 +17,7 @@ from sshKeyDist import KeyDist
 from logger.Logger import logger
 
 class InspectKeyDialog(wx.Dialog):
-    def __init__(self, parent, id, title, sshpaths):
+    def __init__(self, parent, id, title, keyModel):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.inspectKeyDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
@@ -29,7 +29,7 @@ class InspectKeyDialog(wx.Dialog):
 
         self.inspectKeyDialogSizer.Add(self.inspectKeyDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
-        self.sshPathsObject = sshpaths
+        self.keyModel = keyModel
 
         # Instructions label
 
@@ -58,7 +58,7 @@ class InspectKeyDialog(wx.Dialog):
         self.innerKeyPropertiesPanelSizer.Add(self.privateKeyLocationLabel)
 
         self.privateKeyLocationField = wx.TextCtrl(self.innerKeyPropertiesPanel, wx.ID_ANY, style=wx.TE_READONLY)
-        self.privateKeyLocationField.SetValue(self.privateKeyFilePath)
+        self.privateKeyLocationField.SetValue(self.keyModel.getPrivateKeyFilePath())
         self.innerKeyPropertiesPanelSizer.Add(self.privateKeyLocationField, flag=wx.EXPAND)
 
         # Blank space
@@ -221,7 +221,7 @@ class InspectKeyDialog(wx.Dialog):
         self.CenterOnParent()
 
     def reloadAllFields(self):
-        self.privateKeyLocationField.SetValue(self.privateKeyFilePath)
+        self.privateKeyLocationField.SetValue(self.keyModel.getPrivateKeyFilePath())
         self.populatePublicKeyLocationField()
         self.populateFingerprintAndKeyTypeFields()
         self.populateFingerprintInAgentField()
@@ -240,47 +240,39 @@ class InspectKeyDialog(wx.Dialog):
 
     def populatePublicKeyLocationField(self):
         self.publicKeyFilePath = ""
-        if os.path.exists(self.privateKeyFilePath + ".pub"):
-            self.publicKeyFilePath = self.privateKeyFilePath + ".pub"
+        if os.path.exists(self.keyModel.getPrivateKeyFilePath() + ".pub"):
+            self.publicKeyFilePath = self.keyModel.getPrivateKeyFilePath() + ".pub"
         self.publicKeyLocationField.SetValue(self.publicKeyFilePath)
 
     def populateFingerprintAndKeyTypeFields(self):
 
-        # ssh-keygen can give us public key fingerprint, key type and size from private key
-
-        proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.privateKeyFilePath], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-        stdout,stderr = proc.communicate()
-        sshKeyGenOutComponents = stdout.split(" ")
-        if len(sshKeyGenOutComponents)>1:
-            publicKeyFingerprint = sshKeyGenOutComponents[1]
-        else:
-            publicKeyFingerprint = ""
+        key = self.keyModel.fingerprintPrivateKeyFile()
+        keyType = ""
+        publicKeyFingerprint = ""
+        if key!= None:
+            sshKeyGenOutComponents = key.split(" ")
+            if len(sshKeyGenOutComponents)>1:
+                publicKeyFingerprint = sshKeyGenOutComponents[1]
+            if len(sshKeyGenOutComponents)>3:
+                keyType = sshKeyGenOutComponents[-1].strip().strip("(").strip(")")
         self.publicKeyFingerprintField.SetValue(publicKeyFingerprint)
-        if len(sshKeyGenOutComponents)>3:
-            keyType = sshKeyGenOutComponents[-1].strip().strip("(").strip(")")
-        else:
-            keyType = ""
         self.keyTypeField.SetLabel(keyType)
 
     def populateFingerprintInAgentField(self):
 
-        # ssh-add -l | grep Launcher
-
         publicKeyFingerprintInAgent = ""
-        proc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-l"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-        fingerprintLinesInAgent = proc.stdout.readlines()
-        for fingerprintLine in fingerprintLinesInAgent:
-            if "Launcher" in fingerprintLine:
-                sshAddOutComponents = fingerprintLine.split(" ")
-                if len(sshAddOutComponents)>1:
-                    publicKeyFingerprintInAgent = sshAddOutComponents[1]
+        key = self.keyModel.fingerprintAgent()
+        if key != None:
+            sshAddOutComponents = key.split(" ")
+            if len(sshAddOutComponents)>1:
+                publicKeyFingerprintInAgent = sshAddOutComponents[1]
         self.fingerprintInAgentField.SetValue(publicKeyFingerprintInAgent)
 
     def onAddKeyToOrRemoveFromAgent(self, event):
         if self.addKeyToOrRemoveKeyFromAgentButton.GetLabel()=="Add MASSIVE Launcher key to agent":
-            keyModelObject = KeyModel(self.privateKeyFilePath)
 
-            ppd = KeyDist.passphraseDialog(None,wx.ID_ANY,'Unlock Key',"Please enter the passphrase for the key","OK","Cancel")
+            import cvlsshutils
+            ppd = cvlsshutils.PassphraseDialog.passphraseDialog(None,wx.ID_ANY,'Unlock Key',"Please enter the passphrase for the key","OK","Cancel")
             (canceled,passphrase) = ppd.getPassword()
             if (canceled):
                 return
@@ -303,13 +295,12 @@ class InspectKeyDialog(wx.Dialog):
                     logger.debug("InspectKeyDialog.onAddKeyToOrRemoveFromAgent callback: " + message)
                     dlg = wx.MessageDialog(self, message, "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
-                success = keyModelObject.addKeyToAgent(passphrase, keyAddedSuccessfullyCallback, passphraseIncorrectCallback, privateKeyFileNotFoundCallback, failedToConnectToAgentCallback)
+                success = self.keyModel.addKeyToAgent(passphrase, keyAddedSuccessfullyCallback, passphraseIncorrectCallback, privateKeyFileNotFoundCallback, failedToConnectToAgentCallback)
                 if success:
                     self.populateFingerprintInAgentField()
                     self.addKeyToOrRemoveKeyFromAgentButton.SetLabel("Remove MASSIVE Launcher key from agent")
         elif self.addKeyToOrRemoveKeyFromAgentButton.GetLabel()=="Remove MASSIVE Launcher key from agent":
-            keyModelObject = KeyModel(self.privateKeyFilePath)
-            success = keyModelObject.removeKeyFromAgent()
+            success = self.keyModel.removeKeyFromAgent()
             if success:
                 self.populateFingerprintInAgentField()
                 self.addKeyToOrRemoveKeyFromAgentButton.SetLabel("Add MASSIVE Launcher key to agent")
@@ -321,7 +312,8 @@ class InspectKeyDialog(wx.Dialog):
         if dlg.ShowModal()==wx.ID_YES:
 
             keyModelObject = KeyModel(self.privateKeyFilePath)
-            success = keyModelObject.deleteKeyAndRemoveFromAgent()
+            success = self.keyModel.deleteKey()
+            success = success and self.keyModel.removeKeyFromAgent()
             if success:
                 message = "Your Launcher key was successfully deleted!"
             else:
@@ -336,14 +328,14 @@ class InspectKeyDialog(wx.Dialog):
 
     def onChangePassphrase(self,event):
         from ChangeKeyPassphraseDialog import ChangeKeyPassphraseDialog
-        changeKeyPassphraseDialog = ChangeKeyPassphraseDialog(self, wx.ID_ANY, 'Change Key Passphrase', self.privateKeyFilePath)
+        changeKeyPassphraseDialog = ChangeKeyPassphraseDialog(self, wx.ID_ANY, 'Change Key Passphrase', self.keyModel)
         if changeKeyPassphraseDialog.ShowModal()==wx.ID_OK:
             logger.debug("Passphrase changed successfully!")
 
     def onResetKey(self, event):
         from ResetKeyDialog import ResetKeyDialog
         keyInAgent = self.fingerprintInAgentField.GetValue()!=""
-        resetKeyDialog = ResetKeyDialog(self, wx.ID_ANY, 'Reset Key', self.privateKeyFilePath, keyInAgent)
+        resetKeyDialog = ResetKeyDialog(self, wx.ID_ANY, 'Reset Key', self.keyModel, keyInAgent)
         resetKeyDialog.ShowModal()
 
         self.reloadAllFields()
@@ -360,28 +352,7 @@ class InspectKeyDialog(wx.Dialog):
         self.Show(False)
 
     def startAgent(self):
-        agentenv = None
-        try:
-            agentenv = os.environ['SSH_AUTH_SOCK']
-        except:
-            logger.debug(traceback.format_exc())
-            try:
-                agent = subprocess.Popen(self.sshPathsObject.sshAgentBinary.strip('"'),stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
-                stdout = agent.stdout.readlines()
-                for line in stdout:
-                    if sys.platform.startswith('win'):
-                        match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
-                    else:
-                        match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*); export SSH_AUTH_SOCK;$",line)
-                    if match:
-                        agentenv = match.group('socket')
-                        os.environ['SSH_AUTH_SOCK'] = agentenv
-                if agent is None:
-                    logger.debug("I tried to start an ssh agent, but failed with the error message %s"%str(stdout))
-                    return
-            except Exception as e:
-                logger.debug(message="I tried to start an ssh agent, but failed with the error message %s" % str(e))
-                return
+        self.keyModel.startAgent()
 
 
 class MyApp(wx.App):
