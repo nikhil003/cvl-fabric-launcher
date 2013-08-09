@@ -143,13 +143,18 @@ class KeyModel():
         if self.pagaent!=None:
             pagaentPid=self.pagaent.pid
             self.pagaent.kill()
-            subprocess.call(['taskkill', '/F', '/T', '/PID', str(pagaentPid)])
+            if sys.platform.startswith('win'):
+                p=subprocess.Popen(['taskkill', '/F', '/T', '/PID', str(pagaentPid)],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+                (stdout,stderr)=p.communicate
+                logger.debug("KeyModel.stopAgent, Pagaent %s %s"%(stdout,stderr))
             self.pagaent=None
         if self.sshAgentProcess!=None:
             self.sshAgentProcess.kill()
             self.sshAgentProcess=None
             if sys.platform.startswith('win'):
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.agentPid)])
+                p=subprocess.Popen(['taskkill', '/F', '/T', '/PID', str(self.agentPid)],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+                (stdout,stderr)=p.communicate
+                logger.debug("KeyModel.stopAgent, Agaent %s %s"%(stdout,stderr))
 
 
     def startAgent(self):
