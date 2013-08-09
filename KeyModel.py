@@ -15,7 +15,7 @@ from logger.Logger import logger
 
 from os.path import expanduser
 class sshpaths():
-    def double_quote(x):
+    def double_quote(self,x):
         return '"' + x + '"'
     def ssh_binaries(self):
         """
@@ -35,13 +35,13 @@ class sshpaths():
                     launcherModulePath = os.getcwd()
                 f = lambda x: os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', x)
 
-            sshBinary        = double_quote(f('ssh.exe'))
-            sshKeyGenBinary  = double_quote(f('ssh-keygen.exe'))
-            sshKeyScanBinary = double_quote(f('ssh-keyscan.exe'))
-            sshAgentBinary   = double_quote(f('charade.exe'))
-            sshAddBinary     = double_quote(f('ssh-add.exe'))
-            chownBinary      = double_quote(f('chown.exe'))
-            chmodBinary      = double_quote(f('chmod.exe'))
+            sshBinary        = self.double_quote(f('ssh.exe'))
+            sshKeyGenBinary  = self.double_quote(f('ssh-keygen.exe'))
+            sshKeyScanBinary = self.double_quote(f('ssh-keyscan.exe'))
+            sshAgentBinary   = self.double_quote(f('charade.exe'))
+            sshAddBinary     = self.double_quote(f('ssh-add.exe'))
+            chownBinary      = self.double_quote(f('chown.exe'))
+            chmodBinary      = self.double_quote(f('chmod.exe'))
         elif sys.platform.startswith('darwin'):
             sshBinary        = '/usr/bin/ssh'
             sshKeyGenBinary  = '/usr/bin/ssh-keygen'
