@@ -29,7 +29,10 @@ class sshpaths():
             if hasattr(sys, 'frozen'):
                 f = lambda x: os.path.join(os.path.dirname(sys.executable), OPENSSH_BUILD_DIR, 'bin', x)
             else:
-                launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+                try:
+                    launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+                except:
+                    launcherModulePath = os.getcwd()
                 f = lambda x: os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', x)
 
             sshBinary        = double_quote(f('ssh.exe'))
@@ -119,7 +122,10 @@ class KeyModel():
         if hasattr(sys, 'frozen'):
             pageant = os.path.join(os.path.dirname(sys.executable), self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
         else:
-            launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+            try:
+                launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+            except:
+                launcherModulePath = os.getcwd()
             pageant = os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
 
         import win32process
