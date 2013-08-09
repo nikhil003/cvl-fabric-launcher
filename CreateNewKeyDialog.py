@@ -10,7 +10,7 @@ from KeyModel import KeyModel
 from logger.Logger import logger
 
 class CreateNewKeyDialog(wx.Dialog):
-    def __init__(self, parent, id, title, displayStrings=None,displayMessageBoxReportingSuccess=True):
+    def __init__(self, parent, id, title, keyModel, displayStrings,displayMessageBoxReportingSuccess=True):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.displayStrings = displayStrings
@@ -81,6 +81,8 @@ class CreateNewKeyDialog(wx.Dialog):
 
         self.createNewKeyDialogPanelSizer.Add(self.passphrasePanel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
+        self.keyModel = keyModel
+
         # Private key location
 
         self.privateKeyLocationPanel = wx.Panel(self.createNewKeyDialogPanel, wx.ID_ANY)
@@ -98,9 +100,7 @@ class CreateNewKeyDialog(wx.Dialog):
         self.innerPrivateKeyLocationPanelSizer.Add(self.privateKeyLocationLabel)
 
         self.privateKeyLocationField = wx.TextCtrl(self.innerPrivateKeyLocationPanel, wx.ID_ANY, style=wx.TE_READONLY)
-        defaultPrivateKeyLocation = os.path.join(os.path.expanduser('~'), '.ssh', "MassiveLauncherKey")
-        self.privateKeyDir = os.path.join(os.path.expanduser('~'), '.ssh')
-        self.privateKeyFilename = "MassiveLauncherKey"
+        defaultPrivateKeyLocation = self.keyModel.getPrivateKeyFilePath()
         self.privateKeyLocationField.SetValue(defaultPrivateKeyLocation)
 
         self.innerPrivateKeyLocationPanelSizer.Add(self.privateKeyLocationField, flag=wx.EXPAND)
@@ -185,32 +185,8 @@ class CreateNewKeyDialog(wx.Dialog):
                             "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             return
-
-        keyModelObject = KeyModel(self.getPrivateKeyFileLocation())
-        keyComment = os.path.basename(self.getPrivateKeyFileLocation())
-        def keyCreatedSuccessfullyCallback():
-            logger.debug("CreateNewKeyDialog callback: Key created successfully!")
-        def keyFileAlreadyExistsCallback():
-            logger.debug("CreateNewKeyDialog callback: Key file already exists!")
-        def passphraseTooShortCallback():
-            logger.debug("CreateNewKeyDialog callback: Passphrase was too short!")
-        success = keyModelObject.generateNewKey(self.getPassphrase(),keyComment,keyCreatedSuccessfullyCallback,keyFileAlreadyExistsCallback,passphraseTooShortCallback)
-        if success:
-            message = "Your Launcher key was created successfully!"
-        else:
-            message = "An error occured while attempting to create your key."
-        if self.displayMessageBoxReportingSuccess:
-            dlg = wx.MessageDialog(self,
-                message,
-                "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
-            dlg.ShowModal()
-        else:
-            logger.debug("CreateNewKeyDialog: " + message)
-
-        if success:
-            #self.Show(False)
-            self.reopenProgressDialogIfNecessary()
-            self.EndModal(wx.ID_OK)
+        self.reopenProgressDialogIfNecessary()
+        self.EndModal(wx.ID_OK)
 
     def reopenProgressDialogIfNecessary(self):
         if self.closedProgressDialog:

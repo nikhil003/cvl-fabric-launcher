@@ -19,103 +19,12 @@ import pkgutil
 import signal
 
 from logger.Logger import logger
+from PassphraseDialog import passphraseDialog
 
-OPENSSH_BUILD_DIR = 'openssh-cygwin-stdin-build'
 
 if not sys.platform.startswith('win'):
     import pexpect
 
-def is_pageant_running():
-    username = os.path.split(os.path.expanduser('~'))[-1]
-    return 'PAGEANT.EXE' in os.popen('tasklist /FI "USERNAME eq %s"' % username).read().upper()
-
-def start_pageant():
-    if is_pageant_running():
-        # Pageant pops up a dialog box if we try to run a second
-        # instance, so leave immediately.
-        return
-
-    if hasattr(sys, 'frozen'):
-        pageant = os.path.join(os.path.dirname(sys.executable), OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
-    else:
-        #pageant = os.path.join(os.getcwd(), OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
-        launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
-        pageant = os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
-
-    import win32process
-    subprocess.Popen([pageant], creationflags=win32process.DETACHED_PROCESS)
-
-def double_quote(x):
-    return '"' + x + '"'
-
-class sshpaths():
-    def ssh_binaries(self):
-        """
-        Locate the ssh binaries on various systems. On Windows we bundle a
-        stripped-down OpenSSH build that uses Cygwin.
-        """
-
-        if sys.platform.startswith('win'):
-            # Assume that our InnoSetup script will set appropriate permissions on the "tmp" directory.
-
-            if hasattr(sys, 'frozen'):
-                f = lambda x: os.path.join(os.path.dirname(sys.executable), OPENSSH_BUILD_DIR, 'bin', x)
-            else:
-                launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
-                f = lambda x: os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', x)
-
-            sshBinary        = double_quote(f('ssh.exe'))
-            sshKeyGenBinary  = double_quote(f('ssh-keygen.exe'))
-            sshKeyScanBinary = double_quote(f('ssh-keyscan.exe'))
-            sshAgentBinary   = double_quote(f('charade.exe'))
-            sshAddBinary     = double_quote(f('ssh-add.exe'))
-            chownBinary      = double_quote(f('chown.exe'))
-            chmodBinary      = double_quote(f('chmod.exe'))
-        elif sys.platform.startswith('darwin'):
-            sshBinary        = '/usr/bin/ssh'
-            sshKeyGenBinary  = '/usr/bin/ssh-keygen'
-            sshKeyScanBinary = '/usr/bin/ssh-keyscan'
-            sshAgentBinary   = '/usr/bin/ssh-agent'
-            sshAddBinary     = '/usr/bin/ssh-add'
-            chownBinary      = '/usr/sbin/chown'
-            chmodBinary      = '/bin/chmod'
-        else:
-            sshBinary        = '/usr/bin/ssh'
-            sshKeyGenBinary  = '/usr/bin/ssh-keygen'
-            sshKeyScanBinary = '/usr/bin/ssh-keyscan'
-            sshAgentBinary   = '/usr/bin/ssh-agent'
-            sshAddBinary     = '/usr/bin/ssh-add'
-            chownBinary      = '/bin/chown'
-            chmodBinary      = '/bin/chmod'
- 
-        return (sshBinary, sshKeyGenBinary, sshAgentBinary, sshAddBinary, sshKeyScanBinary, chownBinary, chmodBinary,)
-    
-    def ssh_files(self):
-        known_hosts_file = os.path.join(expanduser('~'), '.ssh', 'known_hosts')
-        sshKeyPath = os.path.join(expanduser('~'), '.ssh', self.keyFileName)
-        if self.massiveLauncherConfig is not None:
-            self.massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_launcher_private_key_path", sshKeyPath)
-            with open(self.massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                self.massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-
-        return (sshKeyPath,known_hosts_file,)
-
-    def __init__(self, keyFileName, massiveLauncherConfig=None, massiveLauncherPreferencesFilePath=None):
-        (sshBinary, sshKeyGenBinary, sshAgentBinary, sshAddBinary, sshKeyScanBinary,chownBinary, chmodBinary,) = self.ssh_binaries()
-        self.keyFileName                = keyFileName
-        self.massiveLauncherConfig      = massiveLauncherConfig
-        self.massiveLauncherPreferencesFilePath = massiveLauncherPreferencesFilePath
-        (sshKeyPath,sshKnownHosts,)     = self.ssh_files()
-        self.sshBinary                  = sshBinary
-        self.sshKeyGenBinary            = sshKeyGenBinary
-        self.sshAgentBinary             = sshAgentBinary
-        self.sshAddBinary               = sshAddBinary
-        self.sshKeyScanBinary           = sshKeyScanBinary
-        self.chownBinary                = chownBinary
-        self.chmodBinary                = chmodBinary
-
-        self.sshKeyPath                 = sshKeyPath
-        self.sshKnownHosts              = sshKnownHosts
 
 class KeyDist():
 
@@ -123,190 +32,6 @@ class KeyDist():
         returnval = self.completed.isSet()
         return returnval
 
-    class pass2Dialog(wx.Dialog):
-
-        def __init__(self, parent, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
-            #wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER | wx.STAY_ON_TOP)
-            wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_DIALOG_STYLE ^ wx.RESIZE_BORDER)
-
-            self.closedProgressDialog = False
-            self.parent = parent
-            if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-                launcherMainFrame = parent
-                if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                    launcherMainFrame.progressDialog.Show(False)
-                    self.closedProgressDialog = True
-
-            self.SetTitle(title)
-            self.label = wx.StaticText(self, -1, text)
-            self.PassphraseField = wx.TextCtrl(self, wx.ID_ANY,style=wx.TE_PASSWORD ^ wx.TE_PROCESS_ENTER)
-            self.Passphrase2Field = wx.TextCtrl(self, wx.ID_ANY,style=wx.TE_PASSWORD ^ wx.TE_PROCESS_ENTER)
-            self.PassphraseField.SetFocus()
-            self.canceled=True
-            self.Cancel = wx.Button(self,-1,label=cancelString)
-            self.OK = wx.Button(self,-1,label=okString)
-            self.Help = wx.Button(self,-1,label=helpString)
-
-            self.dataPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
-            self.fieldsSizer = wx.BoxSizer(wx.VERTICAL)
-            self.dataPanelSizer.Add(self.label,flag=wx.ALL,border=5)
-            self.fieldsSizer.Add(self.PassphraseField,proportion=1,flag=wx.ALL,border=5)
-            self.fieldsSizer.Add(self.Passphrase2Field,proportion=1,flag=wx.ALL,border=5)
-            self.dataPanelSizer.Add(self.fieldsSizer)
-
-            self.buttonPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
-            self.buttonPanelSizer.Add(self.Cancel,0,wx.ALL,5)
-            self.buttonPanelSizer.Add(self.Help,0,wx.ALL,5)
-            self.buttonPanelSizer.AddStretchSpacer(prop=1)
-            self.buttonPanelSizer.Add(self.OK,0,wx.ALL,5)
-
-            self.sizer = wx.BoxSizer(wx.VERTICAL)
-            self.sizer.Add(self.dataPanelSizer,flag=wx.EXPAND)
-            self.sizer.Add(self.buttonPanelSizer,flag=wx.EXPAND)
-            self.Passphrase2Field.Bind(wx.EVT_TEXT_ENTER,self.onEnter)
-            self.OK.Bind(wx.EVT_BUTTON,self.onEnter)
-            self.OK.SetDefault()
-            self.Cancel.Bind(wx.EVT_BUTTON,self.onEnter)
-            self.Help.Bind(wx.EVT_BUTTON,self.onHelp)
-#
-            self.border = wx.BoxSizer(wx.VERTICAL)
-            self.border.Add(self.sizer, 0, wx.EXPAND|wx.ALL, 15)
-            self.CentreOnParent(wx.BOTH)
-            self.SetSizer(self.border)
-            self.Fit()
-
-            # User can click close icon in title bar:
-            self.Bind(wx.EVT_CLOSE,self.onEnter)
-
-        def onEnter(self,e):
-            self.canceled=True
-            if (e.GetId() == self.OK.GetId() or e.GetId() == self.Passphrase2Field.GetId()):
-                logger.debug('onEnter: canceled = False')
-                self.canceled = False
-                self.pass1 = self.PassphraseField.GetValue()
-                self.pass2 = self.Passphrase2Field.GetValue()
-                self.EndModal(wx.ID_OK)
-            else:
-                logger.debug('onEnter: canceled = True')
-                self.pass1=None
-                self.pass2=None
-                self.canceled = True
-                self.password = None
-                self.EndModal(wx.ID_CANCEL)
-
-            if self.closedProgressDialog:
-                if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-                    launcherMainFrame = self.parent
-                    if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                        launcherMainFrame.progressDialog.Show(True)
- 
-        def onHelp(self,e):
-            from help.HelpController import helpController
-            helpController.Display("Authentication Overview")
-
-
-        def getPassword(self):
-            val = self.ShowModal()
-            pass1 = self.pass1
-            pass2 = self.pass2
-            canceled = self.canceled
-            self.Destroy()
-            return (canceled,pass1,pass2)
-
-    class passphraseDialog(wx.Dialog):
-
-        def __init__(self, parent, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
-            #wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER | wx.STAY_ON_TOP)
-            wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_DIALOG_STYLE ^ wx.RESIZE_BORDER)
-
-            self.closedProgressDialog = False
-            self.parent = parent
-            if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-                launcherMainFrame = parent
-                if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                    launcherMainFrame.progressDialog.Show(False)
-                    self.closedProgressDialog = True
-
-            self.SetTitle(title)
-            self.label = wx.StaticText(self, -1, text)
-            self.PassphraseField = wx.TextCtrl(self, wx.ID_ANY,style=wx.TE_PASSWORD ^ wx.TE_PROCESS_ENTER)
-            self.PassphraseField.SetFocus()
-            self.canceled=True
-            self.Cancel = wx.Button(self,-1,label=cancelString)
-            self.OK = wx.Button(self,-1,label=okString)
-            self.Help = wx.Button(self,-1,label=helpString)
-
-            self.dataPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
-            self.dataPanelSizer.Add(self.label,flag=wx.ALL,border=5)
-            self.dataPanelSizer.Add(self.PassphraseField,proportion=1,flag=wx.ALL,border=5)
-
-            self.buttonPanelSizer=wx.BoxSizer(wx.HORIZONTAL)
-            self.buttonPanelSizer.Add(self.Cancel,0,wx.ALL,5)
-            self.buttonPanelSizer.Add(self.Help,0,wx.ALL,5)
-            self.buttonPanelSizer.AddStretchSpacer(prop=1)
-            self.buttonPanelSizer.Add(self.OK,0,wx.ALL,5)
-
-            self.sizer = wx.BoxSizer(wx.VERTICAL)
-            self.sizer.Add(self.dataPanelSizer,flag=wx.EXPAND)
-            self.sizer.Add(self.buttonPanelSizer,flag=wx.EXPAND)
-            self.PassphraseField.Bind(wx.EVT_TEXT_ENTER,self.onEnter)
-            self.OK.Bind(wx.EVT_BUTTON,self.onEnter)
-            self.OK.SetDefault()
-            self.Cancel.Bind(wx.EVT_BUTTON,self.onEnter)
-            self.Help.Bind(wx.EVT_BUTTON,self.onHelp)
-#
-            self.border = wx.BoxSizer(wx.VERTICAL)
-            self.border.Add(self.sizer, 0, wx.EXPAND|wx.ALL, 15)
-            self.CentreOnParent(wx.BOTH)
-            self.SetSizer(self.border)
-            self.Fit()
-
-            # User can click close icon in title bar:
-            self.Bind(wx.EVT_CLOSE,self.onEnter)
-
-        def onEnter(self,e):
-            self.canceled=True
-            if (e.GetId() == self.OK.GetId() or e.GetId() == self.PassphraseField.GetId()):
-                logger.debug('onEnter: canceled = False')
-                self.canceled = False
-                self.password = self.PassphraseField.GetValue()
-                self.EndModal(wx.ID_OK)
-            else:
-                logger.debug('onEnter: canceled = True')
-                self.canceled = True
-                self.password = None
-                self.EndModal(wx.ID_CANCEL)
-
-            if self.closedProgressDialog:
-                if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-                    launcherMainFrame = self.parent
-                    if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                        launcherMainFrame.progressDialog.Show(True)
- 
-        def onHelp(self,e):
-            from help.HelpController import helpController
-            helpController.Display("Authentication Overview")
-            #helpDialog = HelpDialog(self.GetParent(), title="MASSIVE/CVL Launcher", name="MASSIVE/CVL Launcher",pos=(200,150),size=(680,290),style=wx.STAY_ON_TOP)
-            #helpPanel = wx.Panel(helpDialog)
-            #helpPanelSizer = wx.FlexGridSizer()
-            #helpPanel.SetSizer(helpPanelSizer)
-            #helpText = wx.TextCtrl(helpPanel,wx.ID_ANY,value="",size=(400,400),style=wx.TE_READONLY|wx.TE_MULTILINE)
-            #try:
-                #helpText.LoadFile("sshHelpText.txt")
-            #except:
-                #pass
-            #helpPanelSizer.Add(helpText,border=20,flag=wx.BORDER|wx.TOP|wx.RIGHT)
-            #helpPanelSizer.Fit(helpPanel)
-            #helpDialog.addPanel(helpPanel)
-            #helpDialog.ShowModal()
-
-
-        def getPassword(self):
-            val = self.ShowModal()
-            passwd = self.password
-            canceled = self.canceled
-            self.Destroy()
-            return (canceled,passwd)
 
     class startAgentThread(Thread):
         def __init__(self,keydistObject):
@@ -327,26 +52,11 @@ class KeyDist():
             try:
                 agentenv = os.environ['SSH_AUTH_SOCK']
             except:
+                # If we start the agent, we will stop the agent.
+                self.keydistObject.stopAgentOnExit.set()
                 logger.debug(traceback.format_exc())
                 try:
-                    self.keydistObject.sshAgentProcess = subprocess.Popen(self.keydistObject.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
-                    stdout = self.keydistObject.sshAgentProcess.stdout.readlines()
-                    for line in stdout:
-                        logger.debug("startAgentThread: line = " + line)
-                        if sys.platform.startswith('win'):
-                            match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
-                        else:
-                            match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*); export SSH_AUTH_SOCK;$",line)
-                        if match:
-                            agentenv = match.group('socket')
-                            os.environ['SSH_AUTH_SOCK'] = agentenv
-                        match2 = re.search("^SSH_AGENT_PID=(?P<pid>.*);.*$",line)
-                        if match2:
-                            pid = match2.group('pid')
-                            os.environ['SSH_AGENT_PID'] = pid
-                    if self.keydistObject.sshAgentProcess is None:
-                        self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message %s"%str(stdout))
-                        return
+                    self.keydistObject.keyModel.startAgent()
                 except Exception as e:
                     self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message %s" % str(e))
                     return
@@ -371,7 +81,7 @@ class KeyDist():
             logger.debug("loadkeyThread: started")
             try:
                 logger.debug("loadkeyThread: Trying to open the key file")
-                with open(self.keydistObject.sshpaths.sshKeyPath,'r'): pass
+                with open(self.keydistObject.keyModel.sshpaths.sshKeyPath,'r'): pass
                 event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
             except Exception as e:
                 logger.error("loadkeyThread: Failed to open the key file %s" % str(e))
@@ -395,51 +105,18 @@ class KeyDist():
 
         def run(self):
             logger.debug("genkeyThread: started")
-            if os.path.exists(self.keydistObject.sshpaths.sshKeyPath):
-                # This is most likely to happen if using a temporary private key file, i.e. when using "public mode".
-                logger.debug("Found an existing file in the private key file path we got from tempfile.NamedTemporaryFile: " + self.keydistObject.sshpaths.sshKeyPath)
-                logger.debug("Deleting : " + self.keydistObject.sshpaths.sshKeyPath)
-                os.unlink(self.keydistObject.sshpaths.sshKeyPath)
-                logger.debug("Deleted : " + self.keydistObject.sshpaths.sshKeyPath)
-            logger.debug("Private key will be saved to " + self.keydistObject.sshpaths.sshKeyPath)
-
-            cmd = '{sshkeygen} -q -f "{keyfilename}" -C "{keycomment}" -N \"{password}\"'.format(sshkeygen=self.keydistObject.sshpaths.sshKeyGenBinary,
-                                                                                                 keyfilename=self.keydistObject.sshpaths.sshKeyPath,
-                                                                                                 keycomment=self.keydistObject.launcherKeyComment,
-                                                                                                 password=self.keydistObject.password)
-            # FIXME!!!!!!!!!!
-            # We shouldn't be logging something which displays the user's passphrase in plain text,
-            # but it might be useful to uncomment this for private testing by developers.
-            # logger.debug("genKeyThread: cmd: " + cmd)
-            try:
-                keygen_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
-                (stdout,stderr) = keygen_proc.communicate("\n\n")
-                logger.debug("genkeyThread: sshkeygen completed")
-                if (stderr != None):
-                    logger.debug("genkeyThread: key gen proc returned an error %s"%stderr)
-                    self.keydistObject.cancel("Unable to generate a new ssh key pair %s"%stderr)
-                    return
-                if (stdout != None):
-                    logger.error("genkeyThread: key gen proc returned a message %s"%stdout)
-                    #self.keydistObject.cancel("Unable to generate a new ssh key pair %s"%stderr)
-                    #return
-            except Exception as e:
-                logger.debug("genkeyThread: sshkeygen threw an exception %s" % str(e))
-                self.keydistObject.cancel("Unable to generate a new ssh key pair: %s" % str(e))
-                return
-
-
-            try:
-                logger.debug("genkeyThread: sshkeygen completed, trying to open the key file")
-                with open(self.keydistObject.sshpaths.sshKeyPath,'r'): pass
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject) # Auth hasn't really failed but this event will trigger loading the key
-            except Exception as e:
-                logger.error("genkeyThread: ssh key gen failed %s" % str(e))
-                self.keydistObject.cancel("Unable to generate a new ssh key pair %s" % str(e))
-                return
-            if (not self.stopped()):
+            if self.keydistObject.removeKeyOnExit.isSet():
+                self.keydistObject.keyModel.deleteKey()
+            self.nextEvent=None
+            def success(): 
+                self.nextEvent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
+            def failure(): 
+                self.keydistObject.cancel("Unable to generate a new key pair")
+            self.keydistObject.keyModel.generateNewKey(self.keydistObject.password,success,failure,failure)
+            self.keydistObject.keyCreated.set()
+            if (not self.stopped() and self.nextEvent != None):
                 logger.debug("genkeyThread: generating LOADKEY event from genkeyThread")
-                wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),event)
+                wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),self.nextEvent)
 
     class getPubKeyThread(Thread):
         def __init__(self,keydistObject):
@@ -456,7 +133,7 @@ class KeyDist():
         def run(self):
             threadid = threading.currentThread().ident
             logger.debug("getPubKeyThread %i: started"%threadid)
-            sshKeyListCmd = self.keydistObject.sshpaths.sshAddBinary + " -L "
+            sshKeyListCmd = self.keydistObject.keyModel.sshpaths.sshAddBinary + " -L "
             logger.debug('getPubKeyThread: running command: ' + sshKeyListCmd)
             keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True)
             (stdout,stderr) = keylist.communicate()
@@ -471,7 +148,10 @@ class KeyDist():
                 match = re.search("^(?P<keytype>\S+)\ (?P<key>\S+)\ (?P<keycomment>.+)$",line)
                 if match:
                     keycomment = match.group('keycomment')
-                    correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.launcherKeyComment),keycomment)
+                    if self.keydistObject.keyModel.isTemporaryKey():
+                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.keyModel.getPrivateKeyFilePath()),keycomment)
+                    else:
+                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.keyModel.getLauncherKeyComment()),keycomment)
                     if correctKey:
                         self.keydistObject.keyloaded.set()
                         logger.debug("getPubKeyThread %i: loaded key successfully"%threadid)
@@ -494,8 +174,8 @@ class KeyDist():
         def __init__(self,keydistObject):
             Thread.__init__(self)
             self.keydistObject = keydistObject
-            self.ssh_keygen_cmd = '{sshkeygen} -F {host} -f {known_hosts_file}'.format(sshkeygen=self.keydistObject.sshpaths.sshKeyGenBinary,host=self.keydistObject.host,known_hosts_file=self.keydistObject.sshpaths.sshKnownHosts)
-            self.ssh_keyscan_cmd = '{sshscan} -H {host}'.format(sshscan=self.keydistObject.sshpaths.sshKeyScanBinary,host=self.keydistObject.host)
+            self.ssh_keygen_cmd = '{sshkeygen} -F {host} -f {known_hosts_file}'.format(sshkeygen=self.keydistObject.keyModel.sshpaths.sshKeyGenBinary,host=self.keydistObject.host,known_hosts_file=self.keydistObject.keyModel.sshpaths.sshKnownHosts)
+            self.ssh_keyscan_cmd = '{sshscan} -H {host}'.format(sshscan=self.keydistObject.keyModel.sshpaths.sshKeyScanBinary,host=self.keydistObject.host)
             self._stop = Event()
 
         def stop(self):
@@ -515,7 +195,7 @@ class KeyDist():
             return hostkeys
                     
         def appendKey(self,key):
-            with open(self.keydistObject.sshpaths.sshKnownHosts,'a+') as known_hosts:
+            with open(self.keydistObject.keyModel.sshpaths.sshKnownHosts,'a+') as known_hosts:
                 known_hosts.write(key)
                 known_hosts.write('\n')
             
@@ -568,7 +248,7 @@ class KeyDist():
             os.close(fd)
             os.unlink(path)
             
-            ssh_cmd = '{sshbinary} -o IdentityFile={nonexistantpath} -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {login} {host} echo "success_testauth"'.format(sshbinary=self.keydistObject.sshpaths.sshBinary,
+            ssh_cmd = '{sshbinary} -o IdentityFile={nonexistantpath} -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {login} {host} echo "success_testauth"'.format(sshbinary=self.keydistObject.keyModel.sshpaths.sshBinary,
                                                                                                                                                                                                              login=self.keydistObject.username,
                                                                                                                                                                                                              host=self.keydistObject.host,
                                                                                                                                                                                                              nonexistantpath=path)
@@ -627,24 +307,27 @@ class KeyDist():
 
         def run(self):
 
-            from KeyModel import KeyModel
+            self.nextEvent=None
             threadid=threading.currentThread().ident
             threadname=threading.currentThread().name
-            km = KeyModel(self.keydistObject.sshpaths.sshKeyPath)
+            km =self.keydistObject.keyModel
             if (self.keydistObject.password!=None):
                 password=self.keydistObject.password
                 newevent1 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_KEY_WRONGPASS, self.keydistObject)
             else:
                 newevent1 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_KEY_LOCKED, self.keydistObject)
                 password=""
-            incorrectCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent1)
-            newevent2 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_GETPUBKEY, self.keydistObject)
-            loadedCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent2)
-            newevent3 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self.keydistObject)
-            notFoundCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent3)
-            newevent4 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEEDAGENT,self.keydistObject)
-            failedToConnectToAgentCallback=lambda:wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent4)
+            def incorrectCallback():
+                self.nextEvent = newevent1
+            def loadedCallback():
+                self.nextEvent =KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_GETPUBKEY, self.keydistObject)
+            def notFoundCallback():
+                self.nextEvent=KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self.keydistObject)
+            def failedToConnectToAgentCallback():
+                self.nextEvent=KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEEDAGENT,self.keydistObject)
             km.addKeyToAgent(password,loadedCallback,incorrectCallback,notFoundCallback,failedToConnectToAgentCallback)
+            if (not self.stopped() and self.nextEvent != None):
+                wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),self.nextEvent)
 
 
     class CopyIDThread(Thread):
@@ -709,12 +392,8 @@ class KeyDist():
             usingOneTimePassphrase = False
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_REQ):
                 logger.debug("received NEWPASS_REQ event")
-                #wx.CallAfter(event.keydist.getNewPassphrase_stage1,event.string)
-                if event.keydist.parentWindow is not None and event.keydist.parentWindow.__class__.__name__=="LauncherMainFrame":
-                    launcherMainFrame = event.keydist.parentWindow
-                    if 'public_mode' in launcherMainFrame.vncOptions and launcherMainFrame.vncOptions['public_mode']:
-                        usingOneTimePassphrase = True
-                if usingOneTimePassphrase:
+                if event.keydist.removeKeyOnExit.isSet():
+                    usingOneTimePassphrase = True
                     import string
                     import random
                     oneTimePassphrase=''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(10))
@@ -722,29 +401,12 @@ class KeyDist():
                     event.keydist.password = oneTimePassphrase
                 else:
                     wx.CallAfter(event.keydist.getPassphrase,event.arg)
-            if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_RPT):
-                logger.debug("received NEWPASS_RPT event")
-                wx.CallAfter(event.keydist.getNewPassphrase_stage2)
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE or usingOneTimePassphrase):
                 if event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE:
                     logger.debug("received NEWPASS_COMPLETE event")
                 if usingOneTimePassphrase:
                     logger.debug("Using one-time passphrase.")
-                usingCreateNewKeyDialogInsteadOfPass2Dialog = True
-                if usingCreateNewKeyDialogInsteadOfPass2Dialog and not usingOneTimePassphrase:
-                    logger.debug("Calling KeyDist.loadkeyThread instead of KeyDist.genkeyThread, because ssh-keygen has already been done by CreateNewKeyDialog (via KeyModel).")
-                    t = KeyDist.loadkeyThread(event.keydist)
-                else:
-                    logger.debug("We need to generate a new key.")
-                    if usingOneTimePassphrase:
-                        logger.debug("We need to generate a temporary key, because we're running in 'public mode'.")
-                        import tempfile
-                        temporaryPrivateKeyFile = tempfile.NamedTemporaryFile(mode='w+b', prefix='MassiveLauncherKey_', delete=False)
-                        event.keydist.sshpaths.sshKeyPath = temporaryPrivateKeyFile.name
-                        logger.debug("Using temporary private key for 'public mode': " + event.keydist.sshpaths.sshKeyPath)
-                    else:
-                        logger.debug("We will generate a persistent key in: " + event.keydist.sshpaths.sshKeyPath)
-                    t = KeyDist.genkeyThread(event.keydist)
+                t = KeyDist.genkeyThread(event.keydist)
                 t.setDaemon(True)
                 t.start()
                 event.keydist.threads.append(t)
@@ -803,7 +465,7 @@ class KeyDist():
 
 
         def needagent(event):
-            if (event.GetId() == KeyDist.EVT_KEYDIST_NEEDAGENT):
+            if (event.GetId() == KeyDist.EVT_KEYDIST_NEEDAGENT and not event.keydist.canceled()):
                 logger.debug("received NEEDAGENT event")
                 t = KeyDist.startAgentThread(event.keydist)
                 t.setDaemon(True)
@@ -813,7 +475,7 @@ class KeyDist():
                 event.Skip()
 
         def listpubkeys(event):
-            if (event.GetId() == KeyDist.EVT_KEYDIST_GETPUBKEY):
+            if (event.GetId() == KeyDist.EVT_KEYDIST_GETPUBKEY and not event.keydist.canceled()):
                 t = KeyDist.getPubKeyThread(event.keydist)
                 t.setDaemon(True)
                 t.start()
@@ -849,7 +511,7 @@ class KeyDist():
             event.Skip()
 
         def loadkey(event):
-            if (event.GetId() == KeyDist.EVT_KEYDIST_LOADKEY):
+            if (event.GetId() == KeyDist.EVT_KEYDIST_LOADKEY and not event.keydist.canceled()):
                 t = KeyDist.loadKeyThread(event.keydist)
                 t.setDaemon(True)
                 t.start()
@@ -859,7 +521,7 @@ class KeyDist():
                 event.Skip()
 
         def authfail(event):
-            if (event.GetId() == KeyDist.EVT_KEYDIST_AUTHFAIL):
+            if (event.GetId() == KeyDist.EVT_KEYDIST_AUTHFAIL and not event.keydist.canceled()):
                 if(not event.keydist.keyloaded.isSet()):
                     newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,event.keydist)
                     wx.PostEvent(event.keydist.notifywindow.GetEventHandler(),newevent)
@@ -890,7 +552,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,username,host,configName,notifywindow,sshPaths,displayStrings=None):
+    def __init__(self,parentWindow,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False):
 
         logger.debug("KeyDist.__init__")
 
@@ -946,20 +608,23 @@ class KeyDist():
         self.password = None
         self.pubkeylock = Lock()
         self.keycopied=Event()
-        self.sshpaths=sshPaths
-        self.launcherKeyComment=os.path.basename(self.sshpaths.sshKeyPath)
         self.authentication_success = False
         self.callback_success=None
         self.callback_fail=None
         self.callback_error = None
         self._canceled=Event()
-        self.removeKey=Event()
+        self.removeKeyOnExit=Event()
+        self.keyCreated=Event()
+        if removeKeyOnExit:
+            self.removeKeyOnExit.set()
+        self.stopAgentOnExit=Event()
+        self.keyModel = keyModel
 
     def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):
-            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePromptIncorrect,"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePromptIncorrect,"OK","Cancel")
         else:
-            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePrompt,"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePrompt,"OK","Cancel")
         (canceled,passphrase) = ppd.getPassword()
         if (canceled):
             self.cancel("Sorry, I can't continue without the passphrase for that key. If you've forgotten the passphrase, you could remove the key and generate a new one. The key is probably located in ~/.ssh/MassiveLauncherKey*")
@@ -972,9 +637,9 @@ class KeyDist():
 
     def getLoginPassword(self,incorrect=False):
         if (not incorrect):
-            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPrompt.format(**self.__dict__),"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPrompt.format(**self.__dict__),"OK","Cancel")
         else:
-            ppd = KeyDist.passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPromptIncorrect.format(**self.__dict__),"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPromptIncorrect.format(**self.__dict__),"OK","Cancel")
         (canceled,password) = ppd.getPassword()
         if canceled:
             self.cancel()
@@ -984,46 +649,16 @@ class KeyDist():
         wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
     def getPassphrase(self,reason=None):
-        usingCreateNewKeyDialogInsteadOfPass2Dialog = True
-        if usingCreateNewKeyDialogInsteadOfPass2Dialog:
-            from CreateNewKeyDialog import CreateNewKeyDialog
-            createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.displayStrings, displayMessageBoxReportingSuccess=False)
-            canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
-        else:
-            if (reason!=None):
-                if (reason.has_key('forbidden')):
-                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseEmptyForbidden,"OK","Cancel")
-                elif(reason.has_key('short')):
-                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseTooShort,"OK","Cancel")
-                elif(reason.has_key('mismatch')):
-                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphraseMismatch,"OK","Cancel")
-                else:
-                    ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphrase,"OK","Cancel")
-            else:
-                ppd = KeyDist.pass2Dialog(self.parentWindow,wx.ID_ANY,self.displayStrings.newPassphraseTitle,self.displayStrings.newPassphrase,"OK","Cancel")
-            (canceled,passphrase1,passphrase2) = ppd.getPassword()
+        from CreateNewKeyDialog import CreateNewKeyDialog
+        createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.displayStrings, displayMessageBoxReportingSuccess=False)
+        canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
         if (not canceled):
-            if usingCreateNewKeyDialogInsteadOfPass2Dialog:
-                logger.debug("User didn't cancel from CreateNewKeyDialog.")
-                self.password=createNewKeyDialog.getPassphrase()
-            else:
-                logger.debug("User didn't cancel from pass2Dialog.")
-                if (passphrase1 != None and len(passphrase1) == 0):
-                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('forbidden',True)]))
-                elif (passphrase1 != None and len(passphrase1) < 6):
-                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('short',True)]))
-                elif (passphrase1 != passphrase2):
-                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self,dict([('mismatch',True)]))
-                else:
-                    self.password=passphrase1
-                    event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
+            logger.debug("User didn't cancel from CreateNewKeyDialog.")
+            self.password=createNewKeyDialog.getPassphrase()
             event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
         else:
-            if usingCreateNewKeyDialogInsteadOfPass2Dialog:
-                logger.debug("KeyDist.getPassphrase: User canceled from CreateNewKeyDialog.")
-            else:
-                logger.debug("KeyDist.getPassphrase: User canceled from pass2Dialog.")
+            logger.debug("KeyDist.getPassphrase: User canceled from CreateNewKeyDialog.")
             self.cancel()
 
     def distributeKey(self,callback_success=None, callback_fail=None):
@@ -1044,39 +679,30 @@ class KeyDist():
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
 
     def shutdownReal(self):
-        #if (self.removeKey.isSet()):
 
-        if sys.platform.startswith('win'):
-            # Terminate charade.exe, but leave pageant.exe running:
-            if hasattr(self,"sshAgentProcess") and self.sshAgentProcess is not None:
-                if is_pageant_running():
-                    logger.debug("sshKeyDist.shutdownReal: Pageant.exe will be left running.")
-                else:
-                    logger.debug("sshKeyDist.shutdownReal: Pageant.exe doesn't seem to be running!  This is unexpected, but it doesn't affect shutdown of key dist tasks.")
-                try:
-                    logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process: " + self.sshpaths.sshAgentBinary)
-                    logger.debug("sshKeyDist.shutdownReal: Terminating SSH Agent process PID: " + os.environ['SSH_AGENT_PID'])
-                    os.kill(int(os.environ['SSH_AGENT_PID']), signal.SIGTERM)
-                    logger.debug("sshKeyDist.shutdownReal: Succeeded in terminating SSH Agent process.")
-                except:
-                    logger.debug(traceback.format_exc())
-
-        if self.parentWindow is not None and self.parentWindow.__class__.__name__=="LauncherMainFrame":
-            logger.debug("sshKeyDist.shutdownReal found parentWindow of class LauncherMainFrame.")
-            launcherMainFrame = self.parentWindow
-            if 'public_mode' in launcherMainFrame.vncOptions and launcherMainFrame.vncOptions['public_mode']:
-                from KeyModel import KeyModel
-                km = KeyModel(self.sshpaths.sshKeyPath)
-                logger.debug("sshKeyDist.shutdownReal: Running in 'public_mode', so removing key from agent and from " + self.sshpaths.sshKeyPath)
-                km.deleteKeyAndRemoveFromAgent()
-            else:
-                if launcherMainFrame.vncOptions['public_mode'] is not None:
-                    logger.debug("sshKeyDist.shutdownReal: launcherMainFrame.vncOptions['public_mode'] = " + str(launcherMainFrame.vncOptions['public_mode']))
-                else:
-                    logger.debug("sshKeyDist.shutdownReal: launcherMainFrame.vncOptions['public_mode'] is None.")
-                logger.debug("sshKeyDist.shutdownReal: Not running in 'public_mode', so not removing key from agent or from ~/.ssh/")
+        if self.removeKeyOnExit.isSet():
+            logger.debug("sshKeyDist.shutdownReal: removeKeyOnExit is set. Calling KeyModel.deleteKey and KeyModel.removeFromAgent")
+            # TODO
+            # These should be in their own thread. Both of these actions cause disk acceses.
+            if self.keyCreated.isSet():
+                t=threading.Thread(target=self.keyModel.deleteKey)
+                t.start()
+                self.threads.append(t)
+            t=threading.Thread(target=self.keyModel.removeKeyFromAgent)
+            t.start()
+            self.threads.append(t)
+            # TODO
+            # delete the key from the server as well.
         else:
-            logger.debug("sshKeyDist.shutdownReal didn't find parentWindow of class LauncherMainFrame.")
+            logger.debug("sshKeyDist.shutdownReal: removeKeyOnExit is not set. No action taken")
+        if self.stopAgentOnExit.isSet():
+            logger.debug("sshKeyDist.shutdownReal: stopAgentOnExit is set, creating a thread to kill the agent")
+            t=threading.Thread(target=self.keyModel.stopAgent)
+            t.start()
+            self.threads.append(t)
+        else:
+            logger.debug("sshKeyDist.shutdownReal: stopAgentOnExit is not set. No action taken")
+        logger.debug("sshKeyDist.shutdownReal: calling stop and join on all threads")
         for t in self.threads:
             try:
                 t.stop()

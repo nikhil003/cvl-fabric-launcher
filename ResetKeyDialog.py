@@ -10,7 +10,7 @@ from logger.Logger import logger
 from KeyModel import KeyModel
 
 class ResetKeyDialog(wx.Dialog):
-    def __init__(self, parent, id, title, privateKeyFilePath, keyInAgent):
+    def __init__(self, parent, id, title, keyModel, keyInAgent):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.resetKeyDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
@@ -22,7 +22,7 @@ class ResetKeyDialog(wx.Dialog):
 
         self.resetKeyDialogSizer.Add(self.resetKeyDialogPanel, flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, border=15)
 
-        self.privateKeyFilePath = privateKeyFilePath
+        self.keyModel = keyModel
         self.keyInAgent = keyInAgent
 
         self.instructionsLabel = wx.StaticText(self.resetKeyDialogPanel, wx.ID_ANY, 
@@ -142,21 +142,21 @@ class ResetKeyDialog(wx.Dialog):
             dlg.ShowModal()
             return
 
-        keyModelObject = KeyModel(self.privateKeyFilePath)
-        success = keyModelObject.deleteKeyAndRemoveFromAgent()
+        success = self.keyModel.deleteKey()
+        if self.keyInAgent:
+            success = success and self.keyModel.removeKeyFromAgent()
         if success:
             logger.debug("Existing Launcher key was successfully deleted!")
 
             # Now create a new key to replace it.
 
-            keyComment = os.path.basename(self.privateKeyFilePath)
             def keyCreatedSuccessfullyCallback():
                 logger.debug("ResetPassphraseDialog callback: Key created successfully!")
             def keyFileAlreadyExistsCallback():
                 logger.debug("ResetPassphraseDialog callback: Key file already exists!")
             def passphraseTooShortCallback():
                 logger.debug("ResetPassphraseDialog callback: Passphrase was too short!")
-            success = keyModelObject.generateNewKey(self.getPassphrase(),keyComment,keyCreatedSuccessfullyCallback,keyFileAlreadyExistsCallback,passphraseTooShortCallback)
+            success = self.keyModel.generateNewKey(self.getPassphrase(),keyCreatedSuccessfullyCallback,keyFileAlreadyExistsCallback,passphraseTooShortCallback)
             if success and self.keyInAgent:
                 def keyAddedSuccessfullyCallback():
                     logger.debug("ResetPassphraseDialog.onAddKeyToOrRemoveFromAgent callback: Key added successfully!")
