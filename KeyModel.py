@@ -15,6 +15,7 @@ from logger.Logger import logger
 
 from os.path import expanduser
 class sshpaths():
+    OPENSSH_BUILD_DIR = 'openssh-cygwin-stdin-build'
     def double_quote(self,x):
         return '"' + x + '"'
     def ssh_binaries(self):
@@ -27,13 +28,13 @@ class sshpaths():
             # Assume that our InnoSetup script will set appropriate permissions on the "tmp" directory.
 
             if hasattr(sys, 'frozen'):
-                f = lambda x: os.path.join(os.path.dirname(sys.executable), OPENSSH_BUILD_DIR, 'bin', x)
+                f = lambda x: os.path.join(os.path.dirname(sys.executable), self.OPENSSH_BUILD_DIR, 'bin', x)
             else:
                 try:
                     launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
                 except:
                     launcherModulePath = os.getcwd()
-                f = lambda x: os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', x)
+                f = lambda x: os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', x)
 
             sshBinary        = self.double_quote(f('ssh.exe'))
             sshKeyGenBinary  = self.double_quote(f('ssh-keygen.exe'))
@@ -97,10 +98,14 @@ class KeyModel():
             sshKey.close()
         self.keyComment = "Massive Launcher Key"
         if self.temporaryKey:
-            self.keyComment+=" (temporary key)"
+            self.keyComment+=" temporary key"
         self.startedPagaent=threading.Event()
         self.startedAgent=threading.Event()
         self.pagaent=None
+        if sys.platform.startswith("win"):
+            if 'HOME' not in os.environ:
+                os.environ['HOME'] = os.path.expanduser('~')
+
 
     def fingerprintPrivateKeyFile(self):
         proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.getPrivateKeyFilePath()], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
@@ -135,8 +140,8 @@ class KeyModel():
 
 
     def stopAgent(self):
-        if self.pagent!=None:
-            self.pagent.kill()
+        if self.pagaent!=None:
+            self.pagaent.kill()
         if self.sshAgentProcess!=None:
             self.sshAgentProcess.kill()
 
