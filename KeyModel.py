@@ -143,35 +143,29 @@ class KeyModel():
         if self.pagaent!=None:
             pagaentPid=self.pagaent.pid
             self.pagaent.kill()
-            if sys.platform.startswith('win'):
-                p=subprocess.Popen(['taskkill', '/F', '/T', '/PID', str(pagaentPid)],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-                (stdout,stderr)=p.communicate()
-                logger.debug("KeyModel.stopAgent, Pagaent %s %s"%(stdout,stderr))
             self.pagaent=None
+        # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exists so the kill won't get the real process
         if self.sshAgentProcess!=None:
-            self.sshAgentProcess.kill()
-            self.sshAgentProcess=None
-            if sys.platform.startswith('win'):
-                p=subprocess.Popen(['taskkill', '/F', '/T', '/PID', str(self.agentPid)],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-                (stdout,stderr)=p.communicate()
-                logger.debug("KeyModel.stopAgent, Agaent %s %s"%(stdout,stderr))
+            import signal
+            os.kill(int(self.agentPid),signal.SIGTERM)
+            del os.environ['SSH_AUTH_SOCK']
 
 
     def startAgent(self):
         if sys.platform.startswith('win'):
             self.start_pageant()
-        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False, universal_newlines=True)
+        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
         stdout = self.sshAgentProcess.stdout.readlines()
         for line in stdout:
             logger.debug("startAgentThread: line = " + line)
             if sys.platform.startswith('win'):
-                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
+                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*?);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
             else:
-                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*); export SSH_AUTH_SOCK;$",line)
+                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*?); export SSH_AUTH_SOCK;$",line)
             if match:
                 agentenv = match.group('socket')
                 os.environ['SSH_AUTH_SOCK'] = agentenv
-            match2 = re.search("^SSH_AGENT_PID=(?P<pid>.*);.*$",line)
+            match2 = re.search("^SSH_AGENT_PID=(?P<pid>[0-9]+);.*$",line)
             if match2:
                 pid = match2.group('pid')
                 os.environ['SSH_AGENT_PID'] = pid
