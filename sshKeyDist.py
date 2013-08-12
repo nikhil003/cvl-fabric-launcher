@@ -51,8 +51,11 @@ class KeyDist():
             self.keydistObject.sshAgentProcess = None
             try:
                 agentenv = os.environ['SSH_AUTH_SOCK']
+                logger.debug("KeyDist.startAgentThread SSH_AUTH_SOCK is set to %s"%agentenv)
+                logger.debug("KeyDist.startAgentThread stopAgentOnExit event is %s"%self.keydistObject.stopAgentOnExit.isSet())
             except:
                 # If we start the agent, we will stop the agent.
+                logger.debug("KeyDist.startAgentThread SSH_AUTH_SOCK did not exist in the environment, starting the agent")
                 self.keydistObject.stopAgentOnExit.set()
                 logger.debug(traceback.format_exc())
                 try:
@@ -149,7 +152,7 @@ class KeyDist():
                 if match:
                     keycomment = match.group('keycomment')
                     if self.keydistObject.keyModel.isTemporaryKey():
-                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.keyModel.getPrivateKeyFilePath()),keycomment)
+                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.keydistObject.keyModel.getPrivateKeyFilePath())),keycomment)
                     else:
                         correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.keyModel.getLauncherKeyComment()),keycomment)
                     if correctKey:

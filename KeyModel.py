@@ -15,7 +15,8 @@ from logger.Logger import logger
 
 from os.path import expanduser
 class sshpaths():
-    def double_quote(x):
+    OPENSSH_BUILD_DIR = 'openssh-cygwin-stdin-build'
+    def double_quote(self,x):
         return '"' + x + '"'
     def ssh_binaries(self):
         """
@@ -27,18 +28,21 @@ class sshpaths():
             # Assume that our InnoSetup script will set appropriate permissions on the "tmp" directory.
 
             if hasattr(sys, 'frozen'):
-                f = lambda x: os.path.join(os.path.dirname(sys.executable), OPENSSH_BUILD_DIR, 'bin', x)
+                f = lambda x: os.path.join(os.path.dirname(sys.executable), self.OPENSSH_BUILD_DIR, 'bin', x)
             else:
-                launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
-                f = lambda x: os.path.join(launcherModulePath, OPENSSH_BUILD_DIR, 'bin', x)
+                try:
+                    launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+                except:
+                    launcherModulePath = os.getcwd()
+                f = lambda x: os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', x)
 
-            sshBinary        = double_quote(f('ssh.exe'))
-            sshKeyGenBinary  = double_quote(f('ssh-keygen.exe'))
-            sshKeyScanBinary = double_quote(f('ssh-keyscan.exe'))
-            sshAgentBinary   = double_quote(f('charade.exe'))
-            sshAddBinary     = double_quote(f('ssh-add.exe'))
-            chownBinary      = double_quote(f('chown.exe'))
-            chmodBinary      = double_quote(f('chmod.exe'))
+            sshBinary        = self.double_quote(f('ssh.exe'))
+            sshKeyGenBinary  = self.double_quote(f('ssh-keygen.exe'))
+            sshKeyScanBinary = self.double_quote(f('ssh-keyscan.exe'))
+            sshAgentBinary   = self.double_quote(f('charade.exe'))
+            sshAddBinary     = self.double_quote(f('ssh-add.exe'))
+            chownBinary      = self.double_quote(f('chown.exe'))
+            chmodBinary      = self.double_quote(f('chmod.exe'))
         elif sys.platform.startswith('darwin'):
             sshBinary        = '/usr/bin/ssh'
             sshKeyGenBinary  = '/usr/bin/ssh-keygen'
@@ -94,10 +98,14 @@ class KeyModel():
             sshKey.close()
         self.keyComment = "Massive Launcher Key"
         if self.temporaryKey:
-            self.keyComment+=" (temporary key)"
+            self.keyComment+=" temporary key"
         self.startedPagaent=threading.Event()
         self.startedAgent=threading.Event()
         self.pagaent=None
+        if sys.platform.startswith("win"):
+            if 'HOME' not in os.environ:
+                os.environ['HOME'] = os.path.expanduser('~')
+
 
     def fingerprintPrivateKeyFile(self):
         proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.getPrivateKeyFilePath()], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
@@ -119,7 +127,10 @@ class KeyModel():
         if hasattr(sys, 'frozen'):
             pageant = os.path.join(os.path.dirname(sys.executable), self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
         else:
-            launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+            try:
+                launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
+            except:
+                launcherModulePath = os.getcwd()
             pageant = os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
 
         import win32process
@@ -129,10 +140,16 @@ class KeyModel():
 
 
     def stopAgent(self):
-        if self.pagent!=None:
-            self.pagent.kill()
+        if self.pagaent!=None:
+            pagaentPid=self.pagaent.pid
+            self.pagaent.kill()
+            self.pagaent=None
+        # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exists so the kill won't get the real process
         if self.sshAgentProcess!=None:
-            self.sshAgentProcess.kill()
+            import signal
+            os.kill(int(self.agentPid),signal.SIGTERM)
+            del os.environ['SSH_AUTH_SOCK']
+
 
     def startAgent(self):
         if sys.platform.startswith('win'):
@@ -142,13 +159,13 @@ class KeyModel():
         for line in stdout:
             logger.debug("startAgentThread: line = " + line)
             if sys.platform.startswith('win'):
-                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
+                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*?);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
             else:
-                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*); export SSH_AUTH_SOCK;$",line)
+                match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*?); export SSH_AUTH_SOCK;$",line)
             if match:
                 agentenv = match.group('socket')
                 os.environ['SSH_AUTH_SOCK'] = agentenv
-            match2 = re.search("^SSH_AGENT_PID=(?P<pid>.*);.*$",line)
+            match2 = re.search("^SSH_AGENT_PID=(?P<pid>[0-9]+);.*$",line)
             if match2:
                 pid = match2.group('pid')
                 os.environ['SSH_AGENT_PID'] = pid
