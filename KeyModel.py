@@ -401,34 +401,41 @@ class KeyModel():
             # to send the passphrase via STDIN.
             cmdList = [self.sshPathsObject.sshAddBinary.strip('"'), self.getPrivateKeyFilePath()]
             logger.debug("KeyModel.addKeyToAgent: " + 'on Windows, so running: ' + str(cmdList))
-            proc = subprocess.Popen(cmdList,
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    universal_newlines=True)
-            stdout, stderr = proc.communicate(input=passphrase + '\r\n')
+            # I think, if the agent is inaccessible, Popen will succeed, but communicate will throw an exception
+            # However I only saw this while fixing a separate bug
+            # We will wrap this in a try except clause just incase it offers additional robustness. CH
+            try:
+                proc = subprocess.Popen(cmdList,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        universal_newlines=True)
+                stdout, stderr = proc.communicate(input=passphrase + '\r\n')
 
-            if stdout is None or str(stdout).strip() == '':
-                logger.debug("KeyModel.addKeyToAgent: " + '(1) Got EOF from ssh-add binary, probably because an empty passphrase was entered for a passphrase-locked key.')
-                passphraseIncorrectCallback()
-            elif stdout is not None and "No such file or directory" in stdout:
-                logger.debug("KeyModel.addKeyToAgent: " + "addKeyToAgent couldn't find a private key")
-                privateKeyFileNotFoundCallback()
-                return False
-            elif "Identity added" in stdout:
-                success = True
-                logger.debug("KeyModel.addKeyToAgent: " + "addKeyToAgent succesfully added a key to the agent")
-                keyAddedSuccessfullyCallback()
-            elif 'Bad pass' in stdout:
-                logger.debug("KeyModel.addKeyToAgent: " + 'Got "Bad pass" from ssh-add binary')
-                proc.kill()
-                passphraseIncorrectCallback()
-            elif 'Could not open a connection to your authentication agent' in stdout:
-                logger.debug("KeyModel.addKeyToAgent: " + "Could not open a connection to your authentication agent.")
+                if stdout is None or str(stdout).strip() == '':
+                    logger.debug("KeyModel.addKeyToAgent: " + '(1) Got EOF from ssh-add binary, probably because an empty passphrase was entered for a passphrase-locked key.')
+                    passphraseIncorrectCallback()
+                elif stdout is not None and "No such file or directory" in stdout:
+                    logger.debug("KeyModel.addKeyToAgent: " + "addKeyToAgent couldn't find a private key")
+                    privateKeyFileNotFoundCallback()
+                    return False
+                elif "Identity added" in stdout:
+                    success = True
+                    logger.debug("KeyModel.addKeyToAgent: " + "addKeyToAgent succesfully added a key to the agent")
+                    keyAddedSuccessfullyCallback()
+                elif 'Bad pass' in stdout:
+                    logger.debug("KeyModel.addKeyToAgent: " + 'Got "Bad pass" from ssh-add binary')
+                    proc.kill()
+                    passphraseIncorrectCallback()
+                elif 'Could not open a connection to your authentication agent' in stdout:
+                    logger.debug("KeyModel.addKeyToAgent: " + "Could not open a connection to your authentication agent.")
+                    failedToConnectToAgentCallback()
+                else:
+                    logger.debug("KeyModel.addKeyToAgent: " + 'Got unknown error from ssh-add binary')
+                    logger.debug("KeyModel.addKeyToAgent: " + stdout)
+            except:
                 failedToConnectToAgentCallback()
-            else:
-                logger.debug("KeyModel.addKeyToAgent: " + 'Got unknown error from ssh-add binary')
-                logger.debug("KeyModel.addKeyToAgent: " + stdout)
+                return False
         else:
             # On Linux or BSD/OSX we can use pexpect to talk to ssh-add.
 
@@ -537,7 +544,7 @@ class KeyModel():
         err=stderr.readlines()
         if err!=[]:
             raise Exception
-        # FIXME The exec_commands above can fail if the user is over quota.
+        # FIXME The exec_commands above can fail if the user is over quota. We should really raise the message rather than just throwing an exception.
         sshClient.close()
 
     def listKey(self):
@@ -564,11 +571,12 @@ class KeyModel():
         return None
 
     def deleteRemoteKey(self,host,username):
-        cmd='{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {host} "sed \'\\#{key}# D\' -i ~/.ssh/authorized_keys"'
-        key=self.pubKey.split(' ')[1]
-        command = cmd.format(sshBinary=self.sshpaths.sshBinary,username=username,host=host,key=key)
-        logger.debug('KeyModel.deleteRemoteKey: running %s to delete remote key'%command)
-        p = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
-        (stdout,stderr) = p.communicate()
+        if self.pubKey!=None:
+            cmd='{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {host} "sed \'\\#{key}# D\' -i ~/.ssh/authorized_keys"'
+            key=self.pubKey.split(' ')[1]
+            command = cmd.format(sshBinary=self.sshpaths.sshBinary,username=username,host=host,key=key)
+            logger.debug('KeyModel.deleteRemoteKey: running %s to delete remote key'%command)
+            p = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
+            (stdout,stderr) = p.communicate()
         
         
