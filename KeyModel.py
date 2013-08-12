@@ -151,6 +151,7 @@ class KeyModel():
             import signal
             os.kill(int(self.agentPid),signal.SIGTERM)
             del os.environ['SSH_AUTH_SOCK']
+            self.sshAgentProcess=None
 
 
     def startAgent(self):
@@ -542,8 +543,11 @@ class KeyModel():
     def listKey(self):
         import re
         sshKeyListCmd = self.sshpaths.sshAddBinary + " -L "
-        keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True)
+        keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
         (stdout,stderr) = keylist.communicate()
+        if stderr!="":
+            e = Exception(err)
+            raise e
 
         lines = stdout.split('\n')
         for line in lines:

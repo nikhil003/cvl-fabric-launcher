@@ -50,12 +50,11 @@ class KeyDist():
             agentenv = None
             self.keydistObject.sshAgentProcess = None
             try:
-                agentenv = os.environ['SSH_AUTH_SOCK']
-                logger.debug("KeyDist.startAgentThread SSH_AUTH_SOCK is set to %s"%agentenv)
-                logger.debug("KeyDist.startAgentThread stopAgentOnExit event is %s"%self.keydistObject.stopAgentOnExit.isSet())
-            except:
+                key=self.keydistObject.keyModel.listKey()
+                logger.debug("KeyDist.startAgentThread keyModel.listKey returned without exception, we assume an agent is running")
+            except Exception as e:
                 # If we start the agent, we will stop the agent.
-                logger.debug("KeyDist.startAgentThread SSH_AUTH_SOCK did not exist in the environment, starting the agent")
+                logger.debug("KeyDist.startAgentThread keyModel.listKey returned an error. Presumably ssh-add was unable to contact the agent, starting an agent")
                 self.keydistObject.stopAgentOnExit.set()
                 logger.debug(traceback.format_exc())
                 try:
@@ -134,16 +133,20 @@ class KeyDist():
         def run(self):
             threadid = threading.currentThread().ident
             logger.debug("getPubKeyThread %i: started"%threadid)
-            key = self.keydistObject.keyModel.listKey()
+            try:
+                key = self.keydistObject.keyModel.listKey()
+                if (key!=None):
+                    self.keydistObject.keyloaded.set()
+                    logger.debug("getPubKeyThread %i: key loaded"%threadid)
+                    logger.debug("getPubKeyThread %i: found a key, creating TESTAUTH event"%threadid)
+                    newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self.keydistObject)
+                else:
+                    logger.debug("getPubKeyThread %i: did not find a key, creating LOADKEY event"%threadid)
+                    newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
+            except:
+                logger.debug("getPubKeyThread %i: Unable to contact agent"%threadid)
+                newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEEDAGENT,self.keydistObject)
 
-            if (key!=None):
-                self.keydistObject.keyloaded.set()
-                logger.debug("getPubKeyThread %i: key loaded"%threadid)
-                logger.debug("getPubKeyThread %i: found a key, creating TESTAUTH event"%threadid)
-                newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self.keydistObject)
-            else:
-                logger.debug("getPubKeyThread %i: did not find a key, creating LOADKEY event"%threadid)
-                newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
             if (not self.stopped()):
                 logger.debug("getPubKeyThread %i: is posting the next event"%threadid)
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent)
