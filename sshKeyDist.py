@@ -108,8 +108,6 @@ class KeyDist():
 
         def run(self):
             logger.debug("genkeyThread: started")
-            if self.keydistObject.removeKeyOnExit.isSet():
-                self.keydistObject.keyModel.deleteKey()
             self.nextEvent=None
             def success(): 
                 self.nextEvent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
@@ -136,38 +134,16 @@ class KeyDist():
         def run(self):
             threadid = threading.currentThread().ident
             logger.debug("getPubKeyThread %i: started"%threadid)
-            sshKeyListCmd = self.keydistObject.keyModel.sshpaths.sshAddBinary + " -L "
-            logger.debug('getPubKeyThread: running command: ' + sshKeyListCmd)
-            keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True)
-            (stdout,stderr) = keylist.communicate()
-            self.keydistObject.pubkeylock.acquire()
+            key = self.keydistObject.keyModel.listKey()
 
-            logger.debug("getPubKeyThread %i: stdout of ssh-add -l: "%threadid + str(stdout))
-            logger.debug("getPubKeyThread %i: stderr of ssh-add -l: "%threadid + str(stderr))
-
-            lines = stdout.split('\n')
-            logger.debug("getPubKeyThread %i: ssh key list completed"%threadid)
-            for line in lines:
-                match = re.search("^(?P<keytype>\S+)\ (?P<key>\S+)\ (?P<keycomment>.+)$",line)
-                if match:
-                    keycomment = match.group('keycomment')
-                    if self.keydistObject.keyModel.isTemporaryKey():
-                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.keydistObject.keyModel.getPrivateKeyFilePath())),keycomment)
-                    else:
-                        correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.keydistObject.keyModel.getLauncherKeyComment()),keycomment)
-                    if correctKey:
-                        self.keydistObject.keyloaded.set()
-                        logger.debug("getPubKeyThread %i: loaded key successfully"%threadid)
-                        self.keydistObject.pubkey = line.rstrip()
-            logger.debug("getPubKeyThread %i: all lines processed"%threadid)
-            if (self.keydistObject.keyloaded.isSet()):
+            if (key!=None):
+                self.keydistObject.keyloaded.set()
                 logger.debug("getPubKeyThread %i: key loaded"%threadid)
                 logger.debug("getPubKeyThread %i: found a key, creating TESTAUTH event"%threadid)
                 newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self.keydistObject)
             else:
                 logger.debug("getPubKeyThread %i: did not find a key, creating LOADKEY event"%threadid)
                 newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
-            self.keydistObject.pubkeylock.release()
             if (not self.stopped()):
                 logger.debug("getPubKeyThread %i: is posting the next event"%threadid)
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),newevent)
@@ -246,10 +222,10 @@ class KeyDist():
             # but since the pub key is extracted from the agent not the identity file I can't see anyway an attacker could use this to trick a user into uploading the attackers key.
             threadid = threading.currentThread().ident
             logger.debug("testAuthThread %i: started"%threadid)
-            import tempfile, os
-            (fd,path)=tempfile.mkstemp()
-            os.close(fd)
-            os.unlink(path)
+            import tempfile
+            fd=tempfile.NamedTemporaryFile(delete=True)
+            path=fd.name
+            fd.close()
             
             ssh_cmd = '{sshbinary} -o IdentityFile={nonexistantpath} -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {login} {host} echo "success_testauth"'.format(sshbinary=self.keydistObject.keyModel.sshpaths.sshBinary,
                                                                                                                                                                                                              login=self.keydistObject.username,
@@ -346,21 +322,10 @@ class KeyDist():
             return self._stop.isSet()
 
         def run(self):
-            sshClient = ssh.SSHClient()
-            sshClient.set_missing_host_key_policy(ssh.AutoAddPolicy())
             try:
-                sshClient.connect(hostname=self.keydistObject.host,username=self.keydistObject.username,password=self.keydistObject.password,allow_agent=False,look_for_keys=False)
-                sshClient.exec_command("module load massive")
-                sshClient.exec_command("/bin/mkdir -p ~/.ssh")
-                sshClient.exec_command("/bin/chmod 700 ~/.ssh")
-                sshClient.exec_command("/bin/touch ~/.ssh/authorized_keys")
-                sshClient.exec_command("/bin/chmod 600 ~/.ssh/authorized_keys")
-                sshClient.exec_command("/bin/echo \"%s\" >> ~/.ssh/authorized_keys"%self.keydistObject.pubkey)
-                # FIXME The exec_commands above can fail if the user is over quota.
-                sshClient.close()
-                self.keydistObject.keycopied.set()
+                self.keydistObject.keyModel.copyID(host=self.keydistObject.host,username=self.keydistObject.username,password=self.keydistObject.password)
+                logger.debug("KeyDist.CopyIDThread: KeyModel.copyID returned without error")
                 event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self.keydistObject)
-                logger.debug('CopyIDThread: successfully copied the key')
             except socket.gaierror as e:
                 logger.debug('CopyIDThread: socket.gaierror : ' + str(e))
                 self.keydistObject.cancel(message=str(e))
@@ -681,30 +646,20 @@ class KeyDist():
             logger.debug('Sending EVT_KEYDIST_CANCEL event.')
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
 
+    def deleteRemoveShutdown(self):
+        if self.removeKeyOnExit.isSet():
+            if self.keyCreated.isSet():
+                self.keyModel.deleteRemoteKey(host=self.host,username=self.username)
+                self.keyModel.deleteKey()
+                self.keyModel.removeKeyFromAgent()
+        if self.stopAgentOnExit.isSet():
+            self.keyModel.stopAgent()
+
     def shutdownReal(self):
 
-        if self.removeKeyOnExit.isSet():
-            logger.debug("sshKeyDist.shutdownReal: removeKeyOnExit is set. Calling KeyModel.deleteKey and KeyModel.removeFromAgent")
-            # TODO
-            # These should be in their own thread. Both of these actions cause disk acceses.
-            if self.keyCreated.isSet():
-                t=threading.Thread(target=self.keyModel.deleteKey)
-                t.start()
-                self.threads.append(t)
-            t=threading.Thread(target=self.keyModel.removeKeyFromAgent)
-            t.start()
-            self.threads.append(t)
-            # TODO
-            # delete the key from the server as well.
-        else:
-            logger.debug("sshKeyDist.shutdownReal: removeKeyOnExit is not set. No action taken")
-        if self.stopAgentOnExit.isSet():
-            logger.debug("sshKeyDist.shutdownReal: stopAgentOnExit is set, creating a thread to kill the agent")
-            t=threading.Thread(target=self.keyModel.stopAgent)
-            t.start()
-            self.threads.append(t)
-        else:
-            logger.debug("sshKeyDist.shutdownReal: stopAgentOnExit is not set. No action taken")
+        t=threading.Thread(target=self.deleteRemoveShutdown)
+        t.start()
+        self.threads.append(t)
         logger.debug("sshKeyDist.shutdownReal: calling stop and join on all threads")
         for t in self.threads:
             try:

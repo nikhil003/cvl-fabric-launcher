@@ -105,6 +105,7 @@ class KeyModel():
         if sys.platform.startswith("win"):
             if 'HOME' not in os.environ:
                 os.environ['HOME'] = os.path.expanduser('~')
+        self.pubKey=None
 
 
     def fingerprintPrivateKeyFile(self):
@@ -140,6 +141,7 @@ class KeyModel():
 
 
     def stopAgent(self):
+        logger.debug("KeyModel.stopAgent: stopping the agent")
         if self.pagaent!=None:
             pagaentPid=self.pagaent.pid
             self.pagaent.kill()
@@ -379,9 +381,9 @@ class KeyModel():
                         success = ("Identity removed" in stdout)
                     finally:
                         os.unlink(tempPublicKeyFile.name)
-            logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: Finished removing Launcher public key(s) from agent.")
+            logger.debug("KeyModel.deleteKey: Finished removing Launcher public key(s) from agent.")
         except:
-            logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: " + traceback.format_exc())
+            logger.debug("KeyModel.deleteKey: " + traceback.format_exc())
             return False
 
         return True
@@ -502,3 +504,67 @@ class KeyModel():
             return False
 
         return True
+
+    def copyID(self,host,username,password):
+        import ssh
+        sshClient = ssh.SSHClient()
+        sshClient.set_missing_host_key_policy(ssh.AutoAddPolicy())
+        sshClient.connect(hostname=host,username=username,password=password,allow_agent=False,look_for_keys=False)
+        (stdin,stdout,stderr)=sshClient.exec_command("module load massive")
+        err=stderr.readlines()
+        if err!=[]:
+            logger.debug("KeyModel.copyID: Exception raised")
+            logger.debug("KeyModel.copyID: %s"%err)
+            #raise Exception
+        (stdin,stdout,stderr)=sshClient.exec_command("/bin/mkdir -p ~/.ssh")
+        err=stderr.readlines()
+        if err!=[]:
+            raise Exception
+        (stdin,stdout,stderr)=sshClient.exec_command("/bin/chmod 700 ~/.ssh")
+        err=stderr.readlines()
+        if err!=[]:
+            raise Exception
+        (stdin,stdout,stderr)=sshClient.exec_command("/bin/touch ~/.ssh/authorized_keys")
+        err=stderr.readlines()
+        if err!=[]:
+            raise Exception
+        (stdin,stdout,stderr)=sshClient.exec_command("/bin/chmod 600 ~/.ssh/authorized_keys")
+        err=stderr.readlines()
+        if err!=[]:
+            raise Exception
+        (stdin,stdout,stderr)=sshClient.exec_command("/bin/echo \"%s\" >> ~/.ssh/authorized_keys"%self.pubKey)
+        err=stderr.readlines()
+        if err!=[]:
+            raise Exception
+        # FIXME The exec_commands above can fail if the user is over quota.
+        sshClient.close()
+
+    def listKey(self):
+        import re
+        sshKeyListCmd = self.sshpaths.sshAddBinary + " -L "
+        keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True)
+        (stdout,stderr) = keylist.communicate()
+
+        lines = stdout.split('\n')
+        for line in lines:
+            match = re.search("^(?P<keytype>\S+)\ (?P<key>\S+)\ (?P<keycomment>.+)$",line)
+            if match:
+                keycomment = match.group('keycomment')
+                if self.isTemporaryKey():
+                    correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.getPrivateKeyFilePath())),keycomment)
+                else:
+                    correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.getLauncherKeyComment()),keycomment)
+                if correctKey:
+                    self.pubKey = line.rstrip()
+                    return self.pubKey
+        return None
+
+    def deleteRemoteKey(self,host,username):
+        cmd='{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {host} "sed \'\\#{key}# D\' -i ~/.ssh/authorized_keys"'
+        key=self.pubKey.split(' ')[1]
+        command = cmd.format(sshBinary=self.sshpaths.sshBinary,username=username,host=host,key=key)
+        logger.debug('KeyModel.deleteRemoteKey: running %s to delete remote key'%command)
+        p = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
+        (stdout,stderr) = p.communicate()
+        
+        
