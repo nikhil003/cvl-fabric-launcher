@@ -144,14 +144,10 @@ class KeyModel():
         logger.debug("KeyModel.stopAgent: stopping the agent")
         if self.pagaent!=None:
             pagaentPid=self.pagaent.pid
-            if sys.platform.startswith('win'):
-                subprocess.Popen(['taskkill','/f','/t','/pid/',"%s"%pagaentPid],shell=True)
             self.pagaent.kill()
             self.pagaent=None
         # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exists so the kill won't get the real process
         if self.sshAgentProcess!=None:
-            if sys.platform.startswith('win'):
-                subprocess.Popen(['taskkill','/f','/t','/pid/',"%s"%self.agentPid],shell=True)
             import signal
             os.kill(int(self.agentPid),signal.SIGTERM)
             del os.environ['SSH_AUTH_SOCK']
