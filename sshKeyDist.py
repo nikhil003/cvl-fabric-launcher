@@ -621,7 +621,7 @@ class KeyDist():
 
     def getPassphrase(self,reason=None):
         from CreateNewKeyDialog import CreateNewKeyDialog
-        createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.displayStrings, displayMessageBoxReportingSuccess=False)
+        createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.keyModel.getPrivateKeyFilePath(),self.displayStrings, displayMessageBoxReportingSuccess=False)
         canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
         if (not canceled):
             logger.debug("User didn't cancel from CreateNewKeyDialog.")
