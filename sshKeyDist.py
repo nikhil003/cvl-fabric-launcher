@@ -660,9 +660,6 @@ class KeyDist():
 
     def shutdownReal(self):
 
-        t=threading.Thread(target=self.deleteRemoveShutdown)
-        t.start()
-        self.threads.append(t)
         logger.debug("sshKeyDist.shutdownReal: calling stop and join on all threads")
         for t in self.threads:
             try:
@@ -670,6 +667,9 @@ class KeyDist():
                 t.join()
             except:
                 pass
+        t=threading.Thread(target=self.deleteRemoveShutdown)
+        t.start()
+        t.join()
         self.completed.set()
 
     def shutdown(self):
