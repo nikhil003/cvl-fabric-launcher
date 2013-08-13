@@ -621,7 +621,7 @@ class KeyDist():
 
     def getPassphrase(self,reason=None):
         from CreateNewKeyDialog import CreateNewKeyDialog
-        createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.displayStrings, displayMessageBoxReportingSuccess=False)
+        createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.keyModel.getPrivateKeyFilePath(),self.displayStrings, displayMessageBoxReportingSuccess=False)
         canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
         if (not canceled):
             logger.debug("User didn't cancel from CreateNewKeyDialog.")
@@ -660,9 +660,6 @@ class KeyDist():
 
     def shutdownReal(self):
 
-        t=threading.Thread(target=self.deleteRemoveShutdown)
-        t.start()
-        self.threads.append(t)
         logger.debug("sshKeyDist.shutdownReal: calling stop and join on all threads")
         for t in self.threads:
             try:
@@ -670,6 +667,9 @@ class KeyDist():
                 t.join()
             except:
                 pass
+        t=threading.Thread(target=self.deleteRemoveShutdown)
+        t.start()
+        t.join()
         self.completed.set()
 
     def shutdown(self):
