@@ -106,6 +106,7 @@ class KeyModel():
             if 'HOME' not in os.environ:
                 os.environ['HOME'] = os.path.expanduser('~')
         self.pubKey=None
+        self.copiedID=threading.Event()
 
 
     def fingerprintPrivateKeyFile(self):
@@ -546,6 +547,7 @@ class KeyModel():
             raise Exception
         # FIXME The exec_commands above can fail if the user is over quota. We should really raise the message rather than just throwing an exception.
         sshClient.close()
+        self.copiedID.set()
 
     def listKey(self):
         import re
@@ -558,23 +560,27 @@ class KeyModel():
 
         lines = stdout.split('\n')
         for line in lines:
+            logger.debug("KeyModel.listKey: ssh-add -L returned a line %s"%line)
             match = re.search("^(?P<keytype>\S+)\ (?P<key>\S+)\ (?P<keycomment>.+)$",line)
             if match:
                 keycomment = match.group('keycomment')
-                if self.isTemporaryKey():
-                    correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.getPrivateKeyFilePath())),keycomment)
-                else:
-                    correctKey = re.search('.*{launchercomment}.*'.format(launchercomment=self.getLauncherKeyComment()),keycomment)
-                if correctKey:
+                logger.debug("KeyModel.listKey: searching for the string")
+                pathMatch = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.getPrivateKeyFilePath())),keycomment)
+                commentMatch = re.search('.*{launchercomment}.*'.format(launchercomment=self.getLauncherKeyComment()),keycomment)
+                if pathMatch or commentMatch:
                     self.pubKey = line.rstrip()
                     return self.pubKey
         return None
 
     def deleteRemoteKey(self,host,username):
-        if self.pubKey!=None:
-            cmd='{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {host} "sed \'\\#{key}# D\' -i ~/.ssh/authorized_keys"'
+        if self.copiedID.isSet() and self.pubKey!=None:
+            import tempfile
+            fd=tempfile.NamedTemporaryFile(delete=True)
+            path=fd.name
+            fd.close()
+            cmd='{sshBinary} -A -T -o IdentityFile={nonexistantpath} -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {host} "sed \'\\#{key}# D\' -i ~/.ssh/authorized_keys"'
             key=self.pubKey.split(' ')[1]
-            command = cmd.format(sshBinary=self.sshpaths.sshBinary,username=username,host=host,key=key)
+            command = cmd.format(sshBinary=self.sshpaths.sshBinary,username=username,host=host,key=key,nonexistantpath=path)
             logger.debug('KeyModel.deleteRemoteKey: running %s to delete remote key'%command)
             p = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
             (stdout,stderr) = p.communicate()
