@@ -8,7 +8,7 @@ import sys
 from logger.Logger import logger
 
 class CreateNewKeyDialog(wx.Dialog):
-    def __init__(self, parent, id, title, defaultPrivateKeyLocation, displayStrings,displayMessageBoxReportingSuccess=True):
+    def __init__(self, parent, progressDialog, id, title, defaultPrivateKeyLocation, displayStrings,displayMessageBoxReportingSuccess=True):
         wx.Dialog.__init__(self, parent, id, title, wx.DefaultPosition)
 
         self.displayStrings = displayStrings
@@ -16,11 +16,10 @@ class CreateNewKeyDialog(wx.Dialog):
 
         self.closedProgressDialog = False
         self.parent = parent
-        if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-            launcherMainFrame = parent
-            if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                launcherMainFrame.progressDialog.Show(False)
-                self.closedProgressDialog = True
+        self.progressDialog = progressDialog
+        if self.progressDialog is not None:
+            self.progressDialog.Show(False)
+            self.closedProgressDialog = True
 
         self.createNewKeyDialogSizer = wx.FlexGridSizer(rows=1, cols=1)
         self.SetSizer(self.createNewKeyDialogSizer)
@@ -186,10 +185,8 @@ class CreateNewKeyDialog(wx.Dialog):
 
     def reopenProgressDialogIfNecessary(self):
         if self.closedProgressDialog:
-            if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-                launcherMainFrame = self.parent
-                if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                    launcherMainFrame.progressDialog.Show(True)
+            if self.progressDialog is not None:
+                self.progressDialog.Show(True)
 
     def onCancel(self, event):
         #self.Show(False)

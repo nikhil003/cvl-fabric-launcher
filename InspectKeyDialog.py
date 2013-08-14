@@ -272,7 +272,7 @@ class InspectKeyDialog(wx.Dialog):
         if self.addKeyToOrRemoveKeyFromAgentButton.GetLabel()=="Add MASSIVE Launcher key to agent":
 
             import cvlsshutils
-            ppd = cvlsshutils.PassphraseDialog.passphraseDialog(None,wx.ID_ANY,'Unlock Key',"Please enter the passphrase for the key","OK","Cancel")
+            ppd = cvlsshutils.PassphraseDialog.passphraseDialog(None,None,wx.ID_ANY,'Unlock Key',"Please enter the passphrase for the key","OK","Cancel")
             (canceled,passphrase) = ppd.getPassword()
             if (canceled):
                 return

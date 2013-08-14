@@ -3,16 +3,15 @@ from logger.Logger import logger
 
 class passphraseDialog(wx.Dialog):
 
-    def __init__(self, parent, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
+    def __init__(self, parent, progressDialog, id, title, text, okString, cancelString,helpString="Help! What is all this?"):
         wx.Dialog.__init__(self, parent, id, pos=(200,150), style=wx.DEFAULT_DIALOG_STYLE ^ wx.RESIZE_BORDER)
 
         self.closedProgressDialog = False
         self.parent = parent
-        if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-            launcherMainFrame = parent
-            if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                launcherMainFrame.progressDialog.Show(False)
-                self.closedProgressDialog = True
+        self.progressDialog = progressDialog
+        if self.progressDialog is not None:
+            self.progressDialog.Show(False)
+            self.closedProgressDialog = True
 
         self.SetTitle(title)
         self.label = wx.StaticText(self, -1, text)
@@ -65,10 +64,8 @@ class passphraseDialog(wx.Dialog):
             self.EndModal(wx.ID_CANCEL)
 
         if self.closedProgressDialog:
-            if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-                launcherMainFrame = self.parent
-                if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                    launcherMainFrame.progressDialog.Show(True)
+            if self.progressDialog is not None:
+                self.progressDialog.Show(True)
 
     def onHelp(self,e):
         from help.HelpController import helpController

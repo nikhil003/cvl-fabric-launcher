@@ -523,7 +523,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False):
+    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False):
 
         logger.debug("KeyDist.__init__")
 
@@ -567,6 +567,7 @@ class KeyDist():
 
         self.completed=Event()
         self.parentWindow = parentWindow
+        self.progressDialog = progressDialog
         self.username = username
         self.host = host
         self.configName = configName
@@ -593,9 +594,9 @@ class KeyDist():
 
     def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):
-            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePromptIncorrect,"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,self.progressDialog,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePromptIncorrect,"OK","Cancel")
         else:
-            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePrompt,"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,self.progressDialog,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePrompt,"OK","Cancel")
         (canceled,passphrase) = ppd.getPassword()
         if (canceled):
             self.cancel("Sorry, I can't continue without the passphrase for that key. If you've forgotten the passphrase, you could remove the key and generate a new one. The key is probably located in ~/.ssh/MassiveLauncherKey*")
@@ -608,9 +609,9 @@ class KeyDist():
 
     def getLoginPassword(self,incorrect=False):
         if (not incorrect):
-            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPrompt.format(**self.__dict__),"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,self.progressDialog,wx.ID_ANY,'Login Password',self.displayStrings.passwdPrompt.format(**self.__dict__),"OK","Cancel")
         else:
-            ppd = passphraseDialog(self.parentWindow,wx.ID_ANY,'Login Password',self.displayStrings.passwdPromptIncorrect.format(**self.__dict__),"OK","Cancel")
+            ppd = passphraseDialog(self.parentWindow,self.progressDialog,wx.ID_ANY,'Login Password',self.displayStrings.passwdPromptIncorrect.format(**self.__dict__),"OK","Cancel")
         (canceled,password) = ppd.getPassword()
         if canceled:
             self.cancel()
@@ -621,7 +622,7 @@ class KeyDist():
 
     def getPassphrase(self,reason=None):
         from CreateNewKeyDialog import CreateNewKeyDialog
-        createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.keyModel.getPrivateKeyFilePath(),self.displayStrings, displayMessageBoxReportingSuccess=False)
+        createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, self.progressDialog, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.keyModel.getPrivateKeyFilePath(),self.displayStrings, displayMessageBoxReportingSuccess=False)
         canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
         if (not canceled):
             logger.debug("User didn't cancel from CreateNewKeyDialog.")
