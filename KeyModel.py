@@ -555,7 +555,7 @@ class KeyModel():
         keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
         (stdout,stderr) = keylist.communicate()
         if stderr!="":
-            e = Exception(err)
+            e = Exception(stderr)
             raise e
 
         lines = stdout.split('\n')
