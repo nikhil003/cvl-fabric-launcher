@@ -365,7 +365,7 @@ class KeyDist():
             usingOneTimePassphrase = False
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_REQ):
                 logger.debug("received NEWPASS_REQ event")
-                if event.keydist.removeKeyOnExit.isSet():
+                if event.keydist.keyModel.isTemporaryKey():
                     usingOneTimePassphrase = True
                     import string
                     import random
