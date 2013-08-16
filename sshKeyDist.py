@@ -29,7 +29,7 @@ if not sys.platform.startswith('win'):
 class KeyDist():
 
     def complete(self):
-        returnval = self.completed.isSet()
+        returnval = self._completed.isSet()
         return returnval
 
 
@@ -264,7 +264,8 @@ class KeyDist():
                 newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_AUTHSUCCESS,self.keydistObject)
             elif 'Agent admitted' in stdout:
                 logger.debug("testAuthThread %i: the ssh agent has an error. Try rebooting the computer")
-                newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_CANCEL,self.keydistObject,"Sorry, there is a problem with the SSH agent.\nThis sort of thing usually occurs if you delete your key and create a new one.\nThe easiest solution is to reboot your computer and try again.")
+                self.keydistObject.cancel("Sorry, there is a problem with the SSH agent.\nThis sort of thing usually occurs if you delete your key and create a new one.\nThe easiest solution is to reboot your computer and try again.")
+                return
             else:
                 logger.debug("testAuthThread %i: did not see success_testauth in stdout, posting EVT_KEYDIST_AUTHFAIL event"%threadid)
                 newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_AUTHFAIL,self.keydistObject)
@@ -307,6 +308,7 @@ class KeyDist():
                 self.nextEvent=KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_REQ,self.keydistObject)
             def failedToConnectToAgentCallback():
                 self.nextEvent=KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEEDAGENT,self.keydistObject)
+            logger.debug("sshKeyDist.loadKeyThread.run: KeyModel information temporary: %s path: %s exists: %s"%(km.isTemporaryKey(),km.getPrivateKeyFilePath(),km.privateKeyExists()))
             km.addKeyToAgent(password,loadedCallback,incorrectCallback,notFoundCallback,failedToConnectToAgentCallback)
             if (not self.stopped() and self.nextEvent != None):
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),self.nextEvent)
@@ -410,26 +412,28 @@ class KeyDist():
         def shutdownEvent(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_SHUTDOWN):
                 logger.debug("received EVT_KEYDIST_SHUTDOWN event")
-                event.keydist.shutdownReal()
+                nextevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COMPLETE,event.keydist)
+                event.keydist.shutdownThread=threading.Thread(target=event.keydist.shutdownReal,args=[nextevent])
+                event.keydist.shutdownThread.start()
             else:
                 event.Skip()
 
-        def cancel(event):
-            if (event.GetId() == KeyDist.EVT_KEYDIST_CANCEL):
-                logger.debug("received EVT_KEYDIST_CANCEL event")
-                event.keydist._canceled.set()
-                event.keydist.shutdownReal()
-                if event.arg!=None:
-                    pass
-                if (event.keydist.callback_fail != None):
-                    event.keydist.callback_fail(event.arg)
-            else:
-                event.Skip()
+        def completeEvent(event):
+            if (event.GetId() == KeyDist.EVT_KEYDIST_COMPLETE):
+                if (event.keydist.canceled()):
+                    if (event.keydist.callback_fail != None):
+                        logger.debug("sshKeyDist.completeEvent: calling-back to indicate completion")
+                        if event.arg!=None:
+                            event.keydist.callback_fail(event.arg)
+                        else:
+                            event.keydist.callback_fail()
+
+                event.keydist._completed.set()
 
         def success(event):
             if (event.GetId() == KeyDist.EVT_KEYDIST_AUTHSUCCESS):
                 logger.debug("received AUTHSUCCESS event")
-                event.keydist.completed.set()
+                event.keydist._completed.set()
                 if (event.keydist.callback_success != None):
                     event.keydist.callback_success()
             event.Skip()
@@ -530,7 +534,6 @@ class KeyDist():
         KeyDist.myEVT_CUSTOM_SSHKEYDIST=wx.NewEventType()
         KeyDist.EVT_CUSTOM_SSHKEYDIST=wx.PyEventBinder(self.myEVT_CUSTOM_SSHKEYDIST,1)
         KeyDist.EVT_KEYDIST_START = wx.NewId()
-        KeyDist.EVT_KEYDIST_CANCEL = wx.NewId()
         KeyDist.EVT_KEYDIST_SHUTDOWN = wx.NewId()
         KeyDist.EVT_KEYDIST_SUCCESS = wx.NewId()
         KeyDist.EVT_KEYDIST_NEEDAGENT = wx.NewId()
@@ -549,9 +552,8 @@ class KeyDist():
         KeyDist.EVT_KEYDIST_SCANHOSTKEYS = wx.NewId()
         KeyDist.EVT_KEYDIST_LOADKEY = wx.NewId()
         KeyDist.EVT_KEYDIST_NETWORK_ERROR = wx.NewId()
+        KeyDist.EVT_KEYDIST_COMPLETE = wx.NewId()
 
-        notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.cancel)
-        notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.shutdownEvent)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.success)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.needagent)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.listpubkeys)
@@ -564,8 +566,10 @@ class KeyDist():
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.scanhostkeys)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.loadkey)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.networkError)
+        notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.completeEvent)
+        notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.shutdownEvent)
 
-        self.completed=Event()
+        self._completed=Event()
         self.parentWindow = parentWindow
         self.progressDialog = progressDialog
         self.username = username
@@ -634,10 +638,11 @@ class KeyDist():
             self.cancel()
 
     def distributeKey(self,callback_success=None, callback_fail=None):
-        event = KeyDist.sshKeyDistEvent(self.EVT_KEYDIST_START, self)
-        wx.PostEvent(self.notifywindow.GetEventHandler(), event)
         self.callback_fail      = callback_fail
         self.callback_success   = callback_success
+        logger.debug("KeyDist.distributeKey: posting EVT_KEYDIST_START")
+        event = KeyDist.sshKeyDistEvent(self.EVT_KEYDIST_START, self)
+        wx.PostEvent(self.notifywindow.GetEventHandler(), event)
         
     def canceled(self):
         return self._canceled.isSet()
@@ -645,9 +650,9 @@ class KeyDist():
     def cancel(self,message=""):
         if (not self.canceled()):
             self._canceled.set()
-            newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_CANCEL, self)
+            newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_SHUTDOWN, self)
             newevent.arg = message
-            logger.debug('Sending EVT_KEYDIST_CANCEL event.')
+            logger.debug('sshKeyDist.cancel: setting canceled, sending EVT_KEYDIST_SHUTDOWN event.')
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
 
     def deleteRemoveShutdown(self):
@@ -660,7 +665,7 @@ class KeyDist():
         if self.stopAgentOnExit.isSet():
             self.keyModel.stopAgent()
 
-    def shutdownReal(self):
+    def shutdownReal(self,nextevent=None):
 
         logger.debug("sshKeyDist.shutdownReal: calling stop and join on all threads")
         for t in self.threads:
@@ -669,10 +674,12 @@ class KeyDist():
                 t.join()
             except:
                 pass
-        t=threading.Thread(target=self.deleteRemoveShutdown)
-        t.start()
-        t.join()
-        self.completed.set()
+        self.deleteRemoveShutdown()
+        #t=threading.Thread(target=self.deleteRemoveShutdown)
+        #t.start()
+        #t.join()
+        if nextevent!=None:
+            wx.PostEvent(self.notifywindow.GetEventHandler(), nextevent)
 
     def shutdown(self):
         if (not self.canceled()):
