@@ -658,12 +658,21 @@ class KeyDist():
     def deleteRemoveShutdown(self):
         logger.debug("sshKeyDist.deleteRemoveShutdown: deleting temporary key and removing key from agent.")
         if self.removeKeyOnExit.isSet():
+            logger.debug("sshKeyDist.deleteRemoveShutdown: self.removeKeyOnExit.isSet() is True.")
             if self.keyCreated.isSet():
+                logger.debug("sshKeyDist.deleteRemoveShutdown: self.keyCreated.isSet() is True.")
                 self.keyModel.deleteRemoteKey(host=self.host,username=self.username)
                 self.keyModel.deleteKey()
                 self.keyModel.removeKeyFromAgent()
+            else:
+                logger.debug("sshKeyDist.deleteRemoveShutdown: self.keyCreated.isSet() is False.")
+        else:
+            logger.debug("sshKeyDist.deleteRemoveShutdown: self.removeKeyOnExit.isSet() is False.")
         if self.stopAgentOnExit.isSet():
+            logger.debug("sshKeyDist.deleteRemoveShutdown: self.stopAgentOnExit.isSet() is True.")
             self.keyModel.stopAgent()
+        else:
+            logger.debug("sshKeyDist.deleteRemoveShutdown: self.stopAgentOnExit.isSet() is False.")
 
     def shutdownReal(self,nextevent=None):
 
