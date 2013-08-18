@@ -93,7 +93,7 @@ class KeyModel():
         self.sshPathsObject = self.sshpaths
         self.temporaryKey=temporaryKey
         if self.temporaryKey:
-            sshKey=tempfile.NamedTemporaryFile(delete=True)
+            sshKey=tempfile.NamedTemporaryFile(prefix="MassiveLauncherKey_",delete=True)
             self.sshpaths.sshKeyPath=sshKey.name
             sshKey.close()
         self.keyComment = "Massive Launcher Key"
@@ -211,7 +211,8 @@ class KeyModel():
         if keyComment!=None:
             self.keyComment = keyComment
         if sys.platform.startswith('win'):
-            cmdList = [self.sshPathsObject.sshKeyGenBinary.strip('"'), "-f", self.getPrivateKeyFilePath(), "-C", self.keyComment, "-N", passphrase]
+            cmdList = [self.sshPathsObject.sshKeyGenBinary.strip('"'), "-f", self.getPrivateKeyFilePath(), "-C", self.sshpaths.double_quote(self.keyComment), "-N", passphrase]
+            logger.debug("KeyModel.generateNewKey: " + " ".join(cmdList))
             proc = subprocess.Popen(cmdList,
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE,
@@ -239,8 +240,9 @@ class KeyModel():
 
             import pexpect
 
-            args = ["-f", self.getPrivateKeyFilePath(), "-C", self.keyComment]
+            args = ["-f", self.getPrivateKeyFilePath(), "-C", self.sshpaths.double_quote(self.keyComment)]
             lp = pexpect.spawn(self.sshPathsObject.sshKeyGenBinary, args=args)
+            logger.debug("KeyModel.generateNewKey: " + self.sshPathsObject.sshKeyGenBinary + " " + " ".join(args))
 
             idx = lp.expect(["Enter passphrase", "already exists", pexpect.EOF])
 
@@ -276,6 +278,7 @@ class KeyModel():
         if sys.platform.startswith('win'):
             cmdList = [self.sshPathsObject.sshKeyGenBinary.strip('"'), "-f", self.getPrivateKeyFilePath(), 
                         "-p", "-P", existingPassphrase, "-N", newPassphrase]
+            logger.debug("KeyModel.changePassphrase: " + " ".join(cmdList))
             proc = subprocess.Popen(cmdList,
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE,
@@ -308,6 +311,7 @@ class KeyModel():
 
             args = ["-f", self.getPrivateKeyFilePath(), "-p"]
             lp = pexpect.spawn(self.sshPathsObject.sshKeyGenBinary, args=args)
+            logger.debug("KeyModel.changePassphrase: " + self.sshPathsObject.sshKeyGenBinary + " " + " ".join(args))
 
             idx = lp.expect(["Enter old passphrase", "Key has comment"])
 
@@ -401,7 +405,7 @@ class KeyModel():
             # The patched OpenSSH binary on Windows/cygwin allows us
             # to send the passphrase via STDIN.
             cmdList = [self.sshPathsObject.sshAddBinary.strip('"'), self.getPrivateKeyFilePath()]
-            logger.debug("KeyModel.addKeyToAgent: " + 'on Windows, so running: ' + str(cmdList))
+            logger.debug("KeyModel.addKeyToAgent: " + " ".join(cmdList))
             # I think, if the agent is inaccessible, Popen will succeed, but communicate will throw an exception
             # However I only saw this while fixing a separate bug
             # We will wrap this in a try except clause just incase it offers additional robustness. CH
@@ -444,6 +448,7 @@ class KeyModel():
 
             args = [self.sshPathsObject.sshKeyPath]
             lp = pexpect.spawn(self.sshPathsObject.sshAddBinary, args=args)
+            logger.debug("KeyModel.addKeyToAgent: " + self.sshPathsObject.sshAddBinary + " " + " ".join(args))
 
             idx = lp.expect(["Enter passphrase", "Identity added",'Could not open a connection to your authentication agent'])
 
@@ -502,6 +507,7 @@ class KeyModel():
                     tempPublicKeyFile.close()
                     try:
                         removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+                        logger.debug("KeyModel.removeKeyFromAgent: " + self.sshPathsObject.sshAddBinary + " -d " + tempPublicKeyFile.name)
                         stdout, stderr = removePublicKeyFromAgent.communicate()
                         if stderr is not None and len(stderr) > 0:
                             logger.debug("KeyModel.removeKeyFromAgent: " + stderr)
