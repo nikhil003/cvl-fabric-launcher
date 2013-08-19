@@ -147,7 +147,7 @@ class KeyModel():
             pagaentPid=self.pagaent.pid
             self.pagaent.kill()
             self.pagaent=None
-        # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exists so the kill won't get the real process
+        # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exits so the kill won't get the real process
         if self.sshAgentProcess!=None:
             import signal
             os.kill(int(self.agentPid),signal.SIGTERM)
@@ -374,10 +374,10 @@ class KeyModel():
 
             publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
-            for publicKey in publicKeysInAgent:
-                if "Launcher" in publicKey:
+            for publicKeyLineFromAgent in publicKeysInAgent:
+                if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
                     tempPublicKeyFile = tempfile.NamedTemporaryFile(delete=False)
-                    tempPublicKeyFile.write(publicKey)
+                    tempPublicKeyFile.write(publicKeyLineFromAgent)
                     tempPublicKeyFile.close()
                     try:
                         removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
@@ -500,10 +500,10 @@ class KeyModel():
 
             publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
-            for publicKey in publicKeysInAgent:
-                if "Launcher" in publicKey:
+            for publicKeyLineFromAgent in publicKeysInAgent:
+                if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
                     tempPublicKeyFile = tempfile.NamedTemporaryFile(delete=False)
-                    tempPublicKeyFile.write(publicKey)
+                    tempPublicKeyFile.write(publicKeyLineFromAgent)
                     tempPublicKeyFile.close()
                     try:
                         removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
