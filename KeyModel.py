@@ -375,7 +375,13 @@ class KeyModel():
             publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
             for publicKeyLineFromAgent in publicKeysInAgent:
-                if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
+                # On Windows, we don't know which format the key file's path will be in:
+                # 2048 33:40:a7:ab:35:da:be:f5:8c:63:c1:a9:23:08:2a:bd c:\docume~1\admini~1\locals~1\temp\MassiveLauncherKey_tkzv3v (RSA)
+                # 2048 d7:e8:a1:7d:55:0f:92:c0:5f:1a:60:e3:46:32:fb:fc C:\Documents and Settings\Administrator\.ssh\MassiveLauncherKey (RSA)
+                # so we could just use the key's filename, not its absolute path.
+                # For now, we will just use "Launcher":
+                #if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
+                if "Launcher" in publicKeyLineFromAgent:
                     tempPublicKeyFile = tempfile.NamedTemporaryFile(delete=False)
                     tempPublicKeyFile.write(publicKeyLineFromAgent)
                     tempPublicKeyFile.close()
@@ -501,7 +507,13 @@ class KeyModel():
             publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
             for publicKeyLineFromAgent in publicKeysInAgent:
-                if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
+                # On Windows, we don't know which format the key file's path will be in:
+                # 2048 33:40:a7:ab:35:da:be:f5:8c:63:c1:a9:23:08:2a:bd c:\docume~1\admini~1\locals~1\temp\MassiveLauncherKey_tkzv3v (RSA)
+                # 2048 d7:e8:a1:7d:55:0f:92:c0:5f:1a:60:e3:46:32:fb:fc C:\Documents and Settings\Administrator\.ssh\MassiveLauncherKey (RSA)
+                # so we could just use the key's filename, not its absolute path.
+                # For now, we will just use "Launcher":
+                #if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
+                if "Launcher" in publicKeyLineFromAgent:
                     tempPublicKeyFile = tempfile.NamedTemporaryFile(delete=False)
                     tempPublicKeyFile.write(publicKeyLineFromAgent)
                     tempPublicKeyFile.close()
