@@ -356,6 +356,8 @@ class KeyModel():
 
         try:
 
+            self.removeKeyFromAgent()
+
             logger.debug("KeyModel.deleteKey: Deleting private key...")
             os.unlink(self.getPrivateKeyFilePath())
             logger.debug("KeyModel.deleteKey: Deleted private key!")
@@ -370,30 +372,6 @@ class KeyModel():
 
             # Remove key(s) from SSH agent:
 
-            logger.debug("KeyModel.deleteKey: Removing Launcher public key(s) from agent.")
-
-            publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-            publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
-            for publicKeyLineFromAgent in publicKeysInAgent:
-                # On Windows, we don't know which format the key file's path will be in:
-                # 2048 33:40:a7:ab:35:da:be:f5:8c:63:c1:a9:23:08:2a:bd c:\docume~1\admini~1\locals~1\temp\MassiveLauncherKey_tkzv3v (RSA)
-                # 2048 d7:e8:a1:7d:55:0f:92:c0:5f:1a:60:e3:46:32:fb:fc C:\Documents and Settings\Administrator\.ssh\MassiveLauncherKey (RSA)
-                # so we could just use the key's filename, not its absolute path.
-                # For now, we will just use "Launcher":
-                #if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
-                if "Launcher" in publicKeyLineFromAgent:
-                    tempPublicKeyFile = tempfile.NamedTemporaryFile(delete=False)
-                    tempPublicKeyFile.write(publicKeyLineFromAgent)
-                    tempPublicKeyFile.close()
-                    try:
-                        removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-                        stdout, stderr = removePublicKeyFromAgent.communicate()
-                        if stderr is not None and len(stderr) > 0:
-                            logger.debug("KeyModel.deleteKeyAndRemoveFromAgent: " + stderr)
-                        success = ("Identity removed" in stdout)
-                    finally:
-                        os.unlink(tempPublicKeyFile.name)
-            logger.debug("KeyModel.deleteKey: Finished removing Launcher public key(s) from agent.")
         except:
             logger.debug("KeyModel.deleteKey: " + traceback.format_exc())
             return False
@@ -585,7 +563,8 @@ class KeyModel():
                 logger.debug("KeyModel.listKey: searching for the string")
                 pathMatch = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.getPrivateKeyFilePath())),keycomment)
                 commentMatch = re.search('.*{launchercomment}.*'.format(launchercomment=self.getLauncherKeyComment()),keycomment)
-                if pathMatch or commentMatch:
+                launcherMatch = re.search('Launcher',keycomment)
+                if pathMatch or commentMatch or launcherMatch:
                     self.pubKey = line.rstrip()
                     return self.pubKey
         return None
