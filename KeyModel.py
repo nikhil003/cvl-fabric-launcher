@@ -106,6 +106,7 @@ class KeyModel():
             if 'HOME' not in os.environ:
                 os.environ['HOME'] = os.path.expanduser('~')
         self.pubKey=None
+        self.addedKey=[]
         self.copiedID=threading.Event()
 
 
@@ -265,6 +266,7 @@ class KeyModel():
                 #logger.debug("1 returning KEY_LOCKED %s %s"%(lp.before,lp.after))
                 logger.debug("KeyModel.generateNewKey: " + "Unexpected result from attempt to create new key.")
             lp.close()
+        pubkeyPath=self.getPrivateKeyFilePath()+".pub"
         return success
 
     def changePassphrase(self, existingPassphrase, newPassphrase, 
@@ -370,20 +372,31 @@ class KeyModel():
             else:
                 logger.debug("KeyModel.deleteKey: Public key not found.")
 
-            # Remove key(s) from SSH agent:
-
         except:
             logger.debug("KeyModel.deleteKey: " + traceback.format_exc())
             return False
 
         return True
 
+    def diffKeys(self,preList):
+        postList = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),'-L'],stdin=None,stdout=subprocess.PIPE,stderr=None,universal_newlines=True).communicate()
+        for line in postList:
+            if (not line in preList):
+                match = re.search("^(?P<keytype>\S+)\ (?P<key>\S+)\ (?P<keycomment>.+)$",line)
+                if match:
+                    self.addedKey.append(match.group('key'))
+                    
     def addKeyToAgent(self, passphrase, keyAddedSuccessfullyCallback, passphraseIncorrectCallback, privateKeyFileNotFoundCallback, failedToConnectToAgentCallback):
 
         success = False
         if not os.path.exists(self.sshPathsObject.sshKeyPath):
             privateKeyFileNotFoundCallback()
             return success
+        try:
+            preList = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),'-L'],stdin=None,stdout=subprocess.PIPE,stderr=None,universal_newlines=True).communicate()
+        except:
+            failedToConnectToAgentCallback()
+            return False
 
         if sys.platform.startswith('win'):
             # The patched OpenSSH binary on Windows/cygwin allows us
@@ -411,6 +424,7 @@ class KeyModel():
                 elif "Identity added" in stdout:
                     success = True
                     logger.debug("KeyModel.addKeyToAgent: " + "addKeyToAgent succesfully added a key to the agent")
+                    self.diffKeys(preList)
                     keyAddedSuccessfullyCallback()
                 elif 'Bad pass' in stdout:
                     logger.debug("KeyModel.addKeyToAgent: " + 'Got "Bad pass" from ssh-add binary')
@@ -439,8 +453,10 @@ class KeyModel():
             if idx == 1:
                 success = True
                 logger.debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
+                self.diffKeys(preList)
                 keyAddedSuccessfullyCallback()
             elif idx == 2:
+                print "failed to connect to agent"
                 failedToConnectToAgentCallback()
                 return False
             elif idx == 0:
@@ -448,6 +464,7 @@ class KeyModel():
 
                 idx = lp.expect(["Identity added", "Bad pass",pexpect.EOF])
                 if idx == 0:
+                    self.diffKeys(preList)
                     success = True
                     logger.debug("addKeyToAgent %i %s sucesfully added the key to the agent, calling keyAddedSuccesfullCallback"%(threading.currentThread().ident,threading.currentThread().name))
                     keyAddedSuccessfullyCallback()
@@ -477,6 +494,8 @@ class KeyModel():
         # but it just greps for Launcher in the agent's keys, rather than 
         # specifically identifying this key. :-(
 
+        if self.pubKey==None:
+            return
         try:
             # Remove key(s) from SSH agent:
 
@@ -485,13 +504,7 @@ class KeyModel():
             publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
             for publicKeyLineFromAgent in publicKeysInAgent:
-                # On Windows, we don't know which format the key file's path will be in:
-                # 2048 33:40:a7:ab:35:da:be:f5:8c:63:c1:a9:23:08:2a:bd c:\docume~1\admini~1\locals~1\temp\MassiveLauncherKey_tkzv3v (RSA)
-                # 2048 d7:e8:a1:7d:55:0f:92:c0:5f:1a:60:e3:46:32:fb:fc C:\Documents and Settings\Administrator\.ssh\MassiveLauncherKey (RSA)
-                # so we could just use the key's filename, not its absolute path.
-                # For now, we will just use "Launcher":
-                #if self.getPrivateKeyFilePath() in publicKeyLineFromAgent:
-                if "Launcher" in publicKeyLineFromAgent:
+                if self.pubKey in publicKeyLineFromAgent:
                     tempPublicKeyFile = tempfile.NamedTemporaryFile(delete=False)
                     tempPublicKeyFile.write(publicKeyLineFromAgent)
                     tempPublicKeyFile.close()
@@ -504,6 +517,10 @@ class KeyModel():
                         success = ("Identity removed" in stdout)
                     finally:
                         os.unlink(tempPublicKeyFile.name)
+            self.pubKey=None
+            for key in self.addedKey:
+                if self.pubKey in key:
+                    self.addedKey.remove(key)
         except:
             logger.debug("KeyModel.removeKeyFromAgent: " + traceback.format_exc())
             return False
@@ -561,12 +578,26 @@ class KeyModel():
             if match:
                 keycomment = match.group('keycomment')
                 logger.debug("KeyModel.listKey: searching for the string")
-                pathMatch = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.getPrivateKeyFilePath())),keycomment)
-                commentMatch = re.search('.*{launchercomment}.*'.format(launchercomment=self.getLauncherKeyComment()),keycomment)
-                launcherMatch = re.search('Launcher',keycomment)
-                if pathMatch or commentMatch or launcherMatch:
+                if (self.addedKey!=[]):
+                    logger.debug("KeyModel.listKey: KeyModel reports that we have added a key, will attmempt to match on the string %s"%self.addedKey[0])
+                    if self.addedKey[0] in line:
+                        keyMatch=True
+                    else:
+                        keyMatch=False
+                    print keyMatch
+                    pathMatch=None
+                    commentMatch=None
+                    launcherMatch=None
+                else:
+                    keyMatch=None
+                    pathMatch = re.search('.*{launchercomment}.*'.format(launchercomment=os.path.basename(self.getPrivateKeyFilePath())),keycomment)
+                    commentMatch = re.search('.*{launchercomment}.*'.format(launchercomment=self.getLauncherKeyComment()),keycomment)
+                    launcherMatch = re.search('Launcher',keycomment)
+                if pathMatch or commentMatch or launcherMatch or keyMatch:
                     self.pubKey = line.rstrip()
                     return self.pubKey
+                else:
+                    print keyMatch
         return None
 
     def deleteRemoteKey(self,host,username):
