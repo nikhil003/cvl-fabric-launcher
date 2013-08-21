@@ -456,7 +456,6 @@ class KeyModel():
                 self.diffKeys(preList)
                 keyAddedSuccessfullyCallback()
             elif idx == 2:
-                print "failed to connect to agent"
                 failedToConnectToAgentCallback()
                 return False
             elif idx == 0:
@@ -584,7 +583,6 @@ class KeyModel():
                         keyMatch=True
                     else:
                         keyMatch=False
-                    print keyMatch
                     pathMatch=None
                     commentMatch=None
                     launcherMatch=None
@@ -596,8 +594,6 @@ class KeyModel():
                 if pathMatch or commentMatch or launcherMatch or keyMatch:
                     self.pubKey = line.rstrip()
                     return self.pubKey
-                else:
-                    print keyMatch
         return None
 
     def deleteRemoteKey(self,host,username):
