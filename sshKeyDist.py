@@ -112,7 +112,7 @@ class KeyDist():
                 self.nextEvent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self.keydistObject)
             def failure(): 
                 self.keydistObject.cancel("Unable to generate a new key pair")
-            self.keydistObject.keyModel.generateNewKey(self.keydistObject.passphrase,success,failure,failure)
+            self.keydistObject.keyModel.generateNewKey(self.keydistObject.password,success,failure,failure)
             self.keydistObject.keyCreated.set()
             if (not self.stopped() and self.nextEvent != None):
                 logger.debug("genkeyThread: generating LOADKEY event from genkeyThread")
@@ -294,12 +294,12 @@ class KeyDist():
             threadid=threading.currentThread().ident
             threadname=threading.currentThread().name
             km =self.keydistObject.keyModel
-            if (self.keydistObject.passphrase!=None):
-                passphrase=self.keydistObject.passphrase
+            if (self.keydistObject.password!=None):
+                password=self.keydistObject.password
                 newevent1 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_KEY_WRONGPASS, self.keydistObject)
             else:
                 newevent1 = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_KEY_LOCKED, self.keydistObject)
-                passphrase=""
+                password=""
             def incorrectCallback():
                 self.nextEvent = newevent1
             def loadedCallback():
@@ -309,7 +309,7 @@ class KeyDist():
             def failedToConnectToAgentCallback():
                 self.nextEvent=KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEEDAGENT,self.keydistObject)
             logger.debug("sshKeyDist.loadKeyThread.run: KeyModel information temporary: %s path: %s exists: %s"%(km.isTemporaryKey(),km.getPrivateKeyFilePath(),km.privateKeyExists()))
-            km.addKeyToAgent(passphrase,loadedCallback,incorrectCallback,notFoundCallback,failedToConnectToAgentCallback)
+            km.addKeyToAgent(password,loadedCallback,incorrectCallback,notFoundCallback,failedToConnectToAgentCallback)
             if (not self.stopped() and self.nextEvent != None):
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(),self.nextEvent)
 
@@ -371,7 +371,7 @@ class KeyDist():
                     import random
                     oneTimePassphrase=''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(10))
                     logger.debug("sshKeyDistEvent.newkey: oneTimePassphrase: " + oneTimePassphrase)
-                    event.keydist.passphrase = oneTimePassphrase
+                    event.keydist.password = oneTimePassphrase
                 else:
                     wx.CallAfter(event.keydist.getPassphrase,event.arg)
             if (event.GetId() == KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE or usingOneTimePassphrase):
@@ -510,12 +510,8 @@ class KeyDist():
                         logger.debug("received AUTHFAIL event from thread %i %s posting TESTAUTH event in response"%(event.threadid,event.threadname))
                         wx.PostEvent(event.keydist.notifywindow.GetEventHandler(),newevent)
                     else:
-                        if event.keydist.password is None:
-                            newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COPYID_NEEDPASS,event.keydist)
-                            logger.debug("received AUTHFAIL event from thread %i %s posting COPYID_NEEDPASS event in response"%(event.threadid,event.threadname))
-                        else:
-                            newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COPYID,event.keydist)
-                            logger.debug("received AUTHFAIL event from thread %i %s posting COPYID event in response"%(event.threadid,event.threadname))
+                        newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COPYID_NEEDPASS,event.keydist)
+                        logger.debug("received AUTHFAIL event from thread %i %s posting NEEDPASS event in response"%(event.threadid,event.threadname))
                         wx.PostEvent(event.keydist.notifywindow.GetEventHandler(),newevent)
             else:
                 event.Skip()
@@ -531,7 +527,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,progressDialog,username,password,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False):
+    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False):
 
         logger.debug("KeyDist.__init__")
 
@@ -577,8 +573,6 @@ class KeyDist():
         self.parentWindow = parentWindow
         self.progressDialog = progressDialog
         self.username = username
-        self.password = password
-        self.passphrase = None
         self.host = host
         self.configName = configName
         self.displayStrings=displayStrings
@@ -587,6 +581,7 @@ class KeyDist():
         self.threads=[]
         self.pubkeyfp = None
         self.keyloaded=Event()
+        self.password = None
         self.pubkeylock = Lock()
         self.keycopied=Event()
         self.authentication_success = False
@@ -611,7 +606,7 @@ class KeyDist():
             self.cancel("Sorry, I can't continue without the passphrase for that key. If you've forgotten the passphrase, you could remove the key and generate a new one. The key is probably located in ~/.ssh/MassiveLauncherKey*")
             return
         else:
-            self.passphrase = passphrase
+            self.password = passphrase
             event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
@@ -635,7 +630,7 @@ class KeyDist():
         canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
         if (not canceled):
             logger.debug("User didn't cancel from CreateNewKeyDialog.")
-            self.passphrase=createNewKeyDialog.getPassphrase()
+            self.password=createNewKeyDialog.getPassphrase()
             event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
         else:
