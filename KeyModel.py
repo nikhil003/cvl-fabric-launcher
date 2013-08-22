@@ -488,11 +488,6 @@ class KeyModel():
 
     def removeKeyFromAgent(self):
 
-        # FIXME
-        # We use a method which doesn't require entering the key's passphrase :-)
-        # but it just greps for Launcher in the agent's keys, rather than 
-        # specifically identifying this key. :-(
-
         if self.pubKey==None:
             return
         try:
@@ -516,10 +511,10 @@ class KeyModel():
                         success = ("Identity removed" in stdout)
                     finally:
                         os.unlink(tempPublicKeyFile.name)
-            self.pubKey=None
             for key in self.addedKey:
                 if self.pubKey in key:
                     self.addedKey.remove(key)
+            self.pubKey=None
         except:
             logger.debug("KeyModel.removeKeyFromAgent: " + traceback.format_exc())
             return False
