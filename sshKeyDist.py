@@ -237,7 +237,7 @@ class KeyDist():
 
             try:
                 startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
                 startupinfo.wShowWindow = subprocess.SW_HIDE
             except:
                 logger.debug(traceback.format_exc())
