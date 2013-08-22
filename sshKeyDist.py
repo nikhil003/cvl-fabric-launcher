@@ -656,14 +656,16 @@ class KeyDist():
             wx.PostEvent(self.notifywindow.GetEventHandler(), newevent)
 
     def deleteRemoveShutdown(self):
-        logger.debug("sshKeyDist.deleteRemoveShutdown: deleting temporary key and removing key from agent.")
         if self.removeKeyOnExit.isSet():
             logger.debug("sshKeyDist.deleteRemoveShutdown: self.removeKeyOnExit.isSet() is True.")
             if self.keyCreated.isSet():
                 logger.debug("sshKeyDist.deleteRemoveShutdown: self.keyCreated.isSet() is True.")
+                logger.debug("sshKeyDist.deleteRemoveShutdown: deleting remote key.")
                 self.keyModel.deleteRemoteKey(host=self.host,username=self.username)
+                logger.debug("sshKeyDist.deleteRemoveShutdown: deleting temporary key and removing key from agent.")
                 self.keyModel.deleteKey()
-                self.keyModel.removeKeyFromAgent()
+                #logger.debug("sshKeyDist.deleteRemoveShutdown: removing key from agent.")
+                #self.keyModel.removeKeyFromAgent()
             else:
                 logger.debug("sshKeyDist.deleteRemoveShutdown: self.keyCreated.isSet() is False.")
         else:
