@@ -72,7 +72,9 @@ class passphraseDialog(wx.Dialog):
         helpController.Display("Authentication Overview")
 
     def getPassword(self):
+        wx.EndBusyCursor()
         val = self.ShowModal()
+        wx.BeginBusyCursor()
         passwd = self.password
         canceled = self.canceled
         self.Destroy()

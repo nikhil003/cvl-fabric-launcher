@@ -25,7 +25,6 @@ from PassphraseDialog import passphraseDialog
 if not sys.platform.startswith('win'):
     import pexpect
 
-
 class KeyDist():
 
     def complete(self):
@@ -627,7 +626,9 @@ class KeyDist():
     def getPassphrase(self,reason=None):
         from CreateNewKeyDialog import CreateNewKeyDialog
         createNewKeyDialog = CreateNewKeyDialog(self.parentWindow, self.progressDialog, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key', self.keyModel.getPrivateKeyFilePath(),self.displayStrings, displayMessageBoxReportingSuccess=False)
+        wx.EndBusyCursor()
         canceled = createNewKeyDialog.ShowModal()==wx.ID_CANCEL
+        wx.BeginBusyCursor()
         if (not canceled):
             logger.debug("User didn't cancel from CreateNewKeyDialog.")
             self.password=createNewKeyDialog.getPassphrase()
