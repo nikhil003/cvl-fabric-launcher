@@ -18,7 +18,7 @@ class sshpaths():
     OPENSSH_BUILD_DIR = 'openssh-cygwin-stdin-build'
     def double_quote(self,x):
         return '"' + x + '"'
-    def ssh_binaries(self):
+    def ssh_binaries(self,temporaryKey=False):
         """
         Locate the ssh binaries on various systems. On Windows we bundle a
         stripped-down OpenSSH build that uses Cygwin.
@@ -39,7 +39,10 @@ class sshpaths():
             sshBinary        = self.double_quote(f('ssh.exe'))
             sshKeyGenBinary  = self.double_quote(f('ssh-keygen.exe'))
             sshKeyScanBinary = self.double_quote(f('ssh-keyscan.exe'))
-            sshAgentBinary   = self.double_quote(f('charade.exe'))
+            if temporaryKey:
+                sshAgentBinary   = self.double_quote(f('ssh-agent.exe'))
+            else:
+                sshAgentBinary   = self.double_quote(f('charade.exe'))
             sshAddBinary     = self.double_quote(f('ssh-add.exe'))
             chownBinary      = self.double_quote(f('chown.exe'))
             chmodBinary      = self.double_quote(f('chmod.exe'))
@@ -68,8 +71,8 @@ class sshpaths():
 
         return (sshKeyPath,known_hosts_file,)
 
-    def __init__(self, keyFileName, massiveLauncherConfig=None, massiveLauncherPreferencesFilePath=None):
-        (sshBinary, sshKeyGenBinary, sshAgentBinary, sshAddBinary, sshKeyScanBinary,chownBinary, chmodBinary,) = self.ssh_binaries()
+    def __init__(self, keyFileName, massiveLauncherConfig=None, massiveLauncherPreferencesFilePath=None, temporaryKey=False):
+        (sshBinary, sshKeyGenBinary, sshAgentBinary, sshAddBinary, sshKeyScanBinary,chownBinary, chmodBinary,) = self.ssh_binaries(temporaryKey)
         self.keyFileName                = keyFileName
         self.massiveLauncherConfig      = massiveLauncherConfig
         self.massiveLauncherPreferencesFilePath = massiveLauncherPreferencesFilePath
@@ -89,10 +92,8 @@ class sshpaths():
 class KeyModel():
 
     def __init__(self, temporaryKey=False,startupinfo=None,creationflags=0):
-        self.sshpaths = sshpaths("MassiveLauncherKey")
-        self.sshPathsObject = self.sshpaths
         self.setUseTemporaryKey(temporaryKey)
-        self.startedPagaent=threading.Event()
+        self.startedPageant=threading.Event()
         self.startedAgent=threading.Event()
         self.pagaent=None
         if sys.platform.startswith("win"):
@@ -105,6 +106,8 @@ class KeyModel():
         self.creationflags=creationflags
 
     def setUseTemporaryKey(self, temporaryKey):
+        self.sshpaths = sshpaths("MassiveLauncherKey",temporaryKey=temporaryKey)
+        self.sshPathsObject = self.sshpaths
         self.temporaryKey=temporaryKey
         if self.temporaryKey:
             sshKey=tempfile.NamedTemporaryFile(prefix="MassiveLauncherKey_",delete=True)
@@ -142,7 +145,7 @@ class KeyModel():
 
         import win32process
         self.pagaent = subprocess.Popen([pageant], startupinfo=self.startupinfo,creationflags=self.creationflags|win32process.DETACHED_PROCESS)
-        self.startedPagaent.set()
+        self.startedPageant.set()
 
 
 
@@ -161,7 +164,7 @@ class KeyModel():
 
 
     def startAgent(self):
-        if sys.platform.startswith('win'):
+        if sys.platform.startswith('win') and not self.isTemporaryKey():
             self.start_pageant()
         self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
         stdout = self.sshAgentProcess.stdout.readlines()
