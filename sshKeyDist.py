@@ -1,5 +1,4 @@
 import os
-import subprocess
 import ssh
 import wx
 import wx.lib.newevent
@@ -166,7 +165,7 @@ class KeyDist():
             return self._stop.isSet()
 
         def getKnownHostKeys(self):
-            keygen = subprocess.Popen(self.ssh_keygen_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
+            keygen = subprocess.Popen(self.ssh_keygen_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.keydistObject.startupinfo)
             stdout,stderr = keygen.communicate()
             keygen.wait()
             hostkeys=[]
@@ -182,7 +181,7 @@ class KeyDist():
             
 
         def scanHost(self):
-            scan = subprocess.Popen(self.ssh_keyscan_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
+            scan = subprocess.Popen(self.ssh_keyscan_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.keydistObject.startupinfo)
             stdout,stderr = scan.communicate()
             scan.wait()
             hostkeys=[]
@@ -234,19 +233,8 @@ class KeyDist():
                                                                                                                                                                                                              host=self.keydistObject.host,
                                                                                                                                                                                                              nonexistantpath=path)
 
-            try:
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-                startupinfo.wShowWindow = subprocess.SW_HIDE
-            except:
-                logger.debug(traceback.format_exc())
-                # On non-Windows systems the previous block will die with 
-                # "AttributeError: 'module' object has no attribute 'STARTUPINFO'" even though
-                # the code is inside the 'if' block, hence the use of a dodgy try/except block.
-                startupinfo = None
-
             logger.debug('testAuthThread: attempting: ' + ssh_cmd)
-            ssh = subprocess.Popen(ssh_cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True, startupinfo=startupinfo)
+            ssh = subprocess.Popen(ssh_cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True, startupinfo=self.keydistObject.startupinfo)
             stdout, stderr = ssh.communicate()
             ssh.wait()
 
@@ -530,7 +518,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False):
+    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False,startupinfo=None):
 
         logger.debug("KeyDist.__init__")
 
@@ -598,6 +586,7 @@ class KeyDist():
             self.removeKeyOnExit.set()
         self.stopAgentOnExit=Event()
         self.keyModel = keyModel
+        self.startupinfo = startupinfo
 
     def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):
