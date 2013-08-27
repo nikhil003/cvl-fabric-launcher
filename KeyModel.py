@@ -88,14 +88,10 @@ class sshpaths():
 
 class KeyModel():
 
-    def __init__(self, temporaryKey=False):
+    def __init__(self, temporaryKey=False,startupinfo=None,creationflags=0):
         self.sshpaths = sshpaths("MassiveLauncherKey")
         self.sshPathsObject = self.sshpaths
-        self.temporaryKey=temporaryKey
-        if self.temporaryKey:
-            sshKey=tempfile.NamedTemporaryFile(prefix="MassiveLauncherKey_",delete=True)
-            self.sshpaths.sshKeyPath=sshKey.name
-            sshKey.close()
+        self.setUseTemporaryKey(temporaryKey)
         self.keyComment = "Massive Launcher Key"
         if self.temporaryKey:
             self.keyComment+=" temporary key"
@@ -108,10 +104,18 @@ class KeyModel():
         self.pubKey=None
         self.addedKey=[]
         self.copiedID=threading.Event()
+        self.startupinfo=startupinfo
+        self.creationflags=creationflags
 
-
+    def setUseTemporaryKey(self, temporaryKey):
+        self.temporaryKey=temporaryKey
+        if self.temporaryKey:
+            sshKey=tempfile.NamedTemporaryFile(prefix="MassiveLauncherKey_",delete=True)
+            self.sshpaths.sshKeyPath=sshKey.name
+            sshKey.close()
+        
     def fingerprintPrivateKeyFile(self):
-        proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.getPrivateKeyFilePath()], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.getPrivateKeyFilePath()], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags)
         stdout,stderr = proc.communicate()
         return stdout
 
@@ -137,7 +141,7 @@ class KeyModel():
             pageant = os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
 
         import win32process
-        self.pagaent = subprocess.Popen([pageant], creationflags=win32process.DETACHED_PROCESS)
+        self.pagaent = subprocess.Popen([pageant], startupinfo=self.startupinfo,creationflags=self.creationflags|win32process.DETACHED_PROCESS)
         self.startedPagaent.set()
 
 
@@ -159,7 +163,7 @@ class KeyModel():
     def startAgent(self):
         if sys.platform.startswith('win'):
             self.start_pageant()
-        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
+        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
         stdout = self.sshAgentProcess.stdout.readlines()
         for line in stdout:
             logger.debug("startAgentThread: line = " + line)
@@ -180,7 +184,7 @@ class KeyModel():
         self.startedAgent.set()
 
     def fingerprintAgent(self):
-        proc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-l"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        proc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-l"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, startupinfo=self.startupinfo, creationflags=self.creationflags)
         stdout,stderr = proc.communicate()
         for line in stdout.splitlines(True):
             if (self.keyComment in line or self.getPrivateKeyFilePath() in line):
@@ -218,7 +222,9 @@ class KeyModel():
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
-                                    universal_newlines=True)
+                                    universal_newlines=True,
+                                    startupinfo=self.startupinfo,
+                                    creationflags=self.creationflags)
             stdout, stderr = proc.communicate('\r\n')
 
             if stdout is None or str(stdout).strip() == '':
@@ -285,7 +291,9 @@ class KeyModel():
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
-                                    universal_newlines=True)
+                                    universal_newlines=True,
+                                    startupinfo=self.startupinfo,
+                                    creationflags=self.creationflags)
             stdout, stderr = proc.communicate(input=existingPassphrase + '\r\n')
 
             if stdout is None or str(stdout).strip() == '':
@@ -348,6 +356,13 @@ class KeyModel():
             lp.close()
         return success
 
+    # FIXME
+    # deleteKey should probably be renamed to deleteKeyAndRemoveFromAgent
+    # or we could have a boolean argument removeKeyFromAgent
+    # or we could eliminate the "self.removeKeyFromAgent()" line
+    # from this method and ensure that we always call
+    # keyModel.removeKeyFromAgent() when calling keyModel.deleteKey().
+
     def deleteKey(self):
         # Delete key
 
@@ -379,7 +394,7 @@ class KeyModel():
         return True
 
     def diffKeys(self,preList):
-        postList = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),'-L'],stdin=None,stdout=subprocess.PIPE,stderr=None,universal_newlines=True).communicate()
+        postList = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),'-L'],stdin=None,stdout=subprocess.PIPE,stderr=None,universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags).communicate()
         for line in postList:
             if (not line in preList):
                 match = re.search("^(?P<keytype>\S+)\ (?P<key>\S+)\ (?P<keycomment>.+)$",line)
@@ -393,7 +408,7 @@ class KeyModel():
             privateKeyFileNotFoundCallback()
             return success
         try:
-            preList = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),'-L'],stdin=None,stdout=subprocess.PIPE,stderr=None,universal_newlines=True).communicate()
+            preList = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),'-L'],stdin=None,stdout=subprocess.PIPE,stderr=None,universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags).communicate()
         except:
             failedToConnectToAgentCallback()
             return False
@@ -411,7 +426,9 @@ class KeyModel():
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
-                                        universal_newlines=True)
+                                        universal_newlines=True,
+                                        startupinfo=self.startupinfo,
+                                        creationflags=self.creationflags)
                 stdout, stderr = proc.communicate(input=passphrase + '\r\n')
 
                 if stdout is None or str(stdout).strip() == '':
@@ -488,14 +505,21 @@ class KeyModel():
 
     def removeKeyFromAgent(self):
 
+        logger.debug("KeyModel.removeKeyFromAgent")
         if self.pubKey==None:
+            # removeKeyFromAgent was failing when being called from InspectKeyDialog,
+            # because keyModel.listKey() hadn't been called yet.
+            logger.debug("KeyModel.removeKeyFromAgent: self.pubKey is None, so calling self.listKey().")
+            self.listKey()
+        if self.pubKey==None:
+            logger.debug("KeyModel.removeKeyFromAgent: Bailing out because self.pubKey is None.")
             return
         try:
             # Remove key(s) from SSH agent:
 
             logger.debug("Removing Launcher public key(s) from agent.")
 
-            publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+            publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
             for publicKeyLineFromAgent in publicKeysInAgent:
                 if self.pubKey in publicKeyLineFromAgent:
@@ -503,7 +527,7 @@ class KeyModel():
                     tempPublicKeyFile.write(publicKeyLineFromAgent)
                     tempPublicKeyFile.close()
                     try:
-                        removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+                        removePublicKeyFromAgent = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-d",tempPublicKeyFile.name],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, startupinfo=self.startupinfo, creationflags=self.creationflags)
                         logger.debug("KeyModel.removeKeyFromAgent: " + self.sshPathsObject.sshAddBinary + " -d " + tempPublicKeyFile.name)
                         stdout, stderr = removePublicKeyFromAgent.communicate()
                         if stderr is not None and len(stderr) > 0:
@@ -559,7 +583,7 @@ class KeyModel():
     def listKey(self):
         import re
         sshKeyListCmd = self.sshpaths.sshAddBinary + " -L "
-        keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
+        keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags)
         (stdout,stderr) = keylist.communicate()
         if stderr!="":
             e = Exception(stderr)
@@ -573,7 +597,7 @@ class KeyModel():
                 keycomment = match.group('keycomment')
                 logger.debug("KeyModel.listKey: searching for the string")
                 if (self.addedKey!=[]):
-                    logger.debug("KeyModel.listKey: KeyModel reports that we have added a key, will attmempt to match on the string %s"%self.addedKey[0])
+                    logger.debug("KeyModel.listKey: KeyModel reports that we have added a key, will attempt to match on the string %s"%self.addedKey[0])
                     if self.addedKey[0] in line:
                         keyMatch=True
                     else:
@@ -601,7 +625,7 @@ class KeyModel():
             key=self.pubKey.split(' ')[1]
             command = cmd.format(sshBinary=self.sshpaths.sshBinary,username=username,host=host,key=key,nonexistantpath=path)
             logger.debug('KeyModel.deleteRemoteKey: running %s to delete remote key'%command)
-            p = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True)
+            p = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags)
             (stdout,stderr) = p.communicate()
         
         

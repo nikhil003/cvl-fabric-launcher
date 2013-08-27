@@ -269,12 +269,15 @@ class InspectKeyDialog(wx.Dialog):
         self.fingerprintInAgentField.SetValue(publicKeyFingerprintInAgent)
 
     def onAddKeyToOrRemoveFromAgent(self, event):
+        logger.debug("onAddKeyToOrRemoveFromAgent")
         if self.addKeyToOrRemoveKeyFromAgentButton.GetLabel()=="Add MASSIVE Launcher key to agent":
+            logger.debug("onAddKeyToOrRemoveFromAgent: Adding key to agent...")
 
             import cvlsshutils
             ppd = cvlsshutils.PassphraseDialog.passphraseDialog(None,None,wx.ID_ANY,'Unlock Key',"Please enter the passphrase for the key","OK","Cancel")
             (canceled,passphrase) = ppd.getPassword()
             if (canceled):
+                logger.debug("onAddKeyToOrRemoveFromAgent: Tried to add key to agent, but user canceld from passphrase dialog.")
                 return
             else:
                 def keyAddedSuccessfullyCallback():
@@ -297,13 +300,20 @@ class InspectKeyDialog(wx.Dialog):
                     dlg.ShowModal()
                 success = self.keyModel.addKeyToAgent(passphrase, keyAddedSuccessfullyCallback, passphraseIncorrectCallback, privateKeyFileNotFoundCallback, failedToConnectToAgentCallback)
                 if success:
+                    logger.debug("onAddKeyToOrRemoveFromAgent: Added key to agent.")
                     self.populateFingerprintInAgentField()
                     self.addKeyToOrRemoveKeyFromAgentButton.SetLabel("Remove MASSIVE Launcher key from agent")
         elif self.addKeyToOrRemoveKeyFromAgentButton.GetLabel()=="Remove MASSIVE Launcher key from agent":
+            logger.debug("onAddKeyToOrRemoveFromAgent: Removing key from agent...")
             success = self.keyModel.removeKeyFromAgent()
             if success:
+                logger.debug("onAddKeyToOrRemoveFromAgent: Removed key from agent.")
                 self.populateFingerprintInAgentField()
                 self.addKeyToOrRemoveKeyFromAgentButton.SetLabel("Add MASSIVE Launcher key to agent")
+            else:
+                logger.debug("onAddKeyToOrRemoveFromAgent: Failed to remove key from agent.")
+                dlg = wx.MessageDialog(self, "Failed to remove key from your agent.", "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+                dlg.ShowModal()
 
     def onDeleteKey(self,event):
         dlg = wx.MessageDialog(self, 
@@ -311,7 +321,7 @@ class InspectKeyDialog(wx.Dialog):
             "MASSIVE/CVL Launcher", wx.YES_NO | wx.ICON_QUESTION)
         if dlg.ShowModal()==wx.ID_YES:
 
-            keyModelObject = KeyModel(self.privateKeyFilePath)
+            keyModelObject = KeyModel(self.keyModel.privateKeyFilePath)
             success = self.keyModel.deleteKey()
             success = success and self.keyModel.removeKeyFromAgent()
             if success:
