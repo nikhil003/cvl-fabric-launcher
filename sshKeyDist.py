@@ -165,7 +165,7 @@ class KeyDist():
             return self._stop.isSet()
 
         def getKnownHostKeys(self):
-            keygen = subprocess.Popen(self.ssh_keygen_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.keydistObject.startupinfo)
+            keygen = subprocess.Popen(self.ssh_keygen_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.keydistObject.startupinfo,creationflags=self.keydistObject.creationflags)
             stdout,stderr = keygen.communicate()
             keygen.wait()
             hostkeys=[]
@@ -181,7 +181,7 @@ class KeyDist():
             
 
         def scanHost(self):
-            scan = subprocess.Popen(self.ssh_keyscan_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.keydistObject.startupinfo)
+            scan = subprocess.Popen(self.ssh_keyscan_cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.keydistObject.startupinfo,creationflags=self.keydistObject.creationflags)
             stdout,stderr = scan.communicate()
             scan.wait()
             hostkeys=[]
@@ -234,7 +234,7 @@ class KeyDist():
                                                                                                                                                                                                              nonexistantpath=path)
 
             logger.debug('testAuthThread: attempting: ' + ssh_cmd)
-            ssh = subprocess.Popen(ssh_cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True, startupinfo=self.keydistObject.startupinfo)
+            ssh = subprocess.Popen(ssh_cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True,universal_newlines=True, startupinfo=self.keydistObject.startupinfo, creationflags=self.keydistObject.creationflags)
             stdout, stderr = ssh.communicate()
             ssh.wait()
 
@@ -518,7 +518,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False,startupinfo=None):
+    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False,startupinfo=None,creationflags=0):
 
         logger.debug("KeyDist.__init__")
 
@@ -587,6 +587,7 @@ class KeyDist():
         self.stopAgentOnExit=Event()
         self.keyModel = keyModel
         self.startupinfo = startupinfo
+        self.creationflags = creationflags
 
     def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):
