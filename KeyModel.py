@@ -92,9 +92,6 @@ class KeyModel():
         self.sshpaths = sshpaths("MassiveLauncherKey")
         self.sshPathsObject = self.sshpaths
         self.setUseTemporaryKey(temporaryKey)
-        self.keyComment = "Massive Launcher Key"
-        if self.temporaryKey:
-            self.keyComment+=" temporary key"
         self.startedPagaent=threading.Event()
         self.startedAgent=threading.Event()
         self.pagaent=None
@@ -113,6 +110,9 @@ class KeyModel():
             sshKey=tempfile.NamedTemporaryFile(prefix="MassiveLauncherKey_",delete=True)
             self.sshpaths.sshKeyPath=sshKey.name
             sshKey.close()
+        self.keyComment = "Massive Launcher Key"
+        if self.temporaryKey:
+            self.keyComment+=" temporary key"
         
     def fingerprintPrivateKeyFile(self):
         proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.getPrivateKeyFilePath()], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags)
