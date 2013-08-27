@@ -412,6 +412,10 @@ class KeyDist():
             if (event.GetId() == KeyDist.EVT_KEYDIST_SHUTDOWN):
                 logger.debug("received EVT_KEYDIST_SHUTDOWN event")
                 nextevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COMPLETE,event.keydist)
+                try:
+                    nextevent.arg=event.arg
+                except:
+                    pass
                 event.keydist.shutdownThread=threading.Thread(target=event.keydist.shutdownReal,args=[nextevent])
                 event.keydist.shutdownThread.start()
             else:
