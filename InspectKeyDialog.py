@@ -246,17 +246,15 @@ class InspectKeyDialog(wx.Dialog):
 
     def populateFingerprintAndKeyTypeFields(self):
 
-        key = self.keyModel.fingerprintPrivateKeyFile()
-        keyType = ""
-        publicKeyFingerprint = ""
-        if key!= None:
-            sshKeyGenOutComponents = key.split(" ")
-            if len(sshKeyGenOutComponents)>1:
-                publicKeyFingerprint = sshKeyGenOutComponents[1]
-            if len(sshKeyGenOutComponents)>3:
-                keyType = sshKeyGenOutComponents[-1].strip().strip("(").strip(")")
-        self.publicKeyFingerprintField.SetValue(publicKeyFingerprint)
-        self.keyTypeField.SetLabel(keyType)
+        (publicKeyFingerprint,keyType) = self.keyModel.getFingerprintAndKeyTypeFromPrivateKeyFile()
+        if publicKeyFingerprint is not None:
+            self.publicKeyFingerprintField.SetValue(publicKeyFingerprint)
+        else:
+            self.publicKeyFingerprintField.SetValue("")
+        if keyType is not None:
+            self.keyTypeField.SetLabel(keyType)
+        else:
+            self.keyTypeField.SetLabel("")
 
     def populateFingerprintInAgentField(self):
 

@@ -101,6 +101,7 @@ class KeyModel():
             if 'HOME' not in os.environ:
                 os.environ['HOME'] = os.path.expanduser('~')
         self.pubKey=None
+        self.pubKeyFingerprint=None
         self.addedKey=[]
         self.copiedID=threading.Event()
         self.startupinfo=startupinfo
@@ -117,11 +118,25 @@ class KeyModel():
         self.keyComment = "Massive Launcher Key"
         if self.temporaryKey:
             self.keyComment+=" temporary key"
-        
-    def fingerprintPrivateKeyFile(self):
+       
+
+    def getFingerprintAndKeyTypeFromPrivateKeyFile(self):
+        logger.debug("KeyModel.getFingerprintAndKeyTypeFromPrivateKeyFile")
         proc = subprocess.Popen([self.sshPathsObject.sshKeyGenBinary.strip('"'),"-yl","-f",self.getPrivateKeyFilePath()], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags)
         stdout,stderr = proc.communicate()
-        return stdout
+
+        publicKeyFingerprint = None
+        keyType = None 
+        if stdout!= None:
+            sshKeyGenOutComponents = stdout.split(" ")
+            if len(sshKeyGenOutComponents)>1:
+                publicKeyFingerprint = sshKeyGenOutComponents[1]
+            if len(sshKeyGenOutComponents)>3:
+                keyType = sshKeyGenOutComponents[-1].strip().strip("(").strip(")")
+
+        self.pubKeyFingerprint = publicKeyFingerprint
+ 
+        return (publicKeyFingerprint,keyType)
 
     OPENSSH_BUILD_DIR = 'openssh-cygwin-stdin-build'
 
@@ -192,7 +207,7 @@ class KeyModel():
         proc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-l"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, startupinfo=self.startupinfo, creationflags=self.creationflags)
         stdout,stderr = proc.communicate()
         for line in stdout.splitlines(True):
-            if (self.keyComment in line or self.getPrivateKeyFilePath() in line):
+            if (self.keyComment in line or self.getPrivateKeyFilePath() in line or "MassiveLauncherKey" in line):
                 return line
 
     def privateKeyExists(self):
@@ -517,17 +532,28 @@ class KeyModel():
             logger.debug("KeyModel.removeKeyFromAgent: self.pubKey is None, so calling self.listKey().")
             self.listKey()
         if self.pubKey==None:
-            logger.debug("KeyModel.removeKeyFromAgent: Bailing out because self.pubKey is None.")
-            return
+            logger.debug("KeyModel.removeKeyFromAgent: self.pubKey is still None after calling self.listKey(), so checking self.pubKeyFingerprint.")
+            if self.pubKeyFingerprint==None:
+                logger.debug("KeyModel.removeKeyFromAgent: self.pubKeyFingerprint is None, so calling self.getFingerprintAndKeyTypeFromPrivatKeyFile().")
+                self.getFingerprintAndKeyTypeFromPrivateKeyFile()
+            if self.pubKey==None and self.pubKeyFingerprint==None:
+                logger.debug("KeyModel.removeKeyFromAgent: Bailing out because self.pubKey is None and self.pubKeyFingerprint is None.")
+                return
         try:
             # Remove key(s) from SSH agent:
 
             logger.debug("Removing Launcher public key(s) from agent.")
 
-            publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
+            if self.pubKey!=None:
+                publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-L"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
+            elif self.pubKeyFingerprint!=None:
+                publicKeysInAgentProc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-l"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
+            else:
+                logger.debug("KeyModel.removeKeyFromAgent: Bailing out because self.pubKey is None and self.pubKeyFingerprint is None.")
+                return 
             publicKeysInAgent = publicKeysInAgentProc.stdout.readlines()
             for publicKeyLineFromAgent in publicKeysInAgent:
-                if self.pubKey in publicKeyLineFromAgent:
+                if (self.pubKey!=None and self.pubKey in publicKeyLineFromAgent) or (self.pubKeyFingerprint!=None and self.pubKeyFingerprint in publicKeyLineFromAgent):
                     tempPublicKeyFile = tempfile.NamedTemporaryFile(delete=False)
                     tempPublicKeyFile.write(publicKeyLineFromAgent)
                     tempPublicKeyFile.close()
@@ -541,9 +567,10 @@ class KeyModel():
                     finally:
                         os.unlink(tempPublicKeyFile.name)
             for key in self.addedKey:
-                if self.pubKey in key:
+                if self.pubKey!=None and self.pubKey in key:
                     self.addedKey.remove(key)
             self.pubKey=None
+            self.pubKeyFingerprint=None
         except:
             logger.debug("KeyModel.removeKeyFromAgent: " + traceback.format_exc())
             return False
