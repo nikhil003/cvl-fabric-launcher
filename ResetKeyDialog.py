@@ -143,8 +143,9 @@ class ResetKeyDialog(wx.Dialog):
             return
 
         success = self.keyModel.deleteKey()
-        if self.keyInAgent:
-            success = success and self.keyModel.removeKeyFromAgent()
+        # deleteKey() method also removes key from agent.
+        #if self.keyInAgent:
+            #success = success and self.keyModel.removeKeyFromAgent()
         if success:
             logger.debug("Existing Launcher key was successfully deleted!")
 
