@@ -40,7 +40,8 @@ class sshpaths():
             sshKeyGenBinary  = self.double_quote(f('ssh-keygen.exe'))
             sshKeyScanBinary = self.double_quote(f('ssh-keyscan.exe'))
             if temporaryKey:
-                sshAgentBinary   = self.double_quote(f('ssh-agent.exe'))
+                #sshAgentBinary   = self.double_quote(f('ssh-agent.exe'))
+                sshAgentBinary   = self.double_quote(f('charade.exe'))
             else:
                 sshAgentBinary   = self.double_quote(f('charade.exe'))
             sshAddBinary     = self.double_quote(f('ssh-add.exe'))
@@ -164,7 +165,8 @@ class KeyModel():
 
 
     def startAgent(self):
-        if sys.platform.startswith('win') and not self.isTemporaryKey():
+        #if sys.platform.startswith('win') and not self.isTemporaryKey():
+        if sys.platform.startswith('win'):
             self.start_pageant()
         self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
         stdout = self.sshAgentProcess.stdout.readlines()
