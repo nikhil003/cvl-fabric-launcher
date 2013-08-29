@@ -319,7 +319,6 @@ class InspectKeyDialog(wx.Dialog):
             "MASSIVE/CVL Launcher", wx.YES_NO | wx.ICON_QUESTION)
         if dlg.ShowModal()==wx.ID_YES:
 
-            keyModelObject = KeyModel(self.keyModel.privateKeyFilePath)
             success = self.keyModel.deleteKey()
             success = success and self.keyModel.removeKeyFromAgent()
             if success:
