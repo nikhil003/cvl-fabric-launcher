@@ -92,11 +92,11 @@ class sshpaths():
 
 class KeyModel():
 
-    def __init__(self, temporaryKey=False,startupinfo=None,creationflags=0):
+    def __init__(self,temporaryKey=False,startupinfo=None,creationflags=0,massiveLauncherConfig=None,massiveLauncherPreferencesFilePath=None):
         self.setUseTemporaryKey(temporaryKey)
         self.startedPageant=threading.Event()
         self.startedAgent=threading.Event()
-        self.pagaent=None
+        self.pageant=None
         if sys.platform.startswith("win"):
             if 'HOME' not in os.environ:
                 os.environ['HOME'] = os.path.expanduser('~')
@@ -106,6 +106,8 @@ class KeyModel():
         self.copiedID=threading.Event()
         self.startupinfo=startupinfo
         self.creationflags=creationflags
+        self.massiveLauncherConfig=massiveLauncherConfig
+        self.massiveLauncherPreferencesFilePath=massiveLauncherPreferencesFilePath
 
     def setUseTemporaryKey(self, temporaryKey):
         self.sshpaths = sshpaths("MassiveLauncherKey",temporaryKey=temporaryKey)
@@ -160,17 +162,17 @@ class KeyModel():
             pageant = os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
 
         import win32process
-        self.pagaent = subprocess.Popen([pageant], startupinfo=self.startupinfo,creationflags=self.creationflags|win32process.DETACHED_PROCESS)
+        self.pageant = subprocess.Popen([pageant], startupinfo=self.startupinfo,creationflags=self.creationflags|win32process.DETACHED_PROCESS)
         self.startedPageant.set()
 
 
 
     def stopAgent(self):
         logger.debug("KeyModel.stopAgent: stopping the agent")
-        if self.pagaent!=None:
-            pagaentPid=self.pagaent.pid
-            self.pagaent.kill()
-            self.pagaent=None
+        if self.pageant!=None:
+            pageantPid=self.pageant.pid
+            self.pageant.kill()
+            self.pageant=None
         # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exits so the kill won't get the real process
         if self.sshAgentProcess!=None:
             import signal
@@ -293,6 +295,12 @@ class KeyModel():
                 logger.debug("KeyModel.generateNewKey: " + "Unexpected result from attempt to create new key.")
             lp.close()
         pubkeyPath=self.getPrivateKeyFilePath()+".pub"
+
+        if self.massiveLauncherConfig!=None and self.massiveLauncherPreferencesFilePath!=None and self.temporaryKey==False:
+            self.massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_launcher_private_key_path", self.getPrivateKeyFilePath())
+            with open(self.massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
+                self.massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
+
         return success
 
     def changePassphrase(self, existingPassphrase, newPassphrase, 
