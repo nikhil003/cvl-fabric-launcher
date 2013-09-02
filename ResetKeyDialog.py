@@ -29,9 +29,8 @@ class ResetKeyDialog(wx.Dialog):
                         "This will delete your key, located at: \n\n" +
                         self.keyModel.getPrivateKeyFilePath()+"\n\n"+ 
                         "A new key will be generated, replacing the existing key.\n\n" +
-                        "Any servers you had configured to access using this key,\n"+
-                        "will again require a password on the first\n" +
-                        "login after resetting your key's passphrase.")
+                        "Any servers you had configured to access using this key will again require a password\n" +
+                        "on the first login after resetting your key's passphrase.")
         self.resetKeyDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
         # Passphrase panel
@@ -124,6 +123,9 @@ class ResetKeyDialog(wx.Dialog):
             self.passphraseStatusLabel1.SetLabel("")
             self.passphraseStatusLabel2.SetLabel("Passphrases match!")
             self.validPassphrase = True
+
+        self.resetKeyDialogPanel.Fit()
+        self.Fit()
 
     def onOK(self, event):
         if self.passphraseField.GetValue().strip()=="" or not self.validPassphrase:
