@@ -575,7 +575,7 @@ class KeyModel():
                     finally:
                         os.unlink(tempPublicKeyFile.name)
             for key in self.addedKey:
-                if self.pubKey!=None and self.pubKey in key:
+                if self.pubKey!=None and key in self.pubKey:
                     self.addedKey.remove(key)
             self.pubKey=None
             self.pubKeyFingerprint=None
