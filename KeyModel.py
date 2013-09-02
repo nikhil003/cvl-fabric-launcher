@@ -92,8 +92,20 @@ class sshpaths():
 
 class KeyModel():
 
-    def __init__(self,temporaryKey=False,startupinfo=None,creationflags=0,massiveLauncherConfig=None,massiveLauncherPreferencesFilePath=None):
-        self.setUseTemporaryKey(temporaryKey)
+    def __init__(self,temporaryKey=False,startupinfo=None,creationflags=0,launcherKeyName="MassiveLauncherKey"):
+        self.temporaryKey=temporaryKey
+        if self.temporaryKey:
+            sshKey=tempfile.NamedTemporaryFile(prefix=launcherKeyName,delete=True)
+            sshKeyName=sshKey.name
+            sshKey.close()
+        else:
+            sshKeyName=launcherKeyName
+        self.sshpaths = sshpaths(sshKeyName,temporaryKey=temporaryKey)
+        self.sshPathsObject = self.sshpaths
+        self.temporaryKey=temporaryKey
+        self.keyComment = "Massive Launcher Key"
+        if self.temporaryKey:
+            self.keyComment+=" temporary key"
         self.startedPageant=threading.Event()
         self.startedAgent=threading.Event()
         self.pageant=None
@@ -106,20 +118,7 @@ class KeyModel():
         self.copiedID=threading.Event()
         self.startupinfo=startupinfo
         self.creationflags=creationflags
-        self.massiveLauncherConfig=massiveLauncherConfig
-        self.massiveLauncherPreferencesFilePath=massiveLauncherPreferencesFilePath
 
-    def setUseTemporaryKey(self, temporaryKey):
-        self.sshpaths = sshpaths("MassiveLauncherKey",temporaryKey=temporaryKey)
-        self.sshPathsObject = self.sshpaths
-        self.temporaryKey=temporaryKey
-        if self.temporaryKey:
-            sshKey=tempfile.NamedTemporaryFile(prefix="MassiveLauncherKey_",delete=True)
-            self.sshpaths.sshKeyPath=sshKey.name
-            sshKey.close()
-        self.keyComment = "Massive Launcher Key"
-        if self.temporaryKey:
-            self.keyComment+=" temporary key"
        
 
     def getFingerprintAndKeyTypeFromPrivateKeyFile(self):
@@ -182,8 +181,7 @@ class KeyModel():
 
 
     def startAgent(self):
-        #if sys.platform.startswith('win') and not self.isTemporaryKey():
-        if sys.platform.startswith('win'):
+        if sys.platform.startswith('win') and not self.isTemporaryKey():
             self.start_pageant()
         self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
         stdout = self.sshAgentProcess.stdout.readlines()
@@ -295,11 +293,6 @@ class KeyModel():
                 logger.debug("KeyModel.generateNewKey: " + "Unexpected result from attempt to create new key.")
             lp.close()
         pubkeyPath=self.getPrivateKeyFilePath()+".pub"
-
-        if self.massiveLauncherConfig!=None and self.massiveLauncherPreferencesFilePath!=None and self.temporaryKey==False:
-            self.massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_launcher_private_key_path", self.getPrivateKeyFilePath())
-            with open(self.massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                self.massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
 
         return success
 
