@@ -27,9 +27,10 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         self.keyModel = keyModel
 
         self.instructionsLabel = wx.StaticText(self.changeKeyPassphraseDialogPanel, wx.ID_ANY, 
-                        "To change your passphrase, you will first need to enter your existing passphrase,\n" +
-                        "then you will need to enter your new passphrase twice.\n\n"+
-                        "You will still be able to access servers without a password if you have connected\n" +
+                        "This will change the passphrase on your key, located at:\n\n" +
+                        self.keyModel.getPrivateKeyFilePath() +
+                        "\n\n"+
+                        "You will still be able to access servers without a password\nif you have connected" +
                         "to them previously with the Launcher.")
         self.changeKeyPassphraseDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 

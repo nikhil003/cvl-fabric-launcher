@@ -26,8 +26,11 @@ class ResetKeyDialog(wx.Dialog):
         self.keyInAgent = keyInAgent
 
         self.instructionsLabel = wx.StaticText(self.resetKeyDialogPanel, wx.ID_ANY, 
-                        "A new key can be generated, replacing the existing key, allowing you to enter a new passphrase.\n\n" +
-                        "Any servers you had access to without a password, will again require a password on the first\n" +
+                        "This will delete your key, located at: \n\n" +
+                        self.keyModel.getPrivateKeyFilePath()+"\n\n"+ 
+                        "A new key will be generated, replacing the existing key.\n\n" +
+                        "Any servers you had configured to access using this key,\n"+
+                        "will again require a password on the first\n" +
                         "login after resetting your key's passphrase.")
         self.resetKeyDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
 
