@@ -30,9 +30,9 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
                         "This will change the passphrase on your key, located at:\n\n" +
                         self.keyModel.getPrivateKeyFilePath() +
                         "\n\n"+
-                        "You will still be able to access servers without a password\nif you have connected" +
-                        "to them previously with the Launcher.")
-        self.changeKeyPassphraseDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM, border=15)
+                        "You will still be able to access servers without a password if you have\n" +
+                        "connected to them previously with the Launcher.")
+        self.changeKeyPassphraseDialogPanelSizer.Add(self.instructionsLabel, flag=wx.EXPAND|wx.BOTTOM|wx.RIGHT, border=15)
 
         # Existing passphrase panel
 
@@ -95,10 +95,6 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         self.newPassphraseStatusLabel2 = wx.StaticText(self.innerNewPassphrasePanel, wx.ID_ANY, "")
         self.innerNewPassphrasePanelSizer.Add(self.newPassphraseStatusLabel2, flag=wx.EXPAND|wx.LEFT, border=20)
 
-        # Initially, set this label to its longest possible value
-        # to help with panel sizing:
-        self.newPassphraseStatusLabel2.SetLabel("Enter your new passphrase again.")
-
         self.innerNewPassphrasePanel.Fit()
         self.newPassphraseGroupBoxSizer.Add(self.innerNewPassphrasePanel, flag=wx.EXPAND)
         self.newPassphrasePanel.Fit()
@@ -137,28 +133,31 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         self.Fit()
         self.CenterOnParent()
 
-        # Now that panel sizing is done, we can clear this status label:
-        self.newPassphraseStatusLabel2.SetLabel("")
-
     def onPassphraseFieldsModified(self, event):
         self.validNewPassphrase = False
-        if len(self.existingPassphraseField.GetValue())==0:
-            self.passphraseStatusLabel1.SetLabel("Please enter a passphrase.")
-            self.passphraseStatusLabel2.SetLabel("")
-        elif len(self.existingPassphraseField.GetValue())>0 and len(self.existingPassphraseField.GetValue())<6:
+        if len(self.newPassphraseField.GetValue())==0:
+            self.newPassphraseStatusLabel1.SetLabel("Please enter a passphrase.")
+            #self.newPassphraseStatusLabel1.SetLabel(self.displayStrings.newPassphraseTitle)
+            self.newPassphraseStatusLabel2.SetLabel("")
+        elif len(self.newPassphraseField.GetValue())>0 and len(self.newPassphraseField.GetValue())<6:
             self.newPassphraseStatusLabel1.SetLabel("Passphrase is too short.")
+            #self.newPassphraseStatusLabel1.SetLabel(self.displayStrings.createNewKeyDialogNewPassphraseTooShort)
             self.newPassphraseStatusLabel2.SetLabel("")
         elif self.newPassphraseField.GetValue()!=self.repeatNewPassphraseField.GetValue():
             if self.repeatNewPassphraseField.GetValue()=="":
                 self.newPassphraseStatusLabel1.SetLabel("")
-                self.newPassphraseStatusLabel2.SetLabel("Enter your new passphrase again.")
+                self.newPassphraseStatusLabel2.SetLabel("Enter your passphrase again.")
             else:
                 self.newPassphraseStatusLabel1.SetLabel("")
                 self.newPassphraseStatusLabel2.SetLabel("Passphrases don't match!")
+                #self.newPassphraseStatusLabel2.SetLabel(self.displayStrings.createNewKeyDialogNewPassphraseMismatch)
         else:
             self.newPassphraseStatusLabel1.SetLabel("")
             self.newPassphraseStatusLabel2.SetLabel("Passphrases match!")
             self.validNewPassphrase = True
+
+        self.changeKeyPassphraseDialogPanel.Fit()
+        self.Fit()
 
     def onOK(self, event):
 
@@ -205,9 +204,9 @@ class ChangeKeyPassphraseDialog(wx.Dialog):
         def passphraseUpdatedSuccessfullyCallback():
             message = "Passphrase updated successfully!"
             logger.debug(message)
-            dlg = wx.MessageDialog(self, message,
-                            "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
-            dlg.ShowModal()
+            #dlg = wx.MessageDialog(self, message,
+                            #"MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+            #dlg.ShowModal()
 
         def newPassphraseTooShortCallback():
             # This should have been caught earlier:
