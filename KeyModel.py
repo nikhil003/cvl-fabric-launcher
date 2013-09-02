@@ -40,8 +40,8 @@ class sshpaths():
             sshKeyGenBinary  = self.double_quote(f('ssh-keygen.exe'))
             sshKeyScanBinary = self.double_quote(f('ssh-keyscan.exe'))
             if temporaryKey:
-                #sshAgentBinary   = self.double_quote(f('ssh-agent.exe'))
-                sshAgentBinary   = self.double_quote(f('charade.exe'))
+                sshAgentBinary   = self.double_quote(f('ssh-agent.exe'))
+                #sshAgentBinary   = self.double_quote(f('charade.exe'))
             else:
                 sshAgentBinary   = self.double_quote(f('charade.exe'))
             sshAddBinary     = self.double_quote(f('ssh-add.exe'))
