@@ -188,12 +188,34 @@ class KeyModel():
 
 
     def startAgent(self):
+
+        if self.startedAgent.isSet() and 'SSH_AGENT_PID' in os.environ and pidIsRunning(os.environ['SSH_AGENT_PID']):
+            logger.debug("KeyModel.startAgent: Bailing out, because agent is already running.")
+            return
+        logger.debug("KeyModel.startAgent: Didn't find existing SSH_AGENT_PID process.")
+
         if sys.platform.startswith('win') and not self.isTemporaryKey():
             self.start_pageant()
-        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True,startupinfo=self.startupinfo, creationflags=self.creationflags)
-        stdout = self.sshAgentProcess.stdout.readlines()
-        for line in stdout:
-            logger.debug("startAgentThread: line = " + line)
+
+        # startupinfo and creationflags are used to avoid flickering Command Prompt windows on Windows OS,
+        # however charade.exe doesn't seem to work reliably with these startupinfo and creationflags values.
+        startupinfo = None
+        creationflags = 0
+
+        self.sshAgentProcess = subprocess.Popen(self.sshpaths.sshAgentBinary,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True,startupinfo=startupinfo, creationflags=creationflags)
+
+        # Switching from self.sshAgentProcess.stdout.readlines() to self.sshAgentProcess.communicate(),
+        # due to anecdotal evidence that it fixed a bug on Windows XP when charade.exe was slow to start up,
+        # and because of the following warning from: http://docs.python.org/2/library/subprocess.html
+        #
+        # "Warning: Use communicate() rather than .stdin.write, .stdout.read or .stderr.read to avoid deadlocks
+        # due to any of the other OS pipe buffers filling up and blocking the child process."
+
+        stdout,stderr = self.sshAgentProcess.communicate()
+        if stderr is not None and stderr!="":
+            logger.debug("KeyModel.startAgent stderr:\n" + stderr)
+        for line in stdout.split("\n"):
+            logger.debug("KeyModel.startAgent: line = " + line)
             if sys.platform.startswith('win'):
                 match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*?);.*$",line) # output from charade.exe doesn't match the regex, even though it looks the same!?
             else:
@@ -210,7 +232,20 @@ class KeyModel():
                 self.agentPid=pid
         if self.sshAgentProcess is None:
             raise Exception(str(stdout))
+        if not pidIsRunning(os.environ['SSH_AGENT_PID']):
+            agentName = ""
+            if "charade" in self.sshpaths.sshAgentBinary:
+                agentName="(charade.exe) "
+            message = "The SSH Agent %sreported that it started a process with PID %s, but that process doesn't appear to be running:\n\n%s" % (agentName, os.environ['SSH_AGENT_PID'],stdout)
+            logger.debug("KeyModel.startAgent: " + message)
+            raise Exception(message)
+        logger.debug("KeyModel.startAgent: Setting startedAgent.")
         self.startedAgent.set()
+        try:
+            logger.debug("KeyModel.startAgent: SSH_AUTH_SOCK = " + os.environ['SSH_AUTH_SOCK'])
+            logger.debug("KeyModel.startAgent: SSH_AGENT_PID = " + os.environ['SSH_AGENT_PID'])
+        except:
+            logger.debug(traceback.format_exc())
 
     def fingerprintAgent(self):
         proc = subprocess.Popen([self.sshPathsObject.sshAddBinary.strip('"'),"-l"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, startupinfo=self.startupinfo, creationflags=self.creationflags)
@@ -636,6 +671,15 @@ class KeyModel():
     def listKey(self):
         import re
         sshKeyListCmd = self.sshpaths.sshAddBinary + " -L "
+        logger.debug("KeyModel.listKey: sshkeyListCmd = " + sshKeyListCmd)
+        if 'SSH_AUTH_SOCK' in os.environ:
+            logger.debug("KeyModel.listKey: SSH_AUTH_SOCK = " + os.environ['SSH_AUTH_SOCK'])
+        else:
+            logger.debug("KeyModel.listKey: SSH_AUTH_SOCK was not found in os.environ")
+        if 'SSH_AGENT_PID' in os.environ:
+            logger.debug("KeyModel.listKey: SSH_AGENT_PID = " + os.environ['SSH_AGENT_PID'])
+        else:
+            logger.debug("KeyModel.listKey: SSH_AGENT_PID was not found in os.environ")
         keylist = subprocess.Popen(sshKeyListCmd, stdout = subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags)
         (stdout,stderr) = keylist.communicate()
         if stderr!="":
@@ -681,4 +725,12 @@ class KeyModel():
             p = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=self.startupinfo,creationflags=self.creationflags)
             (stdout,stderr) = p.communicate()
         
-        
+
+def pidIsRunning(pid):
+    try:
+        import psutil
+        p = psutil.Process(int(pid))
+        return p.status == psutil.STATUS_RUNNING
+    except:
+        return False
+
