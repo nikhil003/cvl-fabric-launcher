@@ -175,7 +175,10 @@ class KeyModel():
         # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exits so the kill won't get the real process
         if self.sshAgentProcess!=None:
             import signal
-            os.kill(int(self.agentPid),signal.SIGTERM)
+            try:
+                os.kill(int(self.agentPid),signal.SIGTERM)
+            except:
+                logger.debug(traceback.format_exc())
             if 'PREVIOUS_SSH_AUTH_SOCK' in os.environ:
                 os.environ['SSH_AUTH_SOCK'] = os.environ['PREVIOUS_SSH_AUTH_SOCK']
                 del os.environ['PREVIOUS_SSH_AUTH_SOCK']
