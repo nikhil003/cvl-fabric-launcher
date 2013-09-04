@@ -588,6 +588,7 @@ class KeyDist():
         self.keyModel = keyModel
         self.startupinfo = startupinfo
         self.creationflags = creationflags
+        self.shuttingDown=Event()
 
     def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):
@@ -677,6 +678,10 @@ class KeyDist():
             logger.debug("sshKeyDist.deleteRemoveShutdown: self.stopAgentOnExit.isSet() is False.")
 
     def shutdownReal(self,nextevent=None):
+
+        if self.shuttingDown.isSet():
+            return
+        self.shuttingDown.set()
 
         logger.debug("sshKeyDist.shutdownReal: calling stop and join on all threads")
         for t in self.threads:
