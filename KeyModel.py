@@ -95,7 +95,7 @@ class KeyModel():
     def __init__(self,temporaryKey=False,startupinfo=None,creationflags=0,launcherKeyName="MassiveLauncherKey"):
         self.temporaryKey=temporaryKey
         if self.temporaryKey:
-            sshKey=tempfile.NamedTemporaryFile(prefix=launcherKeyName,delete=True)
+            sshKey=tempfile.NamedTemporaryFile(prefix=launcherKeyName+"_",delete=True)
             sshKeyName=sshKey.name
             sshKey.close()
         else:
@@ -176,7 +176,11 @@ class KeyModel():
         if self.sshAgentProcess!=None:
             import signal
             os.kill(int(self.agentPid),signal.SIGTERM)
-            del os.environ['SSH_AUTH_SOCK']
+            if 'PREVIOUS_SSH_AUTH_SOCK' in os.environ:
+                os.environ['SSH_AUTH_SOCK'] = os.environ['PREVIOUS_SSH_AUTH_SOCK']
+                del os.environ['PREVIOUS_SSH_AUTH_SOCK']
+            else:
+                del os.environ['SSH_AUTH_SOCK']
             self.sshAgentProcess=None
 
 
@@ -193,6 +197,8 @@ class KeyModel():
                 match = re.search("^SSH_AUTH_SOCK=(?P<socket>.*?); export SSH_AUTH_SOCK;$",line)
             if match:
                 agentenv = match.group('socket')
+                if 'SSH_AUTH_SOCK' in os.environ:
+                    os.environ['PREVIOUS_SSH_AUTH_SOCK'] = os.environ['SSH_AUTH_SOCK']
                 os.environ['SSH_AUTH_SOCK'] = agentenv
             match2 = re.search("^SSH_AGENT_PID=(?P<pid>[0-9]+);.*$",line)
             if match2:
