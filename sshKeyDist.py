@@ -58,7 +58,7 @@ class KeyDist():
                 try:
                     self.keydistObject.keyModel.startAgent()
                 except Exception as e:
-                    self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message %s" % str(e))
+                    self.keydistObject.cancel(message="I tried to start an ssh agent, but failed with the error message:\n\n%s" % str(e))
                     return
 
             newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_GETPUBKEY,self.keydistObject)
