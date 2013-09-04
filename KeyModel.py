@@ -390,7 +390,7 @@ class KeyModel():
     # from this method and ensure that we always call
     # keyModel.removeKeyFromAgent() when calling keyModel.deleteKey().
 
-    def deleteKey(self):
+    def deleteKey(self, removeFromAgent=True, ignoreFailureToConnectToAgent=False):
         # Delete key
 
         # Should we ask for the passphrase before deleting the key?
@@ -399,8 +399,19 @@ class KeyModel():
 
 
         try:
-
-            self.removeKeyFromAgent()
+ 
+            if removeFromAgent:
+                try:
+                    self.removeKeyFromAgent()
+                except:
+                    if ignoreFailureToConnectToAgent and 'Could not open a connection to your authentication agent' in traceback.format_exc():
+                        logger.debug("KeyModel.deleteKey: Found 'Could not open a connection...' in removeKeyFromAgent's traceback.")
+                        logger.debug("KeyModel.deleteKey: Proceeding with key deletion, even though we couldn't remove the key from the agent.")
+                        logger.debug(traceback.format_exc())
+                        pass
+                    else:
+                        logger.debug("KeyModel.deleteKey: Didn't find 'Could not open a connection...' in removeKeyFromAgent's traceback.")
+                        raise
 
             logger.debug("KeyModel.deleteKey: Deleting private key...")
             os.unlink(self.getPrivateKeyFilePath())

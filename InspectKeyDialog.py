@@ -319,8 +319,8 @@ class InspectKeyDialog(wx.Dialog):
             "MASSIVE/CVL Launcher", wx.YES_NO | wx.ICON_QUESTION)
         if dlg.ShowModal()==wx.ID_YES:
 
-            success = self.keyModel.deleteKey()
-            success = success and self.keyModel.removeKeyFromAgent()
+            success = self.keyModel.deleteKey(removeFromAgent=True, ignoreFailureToConnectToAgent=True)
+            #success = success and self.keyModel.removeKeyFromAgent()
             if success:
                 message = "Your Launcher key was successfully deleted!"
             else:
