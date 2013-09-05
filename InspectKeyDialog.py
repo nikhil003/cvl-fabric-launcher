@@ -357,7 +357,13 @@ class InspectKeyDialog(wx.Dialog):
 
     def onClose(self, event):
         self.Show(False)
+        if hasattr(self,'startedAgent'):
+            self.stopAgent() 
 
     def startAgent(self):
         self.keyModel.startAgent()
+        self.startedAgent = True
+
+    def stopAgent(self):
+        self.keyModel.stopAgent()
 
