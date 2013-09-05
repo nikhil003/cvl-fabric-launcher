@@ -147,7 +147,7 @@ class ResetKeyDialog(wx.Dialog):
             dlg.ShowModal()
             return
 
-        success = self.keyModel.deleteKey()
+        success = self.keyModel.deleteKey(ignoreFailureToConnectToAgent=True)
         # deleteKey() method also removes key from agent.
         #if self.keyInAgent:
             #success = success and self.keyModel.removeKeyFromAgent()
