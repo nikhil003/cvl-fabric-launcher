@@ -63,7 +63,7 @@ class passphraseDialog(wx.Dialog):
             self.password = None
             self.EndModal(wx.ID_CANCEL)
 
-        if self.closedProgressDialog:
+        if self.closedProgressDialog and self.canceled==False:
             if self.progressDialog is not None:
                 self.progressDialog.Show(True)
 
