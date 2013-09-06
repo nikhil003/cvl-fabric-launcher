@@ -601,7 +601,7 @@ class KeyDist():
             return
         else:
             self.password = passphrase
-            event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self)
+            event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_LOADKEY,self)
             wx.PostEvent(self.notifywindow.GetEventHandler(),event)
 
 
