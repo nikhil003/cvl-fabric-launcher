@@ -637,7 +637,7 @@ class KeyModel():
         import ssh
         sshClient = ssh.SSHClient()
         sshClient.set_missing_host_key_policy(ssh.AutoAddPolicy())
-        sshClient.connect(hostname=host,username=username,password=password,allow_agent=False,look_for_keys=False)
+        sshClient.connect(hostname=host,timeout=10,username=username,password=password,allow_agent=False,look_for_keys=False)
         (stdin,stdout,stderr)=sshClient.exec_command("module load massive")
         err=stderr.readlines()
         if err!=[]:
