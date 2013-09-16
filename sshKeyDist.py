@@ -597,7 +597,7 @@ class KeyDist():
             ppd = passphraseDialog(self.parentWindow,self.progressDialog,wx.ID_ANY,'Unlock Key',self.displayStrings.passphrasePrompt,"OK","Cancel")
         (canceled,passphrase) = ppd.getPassword()
         if (canceled):
-            self.cancel("Sorry, I can't continue without the passphrase for that key. If you've forgotten the passphrase, you could remove the key and generate a new one. The key is probably located in ~/.ssh/MassiveLauncherKey*")
+            self.cancel("Sorry, I can't continue without the passphrase for that key. If you've forgotten the passphrase, you could remove the key and generate a new one. The key is probably located in\n\n" + self.keyModel.getPrivateKeyFilePath() + "*")
             return
         else:
             self.password = passphrase
