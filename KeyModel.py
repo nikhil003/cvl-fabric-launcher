@@ -168,10 +168,22 @@ class KeyModel():
 
     def stopAgent(self):
         logger.debug("KeyModel.stopAgent: stopping the agent")
-        if self.pageant!=None:
-            pageantPid=self.pageant.pid
-            self.pageant.kill()
-            self.pageant=None
+
+        logger.debug("KeyModel.stopAgent: On Windows, we will stop charade.exe or ssh-agent.exe (whichever one is running),")
+        logger.debug("KeyModel.stopAgent: but we won't stop Pageant, because Pageant is what allows the user to run the")
+        logger.debug("KeyModel.stopAgent: Launcher again without having to re-enter their passphrase.")
+
+        # The code below was presumably added so that when a new Launcher version is installed, 
+        # we can avoid the warning from the Setup Wizard that a Pageant process will need to be terminated
+        # and then restarted after the new version is installed.  But this mechanism of allowing the Setup
+        # Wizard to terminate and restart Pageant seems to work fine in my experience - JW.
+        # This is not the case for the OpenSSH / Cygwin binaries and DLLs - we definitely don't want any
+        # of them to be running when we try to install a new Launcher version with the Windows Setup Wizard.
+
+        #if self.pageant!=None:
+            #pageantPid=self.pageant.pid
+            #self.pageant.kill()
+            #self.pageant=None
         # Do no use self.sshAgentProcess.kill() the sshAgentProcess forks the real agent and exits so the kill won't get the real process
         if self.sshAgentProcess!=None:
             import signal
