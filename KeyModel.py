@@ -161,7 +161,7 @@ class KeyModel():
             pageant = os.path.join(launcherModulePath, self.OPENSSH_BUILD_DIR, 'bin', 'PAGEANT.EXE')
 
         import win32process
-        self.pageant = subprocess.Popen([pageant], startupinfo=self.startupinfo,creationflags=self.creationflags|win32process.DETACHED_PROCESS)
+        self.pageant = subprocess.Popen([pageant], stdin=None, stdout=None, stderr=None, close_fds=True, startupinfo=self.startupinfo, creationflags=self.creationflags|win32process.DETACHED_PROCESS)
         self.startedPageant.set()
 
 
