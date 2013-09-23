@@ -47,6 +47,7 @@ class CreateNewKeyDialog(wx.Dialog):
         self.passphrasePanel.SetSizer(self.passphraseGroupBoxSizer)
 
         self.innerPassphrasePanel = wx.Panel(self.passphrasePanel, wx.ID_ANY)
+        self.innerPassphrasePanel.SetMinSize(wx.Size(450,-1))
         self.innerPassphrasePanelSizer = wx.FlexGridSizer(2,3, hgap=10)
         self.innerPassphrasePanel.SetSizer(self.innerPassphrasePanelSizer)
 
