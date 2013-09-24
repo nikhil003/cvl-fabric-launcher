@@ -650,6 +650,22 @@ class KeyModel():
         sshClient = ssh.SSHClient()
         sshClient.set_missing_host_key_policy(ssh.AutoAddPolicy())
         sshClient.connect(hostname=host,timeout=10,username=username,password=password,allow_agent=False,look_for_keys=False)
+
+        # SSH keys won't work if the user's home directory is writeable by other users.
+        writeableDirectoryErrorMessage = "" + \
+            "Your home directory is writeable by users other than yourself. " + \
+            "As a result, you won't be able to authenticate with SSH keys, so you can't use the Launcher. " + \
+            "Please correct the permissions on your home directory, e.g.\n\n" + \
+            "chmod 700 ~"
+        (stdin,stdout,stderr)=sshClient.exec_command('ls -ld ~ | grep -q "^d....w" && echo HOME_DIRECTORY_WRITEABLE_BY_OTHER_USERS')
+        err=stdout.readlines()
+        if err!=[]:
+            raise Exception(writeableDirectoryErrorMessage)
+        (stdin,stdout,stderr)=sshClient.exec_command('ls -ld ~ | grep -q "^d.......w" && echo HOME_DIRECTORY_WRITEABLE_BY_OTHER_USERS')
+        err=stdout.readlines()
+        if err!=[]:
+            raise Exception(writeableDirectoryErrorMessage)
+
         (stdin,stdout,stderr)=sshClient.exec_command("module load massive")
         err=stderr.readlines()
         if err!=[]:
