@@ -335,6 +335,10 @@ class KeyDist():
                 logger.debug('CopyIDThread: ssh.SSHException : ' + str(e))
                 self.keydistObject.cancel(message=str(e))
                 return
+            except Exception as e:
+                logger.debug('CopyIDThread: Exception : ' + str(e))
+                self.keydistObject.cancel(message=str(e))
+                return
             if (not self.stopped()):
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(), event)
 
