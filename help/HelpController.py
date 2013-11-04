@@ -16,6 +16,16 @@ class HelpController():
 
     def __init__(self):
 
+        # The only way I know how to detect the state of the busy cursor
+        # is to try to stop it, and see if this throws an exception.
+        try:
+            wx.EndBusyCursor()
+            self.stoppedBusyCursor = True
+        except:
+            self.stoppedBusyCursor = False
+
+        wx.BeginBusyCursor()
+
         self.wxHtmlHelpController = wx.html.HtmlHelpController(style=wx.html.HF_DEFAULT_STYLE, parentWindow=None)
 
         self.helpZipFile = None
@@ -59,7 +69,10 @@ class HelpController():
                 # we will try using local help files instead.
 
                 if hasattr(sys, 'frozen'):
-                    self.helpFilesDirectory = os.path.join(os.path.dirname(sys.executable), "help", "helpfiles")
+                    if sys.platform.startswith("darwin"):
+                        self.helpFilesDirectory = os.path.join(os.path.dirname(sys.executable), "..", "Resources", "help", "helpfiles")
+                    else:
+                        self.helpFilesDirectory = os.path.join(os.path.dirname(sys.executable), "help", "helpfiles")
                 else:
                     launcherModulePath = os.path.dirname(pkgutil.get_loader("launcher").filename)
                     self.helpFilesDirectory = os.path.join(launcherModulePath, "help", "helpfiles")
@@ -70,6 +83,11 @@ class HelpController():
             except:
                 logger.debug(traceback.format_exc())
 
+        if not self.stoppedBusyCursor:
+            try:
+                wx.EndBusyCursor()
+            except:
+                pass
 
     def cleanUp(self):
         if self.helpZipFilePath is not None:

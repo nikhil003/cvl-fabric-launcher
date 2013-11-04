@@ -38,8 +38,8 @@ SSH Keys are recommended if you are the only person who uses this account.
 
 This option can be changed from the Identity menu.
 """
-        self.temporaryKeyYes="Use my password every time"
-        self.temporaryKeyNo="Use my SSH Key"
+        self.temporaryKeyYes="Use my password"
+        self.temporaryKeyNo="Use an SSH key pair"
         self.qdelQueuedJob="""It looks like you've been waiting for a job to start.
 Do you want me to delete the job or leave it in the queue so you can reconnect later?
 """
@@ -51,6 +51,7 @@ Do you want me to delete the job or leave it in the queue so you can reconnect l
         self.reconnectMessage="An Existing Desktop was found. It has {timestring} remaining. Would you like to reconnect or kill it and start a new desktop?"
         self.reconnectMessageYes="Reconnect"
         self.reconnectMessageNo="New desktop"
+        self.helpEmailAddress="help@massive.org.au"
 
 class sshKeyDistDisplayStringsCVL(sshKeyDistDisplayStrings):
     def __init__(self):
@@ -58,11 +59,12 @@ class sshKeyDistDisplayStringsCVL(sshKeyDistDisplayStrings):
         self.passwdPrompt="""Please enter the password for your CVL account.
 This is the password you entered when you requested an account
 at the website https://web.cvl.massive.org.au/users"""
-        self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
+        #self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
+        self.passwdPromptIncorrect="Authentication failed. Please check your username and password.\n"+self.passwdPrompt
         self.passphrasePrompt="Please enter the passphrase for your SSH key"
         self.passphrasePromptIncorrect="""Sorry, that passphrase was incorrect.
-Please enter the passphrase for you SSH Key
-If you have forgoten the passphrase for you key, you may need to delete it and create a new key.
+Please enter the passphrase for your SSH Key
+If you have forgotten the passphrase for your key, you may need to delete it and create a new key.
 You can find this option under the Identity menu.
 """
         self.newPassphrase="""It looks like this is the first time you're using the CVL on this
@@ -88,17 +90,19 @@ launching remote HPC jobs."""
         self.newPassphraseTitle="Please enter a new passphrase"
         self.persistentMessage="Would you like to leave your current session running so that you can reconnect later?"
         self.reconnectMessage="An Existing Desktop was found. Would you like to reconnect or kill it and start a new desktop?"
+        self.helpEmailAddress="cvl-help@monash.edu"
 
 class sshKeyDistDisplayStringsMASSIVE(sshKeyDistDisplayStrings):
     def __init__(self):
         super(sshKeyDistDisplayStringsMASSIVE, self).__init__()
         self.passwdPrompt="""Please enter the password for your MASSIVE account."""
-        self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
+        #self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
+        self.passwdPromptIncorrect="Authentication failed. Please check your username and password.\n"+self.passwdPrompt
         self.passphrasePrompt="Please enter the passphrase for your SSH key"
         self.passphrasePromptIncorrect="""
 Sorry, that passphrase was incorrect.
-Please enter the passphrase for you SSH Key
-If you have forgoten the passphrase for you key, you may need to delete it and create a new key.
+Please enter the passphrase for your SSH Key
+If you have forgotten the passphrase for your key, you may need to delete it and create a new key.
 You can find this option under the Identity menu.
 """
         self.newPassphrase="""It looks like this is the first time you're logging in to MASSIVE with this version of the launcher.
@@ -117,6 +121,7 @@ authentication for the launcher."""
         self.newPassphraseMismatch="Sorry, the two passphrases you entered don't match.\n"+self.newPassphrase
         self.createNewKeyDialogNewPassphraseMismatch="Passphrases don't match!"
         self.newPassphraseTitle="Please enter a new passphrase"
+        self.helpEmailAddress="help@massive.org.au"
 
 
 
@@ -149,6 +154,10 @@ class ListSelectionDialog(wx.Dialog):
         else:
             self.parent = None
             logger.debug("ListSelectionDialog: parent is None.")
+        if kw.has_key('progressDialog'):
+            self.progressDialog=kw.pop('progressDialog')
+        else:
+            self.progressDialog=None
         if kw.has_key('headers'):
             self.headers=kw.pop('headers')
         else:
@@ -175,15 +184,18 @@ class ListSelectionDialog(wx.Dialog):
         else:
             logger.debug("cancelCallback set to none")
             self.cancelCallback=None
+        if kw.has_key('helpEmailAddress'):
+            self.helpEmailAddress=kw.pop('helpEmailAddress')
+        else:
+            logger.debug("helpEmailAddress set to none")
+            self.helpEmailAddress="help@massive.org.au"
         super(ListSelectionDialog, self).__init__(*args, **kw)
         self.itemList=[]
        
         self.closedProgressDialog = False
-        if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-            launcherMainFrame = self.parent
-            if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                launcherMainFrame.progressDialog.Show(False)
-                self.closedProgressDialog = True
+        if self.progressDialog is not None:
+            self.progressDialog.Show(False)
+            self.closedProgressDialog = True
 
         self.CenterOnParent()
 
@@ -225,7 +237,7 @@ class ListSelectionDialog(wx.Dialog):
             font.SetPointSize(9)
         contactQueriesContactLabel.SetFont(font)
 
-        contactEmailHyperlink = wx.HyperlinkCtrl(contactPanel, id = wx.ID_ANY, label = "help@massive.org.au", url = "mailto:help@massive.org.au")
+        contactEmailHyperlink = wx.HyperlinkCtrl(contactPanel, id = wx.ID_ANY, label = self.helpEmailAddress, url = "mailto:" + self.helpEmailAddress)
         font = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         if sys.platform.startswith("darwin"):
             font.SetPointSize(11)
@@ -350,10 +362,8 @@ class ListSelectionDialog(wx.Dialog):
         self.Destroy()
 
         if self.closedProgressDialog:
-            if self.parent is not None and self.parent.__class__.__name__=="LauncherMainFrame":
-                launcherMainFrame = self.parent
-                if launcherMainFrame is not None and launcherMainFrame.progressDialog is not None:
-                    launcherMainFrame.progressDialog.Show(True)
+            if self.progressDialog is not None:
+                self.progressDialog.Show(True)
 
 
 class HelpDialog(wx.Dialog):
@@ -566,7 +576,7 @@ def die_from_main_frame(launcherMainFrame,error_message):
     logger.dump_log(launcherMainFrame,submit_log=True)
     os._exit(1)
 
-def run_command(command,ignore_errors=False,log_output=True,callback=None,startupinfo=None,creationflags=0):
+def run_command(command,ignore_errors=False,log_output=True,callback=None,startupinfo=None,creationflags=0,timeout=120):
     stdout=""
     stderr=""
     if command != None:
@@ -576,7 +586,10 @@ def run_command(command,ignore_errors=False,log_output=True,callback=None,startu
         ssh_process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,universal_newlines=True,startupinfo=startupinfo,creationflags=creationflags)
 
         #(stdout,stderr) = ssh_process.communicate(command)
+        t=threading.Timer(timeout,ssh_process.kill)
+        t.start()
         (stdout,stderr) = ssh_process.communicate()
+        t.cancel()
         ssh_process.wait()
         if log_output:
             logger.debug('command stdout: %s' % stdout)

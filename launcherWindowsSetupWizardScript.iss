@@ -36,7 +36,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ; 
-; Enquires: help@massive.org.a
+; Enquiries: help@massive.org.a
 
 ;MASSIVE Launcher InnoSetup script
 ;Change OutputDir to suit your build environment
@@ -46,13 +46,14 @@
 
 [Setup]
 AppName={#LauncherAppName}
-AppVersion=0.4.3
+AppVersion=0.5.0
 DefaultDirName={pf}\{#LauncherAppName}
 DefaultGroupName={#LauncherAppName}
 UninstallDisplayIcon={app}\{#LauncherAppExeName}
 Compression=lzma2
 SolidCompression=yes
-OutputDir=C:\launcher_build\
+;OutputDir=C:\launcher_build\
+OutputDir=.
 
 [Files]
 Source: "dist\launcher\*.*"; DestDir: "{app}"; Flags: recursesubdirs

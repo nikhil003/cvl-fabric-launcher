@@ -11,7 +11,8 @@ code_signing_certificate_password = sys.argv[2]
 
 os.system('del /Q dist\\*.*')
 
-os.system('C:\\Python27\\python.exe  .\\pyinstaller-2.0\\pyinstaller.py --icon MASSIVE.ico --windowed launcher.py')
+#os.system('C:\\Python27\\python.exe  .\\pyinstaller-2.1\\pyinstaller.py --icon MASSIVE.ico --console --debug --log-level=DEBUG launcher.py')
+os.system('C:\\Python27\\python.exe  .\\pyinstaller-2.1\\pyinstaller.py --icon MASSIVE.ico --windowed launcher.py')
 
 os.system('copy /Y MASSIVE.ico dist\\launcher\\')
 os.system('copy /Y C:\\Python27\\Lib\\site-packages\\wx-2.8-msw-unicode\\wx\\gdiplus.dll dist\\launcher\\')
@@ -29,7 +30,6 @@ import requests
 cacert = requests.certs.where()
 os.system('copy /Y ' + cacert + ' dist\\launcher\\')
 
-os.system('copy /Y sshHelpText.txt dist\\launcher\\')
 os.system('mkdir dist\\launcher\\help')
 os.system('mkdir dist\\launcher\\help\\helpfiles')
 os.system('copy /Y help\\helpfiles\\*.* dist\\launcher\\help\\helpfiles\\')
@@ -43,5 +43,5 @@ os.system("signtool sign -f \"" + code_signing_certificate + "\" -p " + code_sig
 # Only one of these will work...
 os.system(r""""C:\Program Files (x86)\Inno Setup 5\Compil32.exe" /cc .\\launcherWindowsSetupWizardScript.iss""")
 os.system(r""""C:\Program Files\Inno Setup 5\Compil32.exe" /cc .\\launcherWindowsSetupWizardScript.iss""")
-os.system("signtool sign -f \"" + code_signing_certificate + "\" -p " + code_signing_certificate_password + " C:\launcher_build\setup.exe")
+os.system("signtool sign -f \"" + code_signing_certificate + "\" -p " + code_signing_certificate_password + " setup.exe")
 

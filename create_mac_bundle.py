@@ -37,7 +37,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # 
-#  Enquires: help@massive.org.au
+#  Enquiries: help@massive.org.au
 
 """
 A distutils script to make a standalone .app of the MASSIVE Launcher for
@@ -56,7 +56,7 @@ import requests
 import os
 import pkgutil
 
-resource_files=["MASSIVE.icns", requests.certs.where(), "sshHelpText.txt"]
+resource_files=["MASSIVE.icns", requests.certs.where()]
 
 launcherVersionNumberModulePath = os.path.dirname(pkgutil.get_loader("launcher_version_number").filename)
 helpFilesDirectory = os.path.join(launcherVersionNumberModulePath, "help", "helpfiles")
@@ -73,6 +73,7 @@ resource_files.append(resource_file)
 
 setup(
     options=dict(py2app=dict(
+        arch='i386',
         plist=dict(
             CFBundleDevelopmentRegion="English",
             CFBundleDisplayName="MASSIVE Launcher",
@@ -81,7 +82,8 @@ setup(
             CFBundleIdentifier="au.edu.monash.MASSIVE",
             CFBundleName="MASSIVE Launcher",
             CFBundlePackageType="APPL",
-            CFBundleVersion="Version " + launcher_version_number.version_number
+            CFBundleVersion="Version " + launcher_version_number.version_number,
+            LSArchitecturePriority=["i386"]
             )
         )
     ),

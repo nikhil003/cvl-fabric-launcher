@@ -11,6 +11,7 @@ wget http://downloads.sourceforge.net/project/modules/Modules/modules-3.2.9/modu
 wget http://downloads.sourceforge.net/wxpython/wxPython-src-2.8.12.1.tar.bz2
 
 yum -y install gcc glibc glibc-devel libgcc  \
+               libxml2-devel libxslt-devel \
                ncurses-libs ncurses-devel \
                readline readline-devel \
                zlib zlib-devel \
@@ -149,6 +150,9 @@ pip install ssh
 pip install pycrypto
 pip install appdirs
 pip install requests
+pip install pexpect
+pip install lxml
+pip install psutil
 
 echo
 echo "Log out and log in again to load the modules environment."
