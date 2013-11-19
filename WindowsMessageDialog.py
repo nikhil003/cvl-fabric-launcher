@@ -12,7 +12,7 @@ class LauncherMessageDialog(wx.Dialog):
             self.Centre()
 
         self.dialogPanel = wx.Panel(self, wx.ID_ANY)
-        #self.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         self.ButtonLabels=ButtonLabels
 
         iconAsBitmap = IconPys.MASSIVElogoTransparent64x64.getMASSIVElogoTransparent64x64Bitmap()
@@ -28,7 +28,7 @@ class LauncherMessageDialog(wx.Dialog):
         self.messageLabel = wx.StaticText(self.dialogPanel, wx.ID_ANY, message, pos=(105,39), size=(messageWidth,-1))
         #self.messageLabel = wx.StaticText(self.dialogPanel, wx.ID_ANY, message)
         self.messageLabel.SetForegroundColour((0,0,0))
-        self.messageLabel.SetFont(smallFont)
+#        self.messageLabel.SetFont(smallFont)
         self.messageLabel.Wrap(messageWidth)
 
         buttonSize = wx.Size(72,22)
@@ -58,12 +58,12 @@ class LauncherMessageDialog(wx.Dialog):
         #self.Bind(wx.EVT_BUTTON, self.onClose, id=self.okButton.GetId())
 
         self.contactQueriesContactLabel = wx.StaticText(self.dialogPanel, label = "For queries, please contact:")
-        self.contactQueriesContactLabel.SetFont(smallFont)
+#        self.contactQueriesContactLabel.SetFont(smallFont)
         self.contactQueriesContactLabel.SetForegroundColour(wx.Colour(0,0,0))
         self.contactQueriesContactLabel.SetPosition(wx.Point(25,buttonPosition.y))
 
         self.contactEmailHyperlink = wx.HyperlinkCtrl(self.dialogPanel, id = wx.ID_ANY, label = "help@massive.org.au", url = "mailto:help@massive.org.au")
-        self.contactEmailHyperlink.SetFont(smallFont) # Or maybe even smaller font?
+#        self.contactEmailHyperlink.SetFont(smallFont) # Or maybe even smaller font?
         #hyperlinkPosition = wx.Point(self.contactQueriesContactLabel.GetPosition().x+self.contactQueriesContactLabel.GetSize().width+10,okButtonPosition.y)
         hyperlinkPosition = wx.Point(self.contactQueriesContactLabel.GetPosition().x+self.contactQueriesContactLabel.GetSize().width,buttonPosition.y)
         self.contactEmailHyperlink.SetPosition(hyperlinkPosition)
