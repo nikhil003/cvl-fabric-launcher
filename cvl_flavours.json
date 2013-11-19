@@ -48,7 +48,7 @@
                 "newPassphraseTooShort": "Sorry, the passphrase must be at least six characters.\nIt looks like this is the first time you're using the CVL on this\ncomputer. To use the CVL, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your remote CVL environment.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.\n\nWHY?\n\nThis new method of authentication allows you to create file system\nmounts to remote computer systems, and in the future it will support\nlaunching remote HPC jobs.",
                 "passphrasePrompt": "Please enter the passphrase for your SSH key",
                 "passphrasePromptIncorrect": "Sorry, that passphrase was incorrect.\nPlease enter the passphrase for you SSH Key\nIf you have forgoten the passphrase for you key, you may need to delete it and create a new key.\nYou can find this option under the Identity menu.\n",
-                "passphrasePromptIncorrectl": "Incorrect. enter key passphrase",
+                "passphrasePromptIncorrectl": "Sorry, that passphrase was incorrect. Please enter the passphrase for your ssh key",
                 "passwdPrompt": "Please enter the password for your CVL account.\nThis is the password you entered when you requested an account\nat the website https://web.cvl.massive.org.au/users",
                 "passwdPromptIncorrect": "Sorry, that password was incorrect.\nPlease enter the password for your CVL account.\nThis is the password you entered when you requested an account\nat the website https://web.cvl.massive.org.au/users",
                 "persistentMessage": "Would you like to leave your current session running so that you can reconnect later?",
@@ -117,19 +117,6 @@
                 "requireMatch": false
             },
             "loginHost": "login.cvl.massive.org.au",
-            "messageRegeexs": {
-                "__class__": "cmdRegEx",
-                "__module__": "siteConfig",
-                "async": false,
-                "cmd": null,
-                "failFatal": true,
-                "host": "login",
-                "loop": false,
-                "regex": [
-                    null
-                ],
-                "requireMatch": false
-            },
             "messageRegexs": [
                 {
                     "__class__": "__regex__",
@@ -200,12 +187,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "\"module load pbs ; module load maui ; qstat | grep {username}\"",
+                "cmd": "\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "^\\s*(?P<jobid>{jobidNumber}\\.\\S+)\\s+(?P<jobname>desktop_\\S+)\\s+\\S+\\s+(?P<elapTime>\\S+)\\s+(?P<state>R)\\s+(?P<queue>\\S+)\\s*$"
+                    ".*<job_state>R</job_state>.*"
                 ],
                 "requireMatch": true
             },
@@ -447,7 +434,7 @@
                 "newPassphraseTooShort": "Sorry, the passphrase must be at least six characters.\nIt looks like this is the first time you're using the CVL on this\ncomputer. To use the CVL, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your remote CVL environment.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.\n\nWHY?\n\nThis new method of authentication allows you to create file system\nmounts to remote computer systems, and in the future it will support\nlaunching remote HPC jobs.",
                 "passphrasePrompt": "Please enter the passphrase for your SSH key",
                 "passphrasePromptIncorrect": "Sorry, that passphrase was incorrect.\nPlease enter the passphrase for you SSH Key\nIf you have forgoten the passphrase for you key, you may need to delete it and create a new key.\nYou can find this option under the Identity menu.\n",
-                "passphrasePromptIncorrectl": "Incorrect. enter key passphrase",
+                "passphrasePromptIncorrectl": "Sorry, that passphrase was incorrect. Please enter the passphrase for your ssh key",
                 "passwdPrompt": "Please enter the password for your CVL account.\nThis is the password you entered when you requested an account\nat the website https://web.cvl.massive.org.au/users",
                 "passwdPromptIncorrect": "Sorry, that password was incorrect.\nPlease enter the password for your CVL account.\nThis is the password you entered when you requested an account\nat the website https://web.cvl.massive.org.au/users",
                 "persistentMessage": "Would you like to leave your current session running so that you can reconnect later?",
@@ -516,19 +503,6 @@
                 "requireMatch": false
             },
             "loginHost": "login.cvl.massive.org.au",
-            "messageRegeexs": {
-                "__class__": "cmdRegEx",
-                "__module__": "siteConfig",
-                "async": false,
-                "cmd": null,
-                "failFatal": true,
-                "host": "login",
-                "loop": false,
-                "regex": [
-                    null
-                ],
-                "requireMatch": false
-            },
             "messageRegexs": [
                 {
                     "__class__": "__regex__",
@@ -599,12 +573,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "\"module load pbs ; module load maui ; qstat | grep {username}\"",
+                "cmd": "\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "^\\s*(?P<jobid>{jobidNumber}\\.\\S+)\\s+(?P<jobname>desktop_\\S+)\\s+\\S+\\s+(?P<elapTime>\\S+)\\s+(?P<state>R)\\s+(?P<queue>\\S+)\\s*$"
+                    ".*<job_state>R</job_state>.*"
                 ],
                 "requireMatch": true
             },

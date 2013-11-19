@@ -37,15 +37,15 @@
                 "__module__": "siteConfig",
                 "createNewKeyDialogNewPassphraseMismatch": "Passphrases don't match",
                 "helpEmailAddress": "help@massive.org.au",
-                "newPassphrase": "new passphrase for new key",
-                "newPassphraseEmptyForbidden": "new passphrase. empty passphrase forbidden",
-                "newPassphraseMismatch": "passphrases don't match. enter new passphrases",
+                "newPassphrase": "Please enter a new passphrase",
+                "newPassphraseEmptyForbidden": "Sorry, you can't use an empty passphrase. Please enter a new passphrase",
+                "newPassphraseMismatch": "Sorry, the passphrases don't match. Please enter a new passphrase",
                 "newPassphraseTitle": "Please enter a new passphrase",
-                "newPassphraseTooShort": "passphrase to short. enter a new passphrase",
-                "passphrasePrompt": "enter key passphrase",
-                "passphrasePromptIncorrectl": "Incorrect. enter key passphrase",
-                "passwdPrompt": "enter passwd",
-                "passwdPromptIncorrect": "passwd incorrect. reenter",
+                "newPassphraseTooShort": "Sorry, the passphrase must be at least six character long. Please enter a new passphrase",
+                "passphrasePrompt": "Please enter the passphrase for you ssh key",
+                "passphrasePromptIncorrectl": "Sorry, that passphrase was incorrect. Please enter the passphrase for your ssh key",
+                "passwdPrompt": "Please enter your password",
+                "passwdPromptIncorrect": "Sorry that password was incorrect. Please reenter",
                 "persistentMessage": "Would you like to leave your current session running so that you can reconnect later?\nIt has {timestring} remaining.",
                 "persistentMessagePersist": "Leave it running",
                 "persistentMessageStop": "Stop the desktop",
@@ -112,19 +112,6 @@
                 "requireMatch": false
             },
             "loginHost": null,
-            "messageRegeexs": {
-                "__class__": "cmdRegEx",
-                "__module__": "siteConfig",
-                "async": false,
-                "cmd": null,
-                "failFatal": true,
-                "host": "login",
-                "loop": false,
-                "regex": [
-                    null
-                ],
-                "requireMatch": false
-            },
             "messageRegexs": [
                 {
                     "__class__": "__regex__",

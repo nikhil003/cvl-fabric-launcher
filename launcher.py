@@ -122,7 +122,7 @@ if sys.platform.startswith("darwin"):
     from MacMessageDialog import LauncherMessageDialog
 elif sys.platform.startswith("win"):
     from WindowsMessageDialog import LauncherMessageDialog
-elif sys.platform.startswidh("linux"):
+elif sys.platform.startswith("linux"):
     from LinuxMessageDialog import LauncherMessageDialog
 from logger.Logger import logger
 import collections
@@ -912,7 +912,7 @@ class LauncherMainFrame(wx.Frame):
         msg=msg+"Paridee was created with funding through the NeCTAR Characterisation Virtual Laboratory by the team at the Monash e-Research Center (Monash University, Australia)\n\n"
         msg=msg+"Paridee is open source (GPL3) software available from https://github.com/CVL-dev/cvl-fabric-launcher\n\n"
         msg=msg+"Version " + launcher_version_number.version_number + "\n" + 'launcher Commit: ' + commit_def.LATEST_COMMIT + '\n' + 'cvlsshutils Commit: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS + '\n'
-        dlg = wx.MessageDialog(self, msg, self.programName, wx.OK | wx.ICON_INFORMATION)
+        dlg = LauncherMessageDialog(self, msg, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 

@@ -15,7 +15,7 @@ if sys.platform.startswith("darwin"):
     from MacMessageDialog import LauncherMessageDialog
 elif sys.platform.startswith("win"):
     from WindowsMessageDialog import LauncherMessageDialog
-elif sys.platform.startswidh("linux"):
+elif sys.platform.startswith("linux"):
     from LinuxMessageDialog import LauncherMessageDialog
 from utilityFunctions import LAUNCHER_URL,TURBOVNC_BASE_URL
 from logger.Logger import logger
