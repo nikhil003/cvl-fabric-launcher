@@ -57,7 +57,7 @@ import os
 import pkgutil
 myname="Paridee"
 
-resource_files=["MASSIVE.icns", requests.certs.where(), "sshHelpText.txt"]
+resource_files=["MASSIVE.icns", requests.certs.where()]
 
 launcherVersionNumberModulePath = os.path.dirname(pkgutil.get_loader("launcher_version_number").filename)
 helpFilesDirectory = os.path.join(launcherVersionNumberModulePath, "help", "helpfiles")
