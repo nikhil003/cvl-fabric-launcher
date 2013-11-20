@@ -93,12 +93,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "qpeek {jobidNumber}",
+                "cmd": "\"module load xmlstarlet ; qstat -x -f {jobid} | xml sel -t -m \\\"/Data/Job/exec_host/text()\\\" -c \\\".\\\" -n - | cut -f 1 -d \\\"/\\\"\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "\\s*To access the desktop first create a secure tunnel to (?P<execHost>\\S+)\\s*$"
+                    "(?P<execHost>\\S+)"
                 ],
                 "requireMatch": true
             },
@@ -119,12 +119,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "qstat -u {username}",
+                "cmd": "\"module load xmlstarlet ; nchar=$( echo {username} | wc -c ) ; nchar=$(( \\$nchar - 1 )) ; qstat -x | xml sel -t -m \\\"/Data/Job[substring(Job_Owner/text(),1,\\$nchar)='{username}' and substring(Job_Name/text(),1,7)='desktop']/Job_Id/text()\\\" -c \\\".\\\" -n -\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "^\\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\\S+)\\s+\\S+\\s+(?P<queue>\\S+)\\s+(?P<jobname>desktop_\\S+)\\s+(?P<sessionID>\\S+)\\s+(?P<nodes>\\S+)\\s+(?P<tasks>\\S+)\\s+(?P<mem>\\S+)\\s+(?P<reqTime>\\S+)\\s+(?P<state>[^C])\\s+(?P<elapTime>\\S+)\\s*$"
+                    "?P<jobid>(?P<jobidNumber>[0-9]+).\\S+)"
                 ],
                 "requireMatch": false
             },
@@ -491,12 +491,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "qpeek {jobidNumber}",
+                "cmd": "\"module load xmlstarlet ; qstat -x -f {jobid} | xml sel -t -m \\\"/Data/Job/exec_host/text()\\\" -c \\\".\\\" -n - | cut -f 1 -d \\\"/\\\"\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "\\s*To access the desktop first create a secure tunnel to (?P<execHost>\\S+)\\s*$"
+                    "(?P<execHost>\\S+)"
                 ],
                 "requireMatch": true
             },
@@ -517,12 +517,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "qstat -u {username}",
+                "cmd": "\"module load xmlstarlet ; nchar=$( echo {username} | wc -c ) ; nchar=$(( \\$nchar - 1 )) ; qstat -x | xml sel -t -m \\\"/Data/Job[substring(Job_Owner/text(),1,\\$nchar)='{username}' and substring(Job_Name/text(),1,7)='desktop']/Job_Id/text()\\\" -c \\\".\\\" -n -\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "^\\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\\S+)\\s+\\S+\\s+(?P<queue>\\S+)\\s+(?P<jobname>desktop_\\S+)\\s+(?P<sessionID>\\S+)\\s+(?P<nodes>\\S+)\\s+(?P<tasks>\\S+)\\s+(?P<mem>\\S+)\\s+(?P<reqTime>\\S+)\\s+(?P<state>[^C])\\s+(?P<elapTime>\\S+)\\s*$"
+                    "?P<jobid>(?P<jobidNumber>[0-9]+).\\S+)"
                 ],
                 "requireMatch": false
             },

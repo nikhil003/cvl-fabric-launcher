@@ -86,13 +86,17 @@ def getMassiveSiteConfig(loginHost):
     c.displayStrings.__dict__.update(displayStrings.__dict__)
     c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
     c.loginHost=loginHost
-    c.listAll=siteConfig.cmdRegEx('qstat -u {username}','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+(?P<queue>\S+)\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
+    cmd = '\"module load xmlstarlet ; nchar=$( echo {username} | wc -c ) ; nchar=$(( \$nchar - 1 )) ; qstat -x | xml sel -t -m \\"/Data/Job[substring(Job_Owner/text(),1,\$nchar)=\'{username}\' and substring(Job_Name/text(),1,7)=\'desktop\']/Job_Id/text()\\" -c \\".\\" -n -\"'
+    regex='?P<jobid>(?P<jobidNumber>[0-9]+).\S+)'
+    c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
     cmd='\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"'
     regex='.*<job_state>R</job_state>.*'
     c.running = siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\'qdel -a {jobid}\'')
     c.stopForRestart=siteConfig.cmdRegEx('qdel {jobid} ; sleep 5\'')
-    c.execHost=siteConfig.cmdRegEx('qpeek {jobidNumber}','\s*To access the desktop first create a secure tunnel to (?P<execHost>\S+)\s*$')
+    cmd='\"module load xmlstarlet ; qstat -x -f {jobid} | xml sel -t -m \\"/Data/Job/exec_host/text()\\" -c \\".\\" -n - | cut -f 1 -d \\"/\\"\"'
+    regex='(?P<execHost>\S+)'
+    c.execHost=siteConfig.cmdRegEx(cmd,regex)
     c.startServer=siteConfig.cmdRegEx("\'/usr/local/desktop/request_visnode.sh {project} {hours} {nodes} True False False {resolution}\'","^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$")
     c.runSanityCheck=siteConfig.cmdRegEx("\'/usr/local/desktop/sanity_check.sh {launcher_version_number}\'")
     c.getProjects=siteConfig.cmdRegEx('\"glsproject -A -q | grep \',{username},\|\s{username},\|,{username}\s\|\s{username}\s\' \"','^(?P<group>\S+)\s+.*$')
