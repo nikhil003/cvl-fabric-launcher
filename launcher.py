@@ -43,45 +43,51 @@
 """
 A wxPython GUI to provide easy login to the MASSIVE Desktop.
 It can be run using "python launcher.py", assuming that you
-have a 32-bit (*) version of Python installed,
-wxPython, and the dependent Python modules imported below.
+have an appropriate (32-bit or 64-bit) version of Python 
+installed (*), wxPython, and the dependent Python modules 
+listed in the DEPENDENCIES file.
 
-(*) wxPython on Mac OS X doesn't yet work nicely in 64-bit mode.
+(*) wxPython 2.8.x on Mac OS X doesn't support 64-bit mode.
 
-The py2app module is required to build the "CVL Launcher.app"
+The py2app module is required to build the "MASSIVE Launcher.app"
 application bundle on Mac OS X, which can be built as follows:
 
    python create_mac_bundle.py py2app
 
+To build a DMG containing the app bundle and a symbolic link to
+Applications, you can run:
+
+   python package_mac_version.py <version_number>
+
 See: https://confluence-vre.its.monash.edu.au/display/CVL/MASSIVE+Launcher+Mac+OS+X+build+instructions
 
-The py2exe module is required to build the "CVL Launcher.exe"
-executable on Windows, which can be built as follows:
+The PyInstaller module, bundled with the Launcher code is used
+to build the Windows and Linux executables. The Windows setup wizard
+(created with InnoSetup) can be built using:
 
-   python create_windows_bundle.py py2exe
+   package_windows_version.bat C:\path\to\code\signing\certificate.pfx <certificate_password>
+
+assuming that you have InnoSetup installed and that you have signtool.exe installed for
+code signing.
 
 See: https://confluence-vre.its.monash.edu.au/display/CVL/MASSIVE+Launcher+Windows+build+instructions
 
-A Windows installation wizard can be built using InnoSetup,
-and the CVL.iss script.
+If you want to build a stand-alone Launcher binary for Mac or Windows
+without using a code-signing certificate, you can do so by commenting
+out the code-signing functionality in package_mac_version.py and in
+package_windows_version.bat.  In other words, sorry, this is not 
+possible at present without modifying the packaging scripts.
 
 A self-contained Linux binary distribution can be built using
 PyInstaller, as described on the following wiki page.
 
 See: https://confluence-vre.its.monash.edu.au/display/CVL/MASSIVE+Launcher+Linux+build+instructions
 
-ACKNOWLEDGEMENT
-
-Thanks to Michael Eager for a concise, non-GUI Python script
-which demonstrated the use of the Python pexpect module to
-automate SSH logins and to automate calling TurboVNC
-on Linux and on Mac OS X.
-
 """
 
 
 # Make sure that the Launcher doesn't attempt to write to
-# "CVL Launcher.exe.log", because it might not have
+# "MASSIVE Launcher.exe.log", because it might not have
 # permission to do so.
 import sys
 if sys.platform.startswith("win"):
@@ -129,6 +135,7 @@ import collections
 import optionsDialog
 import LauncherOptionsDialog
 
+from utilityFunctions import LAUNCHER_URL
 
 class LauncherMainFrame(wx.Frame):
     PERM_SSH_KEY=0
@@ -267,10 +274,6 @@ class LauncherMainFrame(wx.Frame):
         self.loginProcess=[]
         self.logWindow = None
         self.progressDialog = None
-
-
-
-
 
         if sys.platform.startswith("win"):
             _icon = wx.Icon('MASSIVE.ico', wx.BITMAP_TYPE_ICO)
@@ -519,9 +522,6 @@ class LauncherMainFrame(wx.Frame):
         #self.tabbedView.AddPage(self.loginFieldsPanel, "Login")
 
         #self.loginDialogPanelSizer.Add(self.tabbedView, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=10)
-
-        #MASSIVE_TAB_INDEX = 0
-        #self.tabbedView.ChangeSelection(MASSIVE_TAB_INDEX)
 
         # Buttons Panel
 
@@ -887,6 +887,12 @@ class LauncherMainFrame(wx.Frame):
         if self.logWindow!=None:
             self.logWindow.Show(event.GetEventObject().GetValue())
 
+    #def onCloseDebugWindow(self, event):
+        #self.massiveShowDebugWindowCheckBox.SetValue(False)
+        #self.cvlShowDebugWindowCheckBox.SetValue(False)
+        #if launcherMainFrame.logWindow!=None:
+            #launcherMainFrame.logWindow.Show(False)
+
     def onHelpContents(self, event):
         from help.HelpController import helpController
         if helpController is not None and helpController.initializationSucceeded:
@@ -928,7 +934,13 @@ class LauncherMainFrame(wx.Frame):
 #                time.sleep(0.5)
 
         try:
-            logger.dump_log(self)
+            if hasattr(self, 'loginProcess') and self.loginProcess is not None:
+                logger.debug("launcher.py: onExit: Calling self.loginProcess.shutdownReal().")
+                self.loginProcess.shutdownReal()
+            else:
+                logger.debug("launcher.py: onExit: Didn't find a login process to shut down.")
+
+            logger.dump_log(launcherMainFrame)
         finally:
             os._exit(0)
 
@@ -937,7 +949,7 @@ class LauncherMainFrame(wx.Frame):
 
         options = self.getPrefsSection("Global Preferences")
         print options
-        dlg = optionsDialog.LauncherOptionsDialog(self,wx.ID_ANY,"Global Options",options,tabIndex)
+        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,tabIndex)
         rv = dlg.ShowModal()
         if rv == wx.OK:
             options = dlg.getOptions()
@@ -945,11 +957,9 @@ class LauncherMainFrame(wx.Frame):
             self.savePrefs(section="Global Preferences")
         dlg.Destroy()
         auth_mode = int(self.getPrefsSection('Global Preferences')['auth_mode'])
-        print "setting teh radio button in the menu %s"%auth_mode
+        print "setting the radio button in the menu %s"%auth_mode
         self.identity_menu.setRadio(auth_mode)
         self.identity_menu.disableItems(auth_mode)
-    
-
 
     def onCut(self, event):
         textCtrl = self.FindFocus()
@@ -1013,7 +1023,7 @@ class LauncherMainFrame(wx.Frame):
         var='auth_mode'
         options=self.getPrefsSection('Global Preferences')
         # Create a dialog that will never be shown just so we get an authorative list of options
-        dlg = optionsDialog.LauncherOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
+        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
         auth_mode=dlg.FindWindowByName(var)
         choices=[]
         nmodes=auth_mode.GetCount()
@@ -1021,11 +1031,11 @@ class LauncherMainFrame(wx.Frame):
             choices.append(auth_mode.GetString(i))
         dlg.Destroy()
         message = """
-Would you like to use an SSH Key pair or your password to authenticate yourself?
+Would you like to use an SSH key pair or your password to authenticate yourself?
 
 If this computer is shared by a number of people then passwords are preferable.
 
-If this computer is not shared, then an SSH Key pair will give you advanced features for managing your access.
+If this computer is not shared, then an SSH key pair will give you advanced features for managing your access.
 """
         configName=self.FindWindowByName('jobParams_configName').GetValue()
         dlg = LauncherOptionsDialog.multiButtonDialog(launcherMainFrame,message.strip(),title=self.programName,ButtonLabels=choices,helpEmailAddress=self.sites[configName].displayStrings.helpEmailAddress)
@@ -1073,7 +1083,13 @@ If this computer is not shared, then an SSH Key pair will give you advanced feat
         self.loginButton.Enable()
 
     def onLoginProcessComplete(self, jobParams):
+        self.loginProcess = None
         logger.debug("launcher.py: onLogin: Enabling login button.")
+        # The refresh below is a workaround for a Windows bug where a
+        # dark-coloured rectangle appears in the middle of the main
+        # dialog's current panel after a completed or canceled login session:
+        self.massiveLoginDialogPanel.Refresh()
+        self.cvlLoginDialogPanel.Refresh()
         self.loginButton.Enable()
 
     def onLogin(self, event):
@@ -1098,7 +1114,6 @@ If this computer is not shared, then an SSH Key pair will give you advanced feat
             usernamefield = self.FindWindowByName('jobParams_username')
             usernamefield.SetFocus()
             return
-
 
         if (self.logWindow == None):
 
@@ -1137,11 +1152,9 @@ If this computer is not shared, then an SSH Key pair will give you advanced feat
         userCanAbort=True
         maximumProgressBarValue = 10
 
-        try:
-            os.mkdir(os.path.join(os.path.expanduser('~'), '.ssh'))
-        except:
-            logger.debug(traceback.format_exc())
-            pass
+        dotSshDir = os.path.join(os.path.expanduser('~'), '.ssh')
+        if not os.path.exists(dotSshDir):
+            os.makedirs(dotSshDir)
 
         # project hours and nodes will be ignored for the CVL login, but they will be used for Massive.
         configName=self.FindWindowByName('jobParams_configName').GetValue()
@@ -1205,8 +1218,6 @@ class MyApp(wx.App):
 
         global launcherPreferencesFilePath 
         launcherPreferencesFilePath = os.path.join(appUserDataDir,"paridee.cfg")
-
-        sys.modules[__name__].turboVncConfig = ConfigParser.SafeConfigParser(allow_no_value=True)
 
         if sys.platform.startswith("win"):
             os.environ['CYGWIN'] = "nodosfilewarning"
