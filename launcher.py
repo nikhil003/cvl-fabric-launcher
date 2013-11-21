@@ -118,7 +118,12 @@ import tempfile
 from cvlsshutils.KeyModel import KeyModel
 import siteConfig
 
-from MacMessageDialog import LauncherMessageDialog
+if sys.platform.startswith("darwin"):
+    from MacMessageDialog import LauncherMessageDialog
+elif sys.platform.startswith("win"):
+    from WindowsMessageDialog import LauncherMessageDialog
+elif sys.platform.startswith("linux"):
+    from LinuxMessageDialog import LauncherMessageDialog
 from logger.Logger import logger
 import collections
 import optionsDialog
@@ -787,7 +792,7 @@ class LauncherMainFrame(wx.Frame):
             latestVersionNumber = launcher_version_number.version_number
             latestVersionChanges = ''
 
-        if latestVersionNumber < launcher_version_number.version_number:
+        if latestVersionNumber > launcher_version_number.version_number:
             import new_version_alert_dialog
             newVersionAlertDialog = new_version_alert_dialog.NewVersionAlertDialog(self, wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
             newVersionAlertDialog.ShowModal()
@@ -903,10 +908,11 @@ class LauncherMainFrame(wx.Frame):
 
     def onAbout(self, event):
         import commit_def
-        dlg = wx.MessageDialog(self, "Version " + launcher_version_number.version_number + "\n"
-                                   + 'launcher Commit: ' + commit_def.LATEST_COMMIT + '\n'
-                                   + 'cvlsshutils Commit: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS + '\n',
-                                self.programName, wx.OK | wx.ICON_INFORMATION)
+        msg="Paridee is the Program for Accessing Remote Interactive Desktop Environments Easily\n\n"
+        msg=msg+"Paridee was created with funding through the NeCTAR Characterisation Virtual Laboratory by the team at the Monash e-Research Center (Monash University, Australia)\n\n"
+        msg=msg+"Paridee is open source (GPL3) software available from https://github.com/CVL-dev/cvl-fabric-launcher\n\n"
+        msg=msg+"Version " + launcher_version_number.version_number + "\n" + 'launcher Commit: ' + commit_def.LATEST_COMMIT + '\n' + 'cvlsshutils Commit: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS + '\n'
+        dlg = LauncherMessageDialog(self, msg, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
