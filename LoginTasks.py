@@ -1801,6 +1801,7 @@ class LoginProcess():
         print "new otp generated"
         Visible={}
         Visible['usernamePanel']=True
+        Visible['loginHostPanel']=False
         Visible['projectPanel']=False
         Visible['resourcePanel']=False
         Visible['resolutionPanel']=False
