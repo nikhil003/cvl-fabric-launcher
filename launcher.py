@@ -651,7 +651,7 @@ class LauncherMainFrame(wx.Frame):
         finally:
             f.close()
         #newlist=[{'name':'CVL','url':'https://cvl.massive.org.au/cvl_flavours.json'},{'name':'MASSIVE','url':'http://cvl.massive.org.au/massive_flavours.json'}]
-        dlg=siteListDialog.siteListDialog(parent=self,siteList=siteList,newSites=newlist,style=wx.RESIZE_BORDER)
+        dlg=siteListDialog.siteListDialog(parent=self,siteList=siteList,newSites=newlist,style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
         if (dlg.ShowModal() == wx.ID_OK):
             newSiteList=dlg.getList()
             changed=False
