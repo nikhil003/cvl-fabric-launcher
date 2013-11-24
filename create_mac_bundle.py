@@ -55,8 +55,9 @@ import create_commit_def
 import requests
 import os
 import pkgutil
+myname="Paridee"
 
-resource_files=["MASSIVE.icns", requests.certs.where()]
+resource_files=["MASSIVE.icns", requests.certs.where(), "sshHelpText.txt","masterList.url"]
 
 launcherVersionNumberModulePath = os.path.dirname(pkgutil.get_loader("launcher_version_number").filename)
 helpFilesDirectory = os.path.join(launcherVersionNumberModulePath, "help", "helpfiles")
@@ -73,22 +74,22 @@ resource_files.append(resource_file)
 
 setup(
     options=dict(py2app=dict(
-        arch='i386',
+        arch='x86_64',
         plist=dict(
             CFBundleDevelopmentRegion="English",
-            CFBundleDisplayName="MASSIVE Launcher",
-            CFBundleExecutable="MASSIVE Launcher",
+            CFBundleDisplayName=myname,
+            CFBundleExecutable=myname,
             CFBundleIconFile="MASSIVE.icns",
             CFBundleIdentifier="au.edu.monash.MASSIVE",
-            CFBundleName="MASSIVE Launcher",
+            CFBundleName="StRuDeL",
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + launcher_version_number.version_number,
-            LSArchitecturePriority=["i386"]
+            LSArchitecturePriority=["x86_64"]
             )
         )
     ),
     data_files=resource_files,
-    name="MASSIVE Launcher",
+    name=myname,
     setup_requires=["py2app"],
     app=['launcher.py']
 )

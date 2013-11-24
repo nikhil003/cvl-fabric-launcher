@@ -50,7 +50,7 @@ LAUNCHER_VNC_OPTIONS_SHARING_TAB_INDEX = 3
 class GlobalOptionsDialog(wx.Dialog):
     def __init__(self, parent, id, title, globalOptions, tabIndex):
         wx.Dialog.__init__(self, parent, id, title, 
-            style=wx.DEFAULT_DIALOG_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX | wx.MAXIMIZE_BOX))
+            style=wx.DEFAULT_DIALOG_STYLE & ~(wx.RESIZE_BORDER | wx.RESIZE_BOX | wx.MAXIMIZE_BOX),name="optionsDialog")
 
         self.globalOptions = globalOptions
         self.tabIndex = tabIndex
@@ -1055,10 +1055,10 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.Fit()
         self.Layout()
 
-    def getVncOptions(self):
+    def getOptions(self):
         return self.globalOptions
 
-    def setVncOptions(self):
+    def setOptions(self):
         return
 
     def onCancel(self, event):
@@ -1100,9 +1100,6 @@ If you use a password to authenticate, a new keypair will be generated each time
             self.globalOptions['logfile'] = self.vncViewerLogFilenameTextField.GetValue()
         self.globalOptions['share_local_home_directory_on_remote_desktop'] = self.shareLocalHomeDirectoryOnRemoteDesktopCheckBox.GetValue()
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
-        #self.globalOptions['private_mode'] = self.privateModeRadioButton.GetValue()
-        #self.globalOptions['public_mode'] = self.publicModeRadioButton.GetValue()
-        #self.Close(True)
         self.Show(False)
         self.EndModal(wx.OK)
       

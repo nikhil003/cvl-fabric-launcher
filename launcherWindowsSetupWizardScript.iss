@@ -36,17 +36,17 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ; 
-; Enquiries: help@massive.org.a
+; Enquiries: help@massive.org.au
 
 ;MASSIVE Launcher InnoSetup script
 ;Change OutputDir to suit your build environment
 
-#define LauncherAppName "MASSIVE Launcher"
+#define LauncherAppName "Paridee"
 #define LauncherAppExeName "launcher.exe"
 
 [Setup]
 AppName={#LauncherAppName}
-AppVersion=0.5.0
+AppVersion=0.6.0
 DefaultDirName={pf}\{#LauncherAppName}
 DefaultGroupName={#LauncherAppName}
 UninstallDisplayIcon={app}\{#LauncherAppExeName}
