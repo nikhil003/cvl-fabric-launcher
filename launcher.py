@@ -1209,7 +1209,7 @@ class LauncherStatusBar(wx.StatusBar):
 class MyApp(wx.App):
     def OnInit(self):
 
-        appDirs = appdirs.AppDirs("paridee", "Monash University")
+        appDirs = appdirs.AppDirs("strudel", "Monash University")
         appUserDataDir = appDirs.user_data_dir
         # Add trailing slash:
         appUserDataDir = os.path.join(appUserDataDir,"")
@@ -1217,7 +1217,7 @@ class MyApp(wx.App):
             os.makedirs(appUserDataDir)
 
         global launcherPreferencesFilePath 
-        launcherPreferencesFilePath = os.path.join(appUserDataDir,"paridee.cfg")
+        launcherPreferencesFilePath = os.path.join(appUserDataDir,"strudel.cfg")
 
         if sys.platform.startswith("win"):
             os.environ['CYGWIN'] = "nodosfilewarning"
