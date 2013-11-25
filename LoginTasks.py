@@ -1801,6 +1801,7 @@ class LoginProcess():
         print "new otp generated"
         Visible={}
         Visible['usernamePanel']=True
+        Visible['loginHostPanel']=False
         Visible['projectPanel']=False
         Visible['resourcePanel']=False
         Visible['resolutionPanel']=False
@@ -1814,7 +1815,7 @@ class LoginProcess():
         siteConfigDict['execHost']=cmdRegEx('echo %s'%self.jobParams['execHost'],'(?P<execHost>.*)$',host='local')
         siteConfigDict['vncDisplay']=cmdRegEx('echo %s'%self.jobParams['vncDisplay'],'(?P<vncDisplay>.*)$',host='local')
         siteConfigDict['otp']= cmdRegEx('echo %s'%self.jobParams['vncPasswd'],'(?P<vncPasswd>.*)$',host='local')
-        siteConfigDict['agent']=self.siteConfig.agent
+        siteConfigDict['agent']=cmdRegEx()
         siteConfigDict['tunnel']=self.siteConfig.tunnel
         #newConfig = siteConfig(siteConfigDict,Visible)
         newConfig = siteConfig()

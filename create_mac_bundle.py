@@ -55,7 +55,7 @@ import create_commit_def
 import requests
 import os
 import pkgutil
-myname="Paridee"
+myname="Strudel"
 
 resource_files=["MASSIVE.icns", requests.certs.where(), "sshHelpText.txt","masterList.url"]
 

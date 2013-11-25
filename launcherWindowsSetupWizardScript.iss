@@ -36,12 +36,12 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ; 
-; Enquiries: help@massive.org.a
+; Enquiries: help@massive.org.au
 
 ;MASSIVE Launcher InnoSetup script
 ;Change OutputDir to suit your build environment
 
-#define LauncherAppName "Paridee"
+#define LauncherAppName "Strudel"
 #define LauncherAppExeName "launcher.exe"
 
 [Setup]
