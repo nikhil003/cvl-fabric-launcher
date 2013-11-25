@@ -16,7 +16,7 @@ def getMasterSites(url):
     
     
 
-def getSites(prefs):
+def getSites(prefs,path):
     logger.debug("getting a list of sites")
     siteList=[]
     if prefs.has_section('configured_sites'):
@@ -33,16 +33,34 @@ def getSites(prefs):
     for site in siteList:
         logger.debug("retrieving the config for %s"%site)
         try:
+            import hashlib
+            import os
+            filename=os.path.join(path,hashlib.md5(site).hexdigest())
             req=requests.get(site,verify=False)
             if req.status_code == 200:
+                print "saving file"
+                with open(filename,'w') as f:
+                    f.write(req.text)
+                print "decoding json"
                 newSites=GenericJSONDecoder().decode(req.text)
+            else:
+                with open(filename,'r') as f:
+                    newSites=GenericJSONDecoder().decode(f)
+            if (isinstance(newSites,list)):
+                keyorder=newSites[0]
+                for key in keyorder:
+                    r[key]=newSites[1][key]
+        except Exception as e:
+            try:
+                with open(filename,'r') as f:
+                    newSites=GenericJSONDecoder().decode(f.read())
                 if (isinstance(newSites,list)):
                     keyorder=newSites[0]
                     for key in keyorder:
                         r[key]=newSites[1][key]
-        except Exception as e:
-            logger.debug("error retrieving the config for %s"%site)
-            logger.debug("%s"%e)
+            except Exception as e:
+                logger.debug("error retrieving the config for %s"%site)
+                logger.debug("%s"%e)
     return r
         
         

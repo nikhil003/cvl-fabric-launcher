@@ -707,7 +707,7 @@ class LauncherMainFrame(wx.Frame):
             sites=self.getPrefsSection(section='configured_sites')
             
         print "getting sites"
-        self.sites=siteConfig.getSites(self.prefs)
+        self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
         print "site list %s"%self.sites
         for s in self.sites:
             print s
