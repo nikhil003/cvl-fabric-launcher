@@ -289,13 +289,13 @@ class LauncherMainFrame(wx.Frame):
 
         self.file_menu = wx.Menu()
         self.menu_bar.Append(self.file_menu, "&File")
-        shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Share my Desktop")
+        shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Save a shared session")
         self.file_menu.AppendItem(shareDesktop)
         self.Bind(wx.EVT_MENU, self.saveSessionEvent, id=shareDesktop.GetId())
-        loadSession=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load a saved Session")
+        loadSession=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load a shared session")
         self.file_menu.AppendItem(loadSession)
         self.Bind(wx.EVT_MENU, self.loadSessionEvent, id=loadSession.GetId())
-        loadDefaultSessions=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load default sessions")
+        loadDefaultSessions=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load defaults")
         self.file_menu.AppendItem(loadDefaultSessions)
         self.Bind(wx.EVT_MENU, self.loadDefaultSessionsEvent, id=loadDefaultSessions.GetId())
         manageSites=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Manage sites")
@@ -914,10 +914,10 @@ class LauncherMainFrame(wx.Frame):
 
     def onAbout(self, event):
         import commit_def
-        msg="Paridee is the Program for Accessing Remote Interactive Desktop Environments Easily\n\n"
-        msg=msg+"Paridee was created with funding through the NeCTAR Characterisation Virtual Laboratory by the team at the Monash e-Research Center (Monash University, Australia)\n\n"
-        msg=msg+"Paridee is open source (GPL3) software available from https://github.com/CVL-dev/cvl-fabric-launcher\n\n"
-        msg=msg+"Version " + launcher_version_number.version_number + "\n" + 'launcher Commit: ' + commit_def.LATEST_COMMIT + '\n' + 'cvlsshutils Commit: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS + '\n'
+        msg="Strudel is the ScienTific Remote Desktop Launcher\n\n"
+        msg=msg+"Strudel was created with funding through the NeCTAR Characterisation Virtual Laboratory by the team at the Monash e-Research Center (Monash University, Australia)\n\n"
+        msg=msg+"Strudel is open source (GPL3) software available from https://github.com/CVL-dev/cvl-fabric-launcher\n\n"
+        msg=msg+"Version " + launcher_version_number.version_number + "\n" + 'Strudel Commit: ' + commit_def.LATEST_COMMIT + '\n' + 'cvlsshutils Commit: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS + '\n'
         dlg = LauncherMessageDialog(self, msg, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
@@ -1223,7 +1223,7 @@ class MyApp(wx.App):
             os.environ['CYGWIN'] = "nodosfilewarning"
 
         logger.setGlobalLauncherPreferencesFilePath(launcherPreferencesFilePath)
-        sys.modules[__name__].launcherMainFrame = LauncherMainFrame(None, wx.ID_ANY, 'Paridee')
+        sys.modules[__name__].launcherMainFrame = LauncherMainFrame(None, wx.ID_ANY, 'Strudel')
         launcherMainFrame = sys.modules[__name__].launcherMainFrame
         launcherMainFrame.SetStatusBar(launcherMainFrame.loginDialogStatusBar)
         launcherMainFrame.SetMenuBar(launcherMainFrame.menu_bar)
