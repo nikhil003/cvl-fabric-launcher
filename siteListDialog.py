@@ -78,7 +78,7 @@ class siteListDialog(wx.Dialog):
         for i in range(0,self.siteList.GetColumnCount()):
             w=w+self.siteList.GetColumnWidth(i)
         self.siteList.SetMinSize((w,200))
-        mainSizer.Add(self.siteList,flag=wx.EXPAND)
+        mainSizer.Add(self.siteList,flag=wx.EXPAND,proportion=1)
 
         p=wx.Panel(self,wx.ID_ANY)
         s=wx.BoxSizer(wx.HORIZONTAL)
@@ -92,7 +92,7 @@ class siteListDialog(wx.Dialog):
         s.Add(b)
         b.Bind(wx.EVT_BUTTON,self.onDelete)
         p.SetSizer(s)
-        mainSizer.Add(p,1,flag=wx.EXPAND)
+        mainSizer.Add(p,proportion=0,flag=wx.EXPAND)
         self.Fit()
         self.Refresh()
         self.Update()
@@ -100,7 +100,6 @@ class siteListDialog(wx.Dialog):
     def onNew(self,evt):
         dlg=newSiteDialog(parent=self)
         r=dlg.ShowModal()
-        print r
         if r==wx.ID_OK:
             idx=self.siteList.GetItemCount()
             self.siteList.InsertStringItem(idx,dlg.getName())

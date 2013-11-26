@@ -41,7 +41,7 @@
 ;MASSIVE Launcher InnoSetup script
 ;Change OutputDir to suit your build environment
 
-#define LauncherAppName "Paridee"
+#define LauncherAppName "Strudel"
 #define LauncherAppExeName "launcher.exe"
 
 [Setup]

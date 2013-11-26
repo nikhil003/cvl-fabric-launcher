@@ -1,8 +1,8 @@
 import json
 newlist=[
-    {'name':'CVL','url':'https://cvl.massive.org.au/cvl_flavours.json'},
-    {'name':'MASSIVE','url':'http://cvl.massive.org.au/massive_flavours.json'},
-    {'name':'CQU','url':'http://cvl.massive.org.au/massive_flavours.json'}
+    {'name':'NeCTAR - Characterisation VL','url':'https://cvl.massive.org.au/cvl_flavours.json'},
+    {'name':'Monash University - MASSIVE','url':'http://cvl.massive.org.au/massive_flavours.json'},
+    {'name':'CQUniversity - HPC Systesm','url':'http://hpc-stats.cqu.edu.au/cqu.json'}
 ]
 
 s=json.dumps(newlist,sort_keys=True, indent=4, separators=(',', ': '))

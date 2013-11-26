@@ -55,7 +55,7 @@ import create_commit_def
 import requests
 import os
 import pkgutil
-myname="Paridee"
+myname="Strudel"
 
 resource_files=["MASSIVE.icns", requests.certs.where(), "sshHelpText.txt","masterList.url"]
 
@@ -81,7 +81,7 @@ setup(
             CFBundleExecutable=myname,
             CFBundleIconFile="MASSIVE.icns",
             CFBundleIdentifier="au.edu.monash.MASSIVE",
-            CFBundleName="StRuDeL",
+            CFBundleName="Paridee",
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + launcher_version_number.version_number,
             LSArchitecturePriority=["x86_64"]
