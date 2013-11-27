@@ -148,6 +148,28 @@ def getMassiveSiteConfig(loginHost):
 
     return c
 
+def getRaijinSiteConfig(queue):
+    c = getCVLSiteConfig(queue)
+    c.loginHost='raijin.nci.org.au'
+    c.directConnect=False
+    cmd='\"module load pbs ; qstat -f {jobidNumber} \"'
+    regex='.*job_state = R.*'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\"module load pbs ; qdel {jobidNumber}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"module load pbs ; qdel {jobid}\"')
+    c.agent=siteConfig.cmdRegEx()
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/passwdfile\'','^(?P<vncPasswd>\S+)$')
+    cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ; echo \\\" module load x11vnc ; x11vnc -usepw -create -shared -forever\\\" | qsub -q %s -l ncpus=1 -N desktop_{username} -o .vnc/ -e .vnc/ \"'%queue
+    regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+    c.startServer=siteConfig.cmdRegEx(cmd,regex)
+    c.vncDisplay=siteConfig.cmdRegEx('\'qcat {jobidNumber}\'','PORT=59(?P<vncDisplay>[0-9]+)')
+    cmd='\"module load pbs ; qstat -f {jobidNumber} | grep exec_host\"'
+    regex='^\s*exec_host = (?P<execHost>r[0-9]+)\/[0-9]+\s*$'
+    c.execHost = siteConfig.cmdRegEx(cmd,regex)
+    c.listAll=siteConfig.cmdRegEx('\"module load pbs ; qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
+    return c
+
 
 def getCVLSiteConfig(queue):
     cvlvisible={}
@@ -357,4 +379,12 @@ defaultSites['Newton']=newton
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cqu.json','w') as f:
+    f.write(jsons)
+
+defaultSites=collections.OrderedDict()
+raijinExpress=getRaijinSiteConfig('express')
+defaultSites['Raijin (Express Queue)'] = raijinExpress
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('nci_flavours.json','w') as f:
     f.write(jsons)
