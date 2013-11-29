@@ -558,7 +558,7 @@ class LauncherMainFrame(wx.Frame):
         #self.Centre()
 
         self.logWindow = wx.Frame(self, title="%s Debug Log"%self.programName, name="%s Debug Log"%self.programName,pos=(200,150),size=(700,450))
-        #self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
+        self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
         self.logWindowPanel = wx.Panel(self.logWindow)
         self.logTextCtrl = wx.TextCtrl(self.logWindowPanel, style=wx.TE_MULTILINE|wx.TE_READONLY)
         logWindowSizer = wx.FlexGridSizer(rows=2, cols=1, vgap=0, hgap=0)
@@ -891,11 +891,10 @@ class LauncherMainFrame(wx.Frame):
         if self.logWindow!=None:
             self.logWindow.Show(event.GetEventObject().GetValue())
 
-    #def onCloseDebugWindow(self, event):
-        #self.massiveShowDebugWindowCheckBox.SetValue(False)
-        #self.cvlShowDebugWindowCheckBox.SetValue(False)
-        #if launcherMainFrame.logWindow!=None:
-            #launcherMainFrame.logWindow.Show(False)
+    def onCloseDebugWindow(self, event):
+        self.FindWindowByName('debugCheckBox').SetValue(False)
+        if launcherMainFrame.logWindow!=None:
+            launcherMainFrame.logWindow.Show(False)
 
     def onHelpContents(self, event):
         from help.HelpController import helpController
@@ -1123,7 +1122,7 @@ If this computer is not shared, then an SSH key pair will give you advanced feat
 
             #self.logWindow = wx.Frame(self, title='{configName} Login'.format(**jobParams), name='{configName} Login'.format(**jobParams),pos=(200,150),size=(700,450))
             self.logWindow = wx.Frame(self, title='Debug Log'.format(**jobParams), pos=(200,150),size=(700,450))
-            #self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
+            self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
 
             if sys.platform.startswith("win"):
                 _icon = wx.Icon('MASSIVE.ico', wx.BITMAP_TYPE_ICO)
