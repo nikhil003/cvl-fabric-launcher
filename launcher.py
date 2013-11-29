@@ -710,16 +710,21 @@ class LauncherMainFrame(wx.Frame):
             self.manageSites()
             sites=self.getPrefsSection(section='configured_sites')
             
-        print "getting sites"
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
-        print "site list %s"%self.sites
         for s in self.sites:
             print s
         cb=self.FindWindowByName('jobParams_configName')
+        # attempt to preserve the selection on the combo box if the site remains in the list. If not, set the selection to 0
+        sn=cb.GetValue()
         for i in range(0,cb.GetCount()):
             cb.Delete(0)
         for s in self.sites.keys():
             cb.Append(s)
+        if sn in self.sites.keys():
+            cb.SetValue(sn)
+        else:
+            cb.SetSelection(0)
+            
         #cb.SetSelection(0)
         self.updateVisibility(self.noneVisible)
 
@@ -884,17 +889,14 @@ class LauncherMainFrame(wx.Frame):
                     window.Hide()
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
-        if self.logWindow != None:
-            self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
+        self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
 
     def onDebugWindowCheckBoxStateChanged(self, event):
-        if self.logWindow!=None:
-            self.logWindow.Show(event.GetEventObject().GetValue())
+        self.logWindow.Show(event.GetEventObject().GetValue())
 
     def onCloseDebugWindow(self, event):
         self.FindWindowByName('debugCheckBox').SetValue(False)
-        if launcherMainFrame.logWindow!=None:
-            launcherMainFrame.logWindow.Show(False)
+        self.logWindow.Show(False)
 
     def onHelpContents(self, event):
         from help.HelpController import helpController
@@ -1117,36 +1119,6 @@ If this computer is not shared, then an SSH key pair will give you advanced feat
             usernamefield = self.FindWindowByName('jobParams_username')
             usernamefield.SetFocus()
             return
-
-        if (self.logWindow == None):
-
-            #self.logWindow = wx.Frame(self, title='{configName} Login'.format(**jobParams), name='{configName} Login'.format(**jobParams),pos=(200,150),size=(700,450))
-            self.logWindow = wx.Frame(self, title='Debug Log'.format(**jobParams), pos=(200,150),size=(700,450))
-            self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
-
-            if sys.platform.startswith("win"):
-                _icon = wx.Icon('MASSIVE.ico', wx.BITMAP_TYPE_ICO)
-                self.logWindow.SetIcon(_icon)
-
-            if sys.platform.startswith("linux"):
-                import MASSIVE_icon
-                self.logWindow.SetIcon(MASSIVE_icon.getMASSIVElogoTransparent128x128Icon())
-
-            self.logTextCtrl = wx.TextCtrl(self.logWindow, style=wx.TE_MULTILINE|wx.TE_READONLY)
-            logWindowSizer = wx.GridSizer(rows=1, cols=1, vgap=5, hgap=5)
-            logWindowSizer.Add(self.logTextCtrl, 0, wx.EXPAND)
-            self.logWindow.SetSizer(logWindowSizer)
-            if sys.platform.startswith("darwin"):
-                font = wx.Font(13, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Courier New')
-            else:
-                font = wx.Font(11, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Courier New')
-            self.logTextCtrl.SetFont(font)
-
-
-            logger.sendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
-
-        dcb=self.FindWindowByName('debugCheckBox').GetValue()
-        self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
 
 
         logger.debug("Username: " + jobParams['username'])
