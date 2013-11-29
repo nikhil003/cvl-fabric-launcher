@@ -1561,7 +1561,7 @@ class LoginProcess():
                 def noopCallback():
                     logger.debug("Leaving a job in the queue after cancel")
 
-                dialog=LoginProcess.SimpleOptionDialog(self.notify_window,-1,self.displayStrings.qdelQueuedJob,self.displayStrings.qdelQueuedJobQdel,self.displayStrings.qdelQueuedJobNOOP,qdelCallback,noopCallback,title=self.parentWindow.programName,)
+                dialog=LoginProcess.SimpleOptionDialog(self.notify_window,-1,self.displayStrings.qdelQueuedJob,self.displayStrings.qdelQueuedJobQdel,self.displayStrings.qdelQueuedJobNOOP,qdelCallback,noopCallback,)
                 logger.debug("threading.current_thread().name = " + threading.current_thread().name)
                 showModal(dialog,self)
                 self.askUserIfTheyWantToDeleteQueuedJobCompleted = True

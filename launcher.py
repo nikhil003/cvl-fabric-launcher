@@ -450,10 +450,14 @@ class LauncherMainFrame(wx.Frame):
         #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
         self.hoursField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=336,name='jobParams_hours')
         self.resourcePanel.GetSizer().Add(self.hoursField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
-        self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Vis nodes')
+        self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes')
         self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.nodesField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="1", size=(widgetWidth3,-1), min=1,max=10,name='jobParams_nodes')
         self.resourcePanel.GetSizer().Add(self.nodesField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.ppnLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'PPN',name='ppnLabel')
+        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.ppnField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="12", size=(widgetWidth3,-1), min=1,max=12,name='jobParams_ppn')
+        self.resourcePanel.GetSizer().Add(self.ppnField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.resourcePanel, proportion=0,border=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL)
 
 
@@ -554,7 +558,7 @@ class LauncherMainFrame(wx.Frame):
         #self.Centre()
 
         self.logWindow = wx.Frame(self, title="%s Debug Log"%self.programName, name="%s Debug Log"%self.programName,pos=(200,150),size=(700,450))
-        #self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
+        self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
         self.logWindowPanel = wx.Panel(self.logWindow)
         self.logTextCtrl = wx.TextCtrl(self.logWindowPanel, style=wx.TE_MULTILINE|wx.TE_READONLY)
         logWindowSizer = wx.FlexGridSizer(rows=2, cols=1, vgap=0, hgap=0)
@@ -706,16 +710,21 @@ class LauncherMainFrame(wx.Frame):
             self.manageSites()
             sites=self.getPrefsSection(section='configured_sites')
             
-        print "getting sites"
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
-        print "site list %s"%self.sites
         for s in self.sites:
             print s
         cb=self.FindWindowByName('jobParams_configName')
+        # attempt to preserve the selection on the combo box if the site remains in the list. If not, set the selection to 0
+        sn=cb.GetValue()
         for i in range(0,cb.GetCount()):
             cb.Delete(0)
         for s in self.sites.keys():
             cb.Append(s)
+        if sn in self.sites.keys():
+            cb.SetValue(sn)
+        else:
+            cb.SetSelection(0)
+            
         #cb.SetSelection(0)
         self.updateVisibility(self.noneVisible)
 
@@ -880,18 +889,14 @@ class LauncherMainFrame(wx.Frame):
                     window.Hide()
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
-        if self.logWindow != None:
-            self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
+        self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
 
     def onDebugWindowCheckBoxStateChanged(self, event):
-        if self.logWindow!=None:
-            self.logWindow.Show(event.GetEventObject().GetValue())
+        self.logWindow.Show(event.GetEventObject().GetValue())
 
-    #def onCloseDebugWindow(self, event):
-        #self.massiveShowDebugWindowCheckBox.SetValue(False)
-        #self.cvlShowDebugWindowCheckBox.SetValue(False)
-        #if launcherMainFrame.logWindow!=None:
-            #launcherMainFrame.logWindow.Show(False)
+    def onCloseDebugWindow(self, event):
+        self.FindWindowByName('debugCheckBox').SetValue(False)
+        self.logWindow.Show(False)
 
     def onHelpContents(self, event):
         from help.HelpController import helpController
@@ -1114,36 +1119,6 @@ If this computer is not shared, then an SSH key pair will give you advanced feat
             usernamefield = self.FindWindowByName('jobParams_username')
             usernamefield.SetFocus()
             return
-
-        if (self.logWindow == None):
-
-            #self.logWindow = wx.Frame(self, title='{configName} Login'.format(**jobParams), name='{configName} Login'.format(**jobParams),pos=(200,150),size=(700,450))
-            self.logWindow = wx.Frame(self, title='Debug Log'.format(**jobParams), pos=(200,150),size=(700,450))
-            #self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
-
-            if sys.platform.startswith("win"):
-                _icon = wx.Icon('MASSIVE.ico', wx.BITMAP_TYPE_ICO)
-                self.logWindow.SetIcon(_icon)
-
-            if sys.platform.startswith("linux"):
-                import MASSIVE_icon
-                self.logWindow.SetIcon(MASSIVE_icon.getMASSIVElogoTransparent128x128Icon())
-
-            self.logTextCtrl = wx.TextCtrl(self.logWindow, style=wx.TE_MULTILINE|wx.TE_READONLY)
-            logWindowSizer = wx.GridSizer(rows=1, cols=1, vgap=5, hgap=5)
-            logWindowSizer.Add(self.logTextCtrl, 0, wx.EXPAND)
-            self.logWindow.SetSizer(logWindowSizer)
-            if sys.platform.startswith("darwin"):
-                font = wx.Font(13, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Courier New')
-            else:
-                font = wx.Font(11, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Courier New')
-            self.logTextCtrl.SetFont(font)
-
-
-            logger.sendLogMessagesToDebugWindowTextControl(self.logTextCtrl)
-
-        dcb=self.FindWindowByName('debugCheckBox').GetValue()
-        self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
 
 
         logger.debug("Username: " + jobParams['username'])

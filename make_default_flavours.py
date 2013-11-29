@@ -80,6 +80,8 @@ def getMassiveSiteConfig(loginHost):
     massivevisible['debugCheckBoxPanel']='Advanced'
     massivevisible['advancedCheckBoxPanel']=True
     massivevisible['optionsDialog']=False
+    massivevisible['ppnLabel']=False
+    massivevisible['jobParams_ppn']=False
     c = siteConfig.siteConfig()
     c.visibility=massivevisible
     displayStrings=sshKeyDistDisplayStringsMASSIVE()
@@ -148,6 +150,51 @@ def getMassiveSiteConfig(loginHost):
 
     return c
 
+def getRaijinSiteConfig(queue):
+    c = getCVLSiteConfig(queue)
+    c.visibility['ppnLabel']='Advanced'
+    c.visibility['jobParams_ppn']='Advanced'
+    c.loginHost='raijin.nci.org.au'
+    c.directConnect=False
+    cmd='\"module load pbs ; qstat -f {jobidNumber} \"'
+    regex='.*job_state = R.*'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\"module load pbs ; qdel {jobidNumber}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"module load pbs ; qdel {jobid}\"')
+    c.agent=siteConfig.cmdRegEx()
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/passwdfile\'','^(?P<vncPasswd>\S+)$')
+    cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ; echo \\\" module load x11vnc ; x11vnc -usepw -create -shared -forever\\\" | qsub -q %s -l ncpus=1 -N desktop_{username} -l walltime={hours}:00 -o .vnc/ -e .vnc/ \"'%queue
+    regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+    c.startServer=siteConfig.cmdRegEx(cmd,regex)
+    c.vncDisplay=siteConfig.cmdRegEx('\'qcat {jobidNumber}\'','PORT=59(?P<vncDisplay>[0-9]+)')
+    cmd='\"module load pbs ; qstat -f {jobidNumber} | grep exec_host\"'
+    regex='^\s*exec_host = (?P<execHost>r[0-9]+)\/[0-9]+\s*$'
+    c.execHost = siteConfig.cmdRegEx(cmd,regex)
+    c.listAll=siteConfig.cmdRegEx('\"module load pbs ; qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
+    return c
+
+def getRaijinLoginSiteConfig(loginnode):
+    c = getCVLSiteConfig(" ")
+    c.visibility['ppnLabel']='Advanced'
+    c.visibility['jobParams_ppn']='Advanced'
+    c.loginHost=loginnode
+    c.directConnect=False
+    cmd='\" pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,user --no-headers 2>/dev/null\"'
+    regex='(?<pid>[0-9]+) {username}'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\"kill {pid}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"kill {pid}\"')
+    c.agent=siteConfig.cmdRegEx()
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/passwdfile\'','^(?P<vncPasswd>\S+)$')
+    cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ; module load x11vnc ; nohup x11vnc -usepw -create -shared -forever > .vnc/{loginHost}.log {ampersand}; echo started\"'
+    c.startServer=siteConfig.cmdRegEx(cmd,"started")
+    c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{loginHost}.log\'','PORT=59(?P<vncDisplay>[0-9]+)')
+    c.execHost = siteConfig.cmdRegEx()
+    c.listAll=siteConfig.cmdRegEx('\"pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log 2>/dev/null | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,user --no-headers 2>/dev/null\"','(?<pid>[0-9]+) {username}',requireMatch=False)
+    return c
+
 
 def getCVLSiteConfig(queue):
     cvlvisible={}
@@ -155,6 +202,8 @@ def getCVLSiteConfig(queue):
     cvlvisible['usernamePanel']=True
     cvlvisible['projectPanel']=False
     cvlvisible['resourcePanel']='Advanced'
+    cvlvisible['ppnLabel']=False
+    cvlvisible['jobParams_ppn']=False
     cvlvisible['resolutionPanel']='Advanced'
     cvlvisible['cipherPanel']='Advanced'
     cvlvisible['debugCheckBoxPanel']='Advanced'
@@ -357,4 +406,14 @@ defaultSites['Newton']=newton
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cqu.json','w') as f:
+    f.write(jsons)
+
+defaultSites=collections.OrderedDict()
+raijinExpress=getRaijinSiteConfig('express')
+defaultSites['Raijin (Express Queue)'] = raijinExpress
+defaultSites['Raijin (Login node raijin1)'] = getRaijinLoginSiteConfig('raijin1.nci.org.au')
+defaultSites['Raijin (Login node raijin2)'] = getRaijinLoginSiteConfig('raijin2.nci.org.au')
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('nci_flavours.json','w') as f:
     f.write(jsons)

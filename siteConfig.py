@@ -18,6 +18,7 @@ def getMasterSites(url):
 
 def getSites(prefs,path):
     logger.debug("getting a list of sites")
+    siteTupleList=[]
     siteList=[]
     if prefs.has_section('configured_sites'):
         l=prefs.options('configured_sites')
@@ -27,7 +28,10 @@ def getSites(prefs,path):
                 number=int(s[7:])
                 enabled=prefs.get('configured_sites','siteenabled%i'%number)
                 if enabled=='True':
-                    siteList.append(site)
+                    siteTupleList.append((site,number))
+    siteTupleList.sort(key=lambda t:t[1])
+    for s in siteTupleList:
+        siteList.append(s[0])
 
     r=collections.OrderedDict()
     for site in siteList:
@@ -48,8 +52,14 @@ def getSites(prefs,path):
                     newSites=GenericJSONDecoder().decode(f)
             if (isinstance(newSites,list)):
                 keyorder=newSites[0]
+                # We don't want two sites to use the same name for two of their menu items, but if they do, we should alter the name of one of them.
                 for key in keyorder:
-                    r[key]=newSites[1][key]
+                    nk = key
+                    i=1
+                    while nk in r.keys():
+                        i=i+1
+                        nk = key+" %s"%i
+                    r[nk]=newSites[1][key]
         except Exception as e:
             try:
                 with open(filename,'r') as f:
