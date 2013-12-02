@@ -88,7 +88,7 @@ def getMassiveSiteConfig(loginHost):
     c.displayStrings.__dict__.update(displayStrings.__dict__)
     c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
     c.loginHost=loginHost
-    cmd = '\"module load xmlstarlet ; qstat -x | xml sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and Job_state/text()!=\'C\']/Job_Id/text()\\" -c \\".\\" -n -\"'
+    cmd = '\"module load xmlstarlet ; qstat -x | xml sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']/Job_Id/text()\\" -c \\".\\" -n -\"'
     regex='(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)'
     c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
     cmd='\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"'
@@ -152,8 +152,8 @@ def getMassiveSiteConfig(loginHost):
 
 def getRaijinSiteConfig(queue):
     c = getCVLSiteConfig(queue)
-    c.visibility['ppnLabel']='Advanced'
-    c.visibility['jobParams_ppn']='Advanced'
+    c.visibility['ppnLabel']=False
+    c.visibility['jobParams_ppn']=False
     c.loginHost='raijin.nci.org.au'
     c.directConnect=False
     cmd='\"module load pbs ; qstat -f {jobidNumber} \"'
@@ -164,35 +164,35 @@ def getRaijinSiteConfig(queue):
     c.agent=siteConfig.cmdRegEx()
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
     c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/passwdfile\'','^(?P<vncPasswd>\S+)$')
-    cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ; echo \\\" module load x11vnc ; x11vnc -usepw -create -shared -forever\\\" | qsub -q %s -l ncpus=1 -N desktop_{username} -l walltime={hours}:00 -o .vnc/ -e .vnc/ \"'%queue
+    cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ;  echo \\\" module load x11vnc ; x11vnc -usepw -create -shared -forever\\\" | qsub -q %s -l ncpus={nodes} -N desktop_{username} -l walltime={hours}:00 -o .vnc/ -e .vnc/ \"'%queue
     regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.vncDisplay=siteConfig.cmdRegEx('\'qcat {jobidNumber}\'','PORT=59(?P<vncDisplay>[0-9]+)')
     cmd='\"module load pbs ; qstat -f {jobidNumber} | grep exec_host\"'
-    regex='^\s*exec_host = (?P<execHost>r[0-9]+)\/[0-9]+\s*$'
+    regex='^\s*exec_host = (?P<execHost>r[0-9]+)\/.*$'
     c.execHost = siteConfig.cmdRegEx(cmd,regex)
     c.listAll=siteConfig.cmdRegEx('\"module load pbs ; qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
     return c
 
 def getRaijinLoginSiteConfig(loginnode):
     c = getCVLSiteConfig(" ")
-    c.visibility['ppnLabel']='Advanced'
-    c.visibility['jobParams_ppn']='Advanced'
+    c.visibility['resourcePanel']=False
     c.loginHost=loginnode
     c.directConnect=False
-    cmd='\" pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,user --no-headers 2>/dev/null\"'
-    regex='(?<pid>[0-9]+) {username}'
+    cmd='\" pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,pgrp,user --no-headers 2>/dev/null\"'
+    regex='(?P<pid>[0-9]+)\s+(?P<pgrp>[0-9]+)\s+{username}'
     c.running=siteConfig.cmdRegEx(cmd,regex)
-    c.stop=siteConfig.cmdRegEx('\"kill {pid}\"')
-    c.stopForRestart=siteConfig.cmdRegEx('\"kill {pid}\"')
+    # For reasons I don't understand Xvfb does not inherit the process group of x11vnc
+    c.stop=siteConfig.cmdRegEx('\"kill -- -{pgrp} ; pkill -U {username} Xvfb\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"kill -- -{pgrp} ; pkill -U {username} Xvfb\"')
     c.agent=siteConfig.cmdRegEx()
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
     c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/passwdfile\'','^(?P<vncPasswd>\S+)$')
-    cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ; module load x11vnc ; nohup x11vnc -usepw -create -shared -forever > .vnc/{loginHost}.log {ampersand}; echo started\"'
+    cmd='\" mkdir ~/.vnc 2>/dev/null ; rm -f ~/.vnc/{loginHost}.log ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ; module load x11vnc ; x11vnc -usepw -create -shared -forever > .vnc/{loginHost}.log 2>{ampersand}1 {ampersand} echo started\"'
     c.startServer=siteConfig.cmdRegEx(cmd,"started")
     c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{loginHost}.log\'','PORT=59(?P<vncDisplay>[0-9]+)')
     c.execHost = siteConfig.cmdRegEx()
-    c.listAll=siteConfig.cmdRegEx('\"pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log 2>/dev/null | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,user --no-headers 2>/dev/null\"','(?<pid>[0-9]+) {username}',requireMatch=False)
+    c.listAll=siteConfig.cmdRegEx('\"pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log 2>/dev/null | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,pgrp,user --no-headers 2>/dev/null\"','(?P<pid>[0-9]+)\s+(?P<pgrp>[0-9]+)\s+{username}',requireMatch=False)
     return c
 
 
@@ -209,6 +209,8 @@ def getCVLSiteConfig(queue):
     cvlvisible['debugCheckBoxPanel']='Advanced'
     cvlvisible['advancedCheckBoxPanel']=True
     cvlvisible['optionsDialog']=False
+    cvlvisible['ppnLabel']=False
+    cvlvisible['jobParams_ppn']=False
     c = siteConfig.siteConfig()
     cvlstrings = sshKeyDistDisplayStringsCVL()
     c.displayStrings.__dict__.update(cvlstrings.__dict__)

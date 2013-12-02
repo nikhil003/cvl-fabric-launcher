@@ -53,9 +53,20 @@ class LoginProcess():
                 self.process.stdin.write("exit\n")
                 self.process.kill()
                 self.process=None
-        
+
         def stopped(self):
             return self._stop.isSet()
+
+        def pingTunnel(self):
+            self.process.stdin.write("echo pong\n")
+
+        def tunnelUp(self):
+            try:
+                self.pingTunnel()
+                return True
+            except:
+                logger.debug("runAsyncServerCommandThread: tunnel %s is no longer up"%(self.cmdRegex.cmd))
+                return False
 
         def run(self):
             if (self.cmdRegex.cmd==None):
@@ -78,11 +89,10 @@ class LoginProcess():
                 while (not self.stopped()):
                     self.process.poll()
                     if self.process.returncode is not None and (line is None or line==""):
-                        exceptionMessage = "Process exited prematurely:\n\n" + " ".join(cmd)
-                        if lastNonEmptyLine is not None:
-                            exceptionMessage = exceptionMessage + "\n\n" + lastNonEmptyLine
-                        if (not self.stopped()):
-                            raise Exception(exceptionMessage)
+                        # One of the tunnels exited prematurely. Probably a network error. 
+                        # We should attempt a clean shutdown, bearing in mind that the network might not be available, and 
+                        # Tell the user they can reconnect.
+                        self.loginprocess.networkFaultShutdown()
                     time.sleep(0.1)
                     line = self.process.stdout.readline()
                     if (line != None):
@@ -366,8 +376,12 @@ class LoginProcess():
                     if self.loginprocess.turboVncProcess.returncode != 0:
                         logger.debug('self.loginprocess.turboVncStdout: ' + self.loginprocess.turboVncStdout)
 
-                    if (not self.stopped() and not self.loginprocess.canceled() and not self.loginprocess._shutdown.is_set()):
-                        wx.PostEvent(self.loginprocess.notify_window.GetEventHandler(),self.nextevent)
+                    # vncviewer exits with return code 0 if the network drops. The ssh tunnels on the other hand will exit and trigger error messages
+                    # Thus we sleep to try to let the ssh AsyncCommandThreads tigger a notification.
+                    if self.loginprocess.tunnelUp():
+                        if (not self.stopped() and not self.loginprocess.canceled() and not self.loginprocess._shutdown.is_set()):
+                            logger.debug('vncviewer exited with return code %i'%self.loginprocess.turboVncProcess.returncode)
+                            wx.PostEvent(self.loginprocess.notify_window.GetEventHandler(),self.nextevent)
 
                 except Exception as e:
                     self.loginprocess.cancel("Couldn't start the vnc viewer: %s"%e)
@@ -1528,7 +1542,6 @@ class LoginProcess():
 
     def shutdownReal(self,nextevent=None):
         # First stop all the threads, then (optionally) create a new thread to qdel the job. Finally shutdown the sshKeyDist object (which may shutdown the agent)
-        logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_SHUTDOWN')
         for t in self.threads:
             try:
                 logger.debug('loginProcessEvent: shutdown: attempting to stop thread ' + str(t))
@@ -1561,7 +1574,7 @@ class LoginProcess():
                 def noopCallback():
                     logger.debug("Leaving a job in the queue after cancel")
 
-                dialog=LoginProcess.SimpleOptionDialog(self.notify_window,-1,self.displayStrings.qdelQueuedJob,self.displayStrings.qdelQueuedJobQdel,self.displayStrings.qdelQueuedJobNOOP,qdelCallback,noopCallback,)
+                dialog=LoginProcess.SimpleOptionDialog(self.notify_window,-1,"",self.displayStrings.qdelQueuedJob,self.displayStrings.qdelQueuedJobQdel,self.displayStrings.qdelQueuedJobNOOP,qdelCallback,noopCallback,)
                 logger.debug("threading.current_thread().name = " + threading.current_thread().name)
                 showModal(dialog,self)
                 self.askUserIfTheyWantToDeleteQueuedJobCompleted = True
@@ -1833,6 +1846,38 @@ class LoginProcess():
                 logger.debug("LoginProcess.cancel: no error specified")
             event=self.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CANCEL,self,error)
             wx.PostEvent(self.notify_window.GetEventHandler(),event)
+
+    def tunnelUp(self):
+        state=None
+        # Loop through our threads. Ones that have the tunnelUp method (i.e. the AsyncServer command threads) will return True or False
+        # Others will throw an exception that we ignore (since they aren't tunnel threads)
+        # If no threads return a bool, the tunnels have clearly gone away.
+        for t in self.threads:
+            try:
+                if state==None:
+                    state=t.tunnelUp()
+                else:
+                    state=state and t.tunnelUp()
+            except:
+                pass
+        if state!=None:
+            return state
+        else:
+            return False
+
+    def networkFaultShutdown(self):
+        import requests
+        from utilityFunctions import LAUNCHER_URL
+        logger.debug("Processing networkFaultShutdown")
+        if not self._canceled.isSet() and not self._shutdown.isSet():
+            try:
+                r=requests.get(LAUNCHER_URL,timeout=10)
+                self.shutdown()
+            except:
+                self.cancel()
+            msg=self.displayStrings.networkError
+            dlg = LauncherMessageDialog(self.notify_window,title=self.parentWindow.programName,message=msg,helpEmailAddress=self.displayStrings.helpEmailAddress)
+            wx.CallAfter(dlg.ShowModal)
 
     def userCancel(self,error=""):
         self.userCanceled.set()
