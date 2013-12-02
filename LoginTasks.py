@@ -1425,7 +1425,11 @@ class LoginProcess():
                         nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CLOSE_WEBDAV_WINDOW,event.loginprocess)
                     else:
                         logger.debug("showKillServerDialog: jobParams doesn't have 'webDavWindowID' key.")
-                        nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_UNMOUNT_WEBDAV,event.loginprocess)
+                        if '{webDavWindowID}' in event.loginprocess.siteConfig.webDavCloseWindow.cmd:
+                            logger.debug("showKillServerDialog: Skipping webDavCloseWindow.cmd, which requires 'webDavWindowID' key.")
+                            nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_UNMOUNT_WEBDAV,event.loginprocess)
+                        else:
+                            nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CLOSE_WEBDAV_WINDOW,event.loginprocess)
                     persistCallback=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),nextevent)
                 else:
                     persistCallback=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_SHUTDOWN,event.loginprocess))
