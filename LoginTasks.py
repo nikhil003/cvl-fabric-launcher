@@ -1780,6 +1780,9 @@ class LoginProcess():
                     ehours=0
                     emin=0
                     return (int(rhours)-int(ehours))*60*60 + (int(rmin)-int(emin))*60
+            elif (job.has_key('remainingWalltime')):
+                if job['remainingWalltime']!=None:
+                    return int(job['remainingWalltime'])
             else:
                 return None
         else:
