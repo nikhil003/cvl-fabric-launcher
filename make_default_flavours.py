@@ -88,7 +88,7 @@ def getMassiveSiteConfig(loginHost):
     c.displayStrings.__dict__.update(displayStrings.__dict__)
     c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
     c.loginHost=loginHost
-    cmd = '\"module load xmlstarlet ; qstat -x | xml sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and Job_state/text()!=\'C\']/Job_Id/text()\\" -c \\".\\" -n -\"'
+    cmd = '\"module load xmlstarlet ; qstat -x | xml sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']/Job_Id/text()\\" -c \\".\\" -n -\"'
     regex='(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)'
     c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
     cmd='\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"'
