@@ -53,6 +53,7 @@
                 "createNewKeyDialogNewPassphraseMismatch": "Passphrases don't match!",
                 "createNewKeyDialogNewPassphraseTooShort": "Passphrase is too short.",
                 "helpEmailAddress": "help@massive.org.au",
+                "networkError": "It looks like a network error occured. You may be able to resume you work by logging in again.",
                 "newPassphrase": "It looks like this is the first time you're logging in to MASSIVE with this version of the launcher.\nTo make logging in faster and more secure, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your MASSIVE desktop.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.",
                 "newPassphraseEmptyForbidden": "Sorry, empty passphrases are forbidden.\nIt looks like this is the first time you're logging in to MASSIVE with this version of the launcher.\nTo make logging in faster and more secure, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your MASSIVE desktop.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.",
                 "newPassphraseMismatch": "Sorry, the two passphrases you entered don't match.\nIt looks like this is the first time you're logging in to MASSIVE with this version of the launcher.\nTo make logging in faster and more secure, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your MASSIVE desktop.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.",
@@ -119,12 +120,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "\"module load xmlstarlet ; qstat -x | xml sel -t -m \\\"/Data/Job[starts-with(Job_Owner/text(),'{username}@') and starts-with(Job_Name/text(),'desktop') and Job_state/text()!='C']/Job_Id/text()\\\" -c \\\".\\\" -n -\"",
+                "cmd": "\"module load xmlstarlet ; qstat -x | xml sel -t -m \\\"/Data/Job[starts-with(Job_Owner/text(),'{username}@') and starts-with(Job_Name/text(),'desktop') and job_state/text()!='C']\\\" -v \\\" concat(./Job_Id/text(),' ',./Walltime/Remaining/text())  \\\" -n -\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "(?P<jobid>(?P<jobidNumber>[0-9]+).\\S+)"
+                    "(?P<jobid>(?P<jobidNumber>[0-9]+).\\S+) (?P<remainingWalltime>.*)$"
                 ],
                 "requireMatch": false
             },
@@ -453,6 +454,7 @@
                 "createNewKeyDialogNewPassphraseMismatch": "Passphrases don't match!",
                 "createNewKeyDialogNewPassphraseTooShort": "Passphrase is too short.",
                 "helpEmailAddress": "help@massive.org.au",
+                "networkError": "It looks like a network error occured. You may be able to resume you work by logging in again.",
                 "newPassphrase": "It looks like this is the first time you're logging in to MASSIVE with this version of the launcher.\nTo make logging in faster and more secure, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your MASSIVE desktop.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.",
                 "newPassphraseEmptyForbidden": "Sorry, empty passphrases are forbidden.\nIt looks like this is the first time you're logging in to MASSIVE with this version of the launcher.\nTo make logging in faster and more secure, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your MASSIVE desktop.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.",
                 "newPassphraseMismatch": "Sorry, the two passphrases you entered don't match.\nIt looks like this is the first time you're logging in to MASSIVE with this version of the launcher.\nTo make logging in faster and more secure, the launcher will generate a local\npassphrase protected key on your computer which is used to\nauthenticate you and set up your MASSIVE desktop.\n\nPlease enter a new passphrase (twice to avoid typos) to protect your local key. \nAfter you've done this, your passphrase will be the primary method of\nauthentication for the launcher.",
@@ -519,12 +521,12 @@
                 "__class__": "cmdRegEx",
                 "__module__": "siteConfig",
                 "async": false,
-                "cmd": "\"module load xmlstarlet ; qstat -x | xml sel -t -m \\\"/Data/Job[starts-with(Job_Owner/text(),'{username}@') and starts-with(Job_Name/text(),'desktop') and Job_state/text()!='C']/Job_Id/text()\\\" -c \\\".\\\" -n -\"",
+                "cmd": "\"module load xmlstarlet ; qstat -x | xml sel -t -m \\\"/Data/Job[starts-with(Job_Owner/text(),'{username}@') and starts-with(Job_Name/text(),'desktop') and job_state/text()!='C']\\\" -v \\\" concat(./Job_Id/text(),' ',./Walltime/Remaining/text())  \\\" -n -\"",
                 "failFatal": true,
                 "host": "login",
                 "loop": false,
                 "regex": [
-                    "(?P<jobid>(?P<jobidNumber>[0-9]+).\\S+)"
+                    "(?P<jobid>(?P<jobidNumber>[0-9]+).\\S+) (?P<remainingWalltime>.*)$"
                 ],
                 "requireMatch": false
             },

@@ -3,6 +3,8 @@ import sys
 import collections
 import requests
 from logger.Logger import logger
+from threading import *
+import Queue
 
 def getMasterSites(url):
     logger.debug("Getting the master list of all known sites/HPC installations")
@@ -15,8 +17,76 @@ def getMasterSites(url):
         return []
     
     
+class requestThread(Thread):
+    def __init__(self,url,queue):
+        super(requestThread,self).__init__()
+        self.url=url
+        self.queue=queue
+        
+    def run(self):
+        import time
+        req=requests.get(self.url,verify=False)
+        if req.status_code == 200:
+            self.queue.put([self.url,req.text])
+        else:
+            self.queue.put([self.url,None])
+
+# this thread will wait until either it has pulled nthreads items of the queue, or it has pulled a None object off the queue.
+class waitThread(Thread):
+    def __init__(self,qin,res,nthreads):
+        super(waitThread,self).__init__()
+        self.qin=qin
+        self.res=res
+        self.nthreads=nthreads
+
+    def run(self):
+        r=self.qin.get()
+        results=0
+        while r!=None:
+            results=results+1
+            if r[1]!=None:
+                self.res[r[0]] = r[1]
+            if results<self.nthreads:
+                r=self.qin.get()
+            else:
+                r=None
+        
+# This thread will place a none object on the queue after a specified time to terminate the wait thread above
+class timerThread(Thread):
+    def __init__(self,q,time):
+        super(timerThread,self).__init__()
+        self.q=q
+        self.time=time
+    
+    def run(self):
+        import time
+        time.sleep(self.time)
+        self.q.put(None)
+
+# This thread will allow the requstThreads to run indefinitly and write the output to the cache.
+# It should only apply if the file didn't download within the time limit
+class backgroundDownloadThread(Thread):
+    def __init__(self,q,nthreads,path):
+        super(backgroundDownloadThread,self).__init__()
+        self.q=q
+        self.nthreads=nthreads
+        self.path=path
+
+    def run(self):
+        import os
+        import hashlib
+        nres=0
+        while nres<self.nthreads:
+            r=self.q.get()
+            nres=nres+1
+            if r[1]!=None:
+                filename=os.path.join(self.path,hashlib.md5(r[0]).hexdigest())
+                with open(filename,'w') as f:
+                    logger.debug("retrieved site %s in a background download"%r[0])
+                    f.write(r[1])
 
 def getSites(prefs,path):
+    import time
     logger.debug("getting a list of sites")
     siteTupleList=[]
     siteList=[]
@@ -34,20 +104,36 @@ def getSites(prefs,path):
         siteList.append(s[0])
 
     r=collections.OrderedDict()
+    q=Queue.Queue()
+    backgroundQ=Queue.Queue()
+    nthreads=0
+    for site in siteList:
+        requestThread(site,q).start()
+        nthreads=nthreads+1
+    timerThread(q,2).start()
+    foundSites={}
+    t=waitThread(q,foundSites,nthreads)
+    t.start()
+    t.join()
+
+    
+    nback=0
     for site in siteList:
         logger.debug("retrieving the config for %s"%site)
         try:
             import hashlib
             import os
             filename=os.path.join(path,hashlib.md5(site).hexdigest())
-            req=requests.get(site,verify=False)
-            if req.status_code == 200:
-                print "saving file"
+            if site in foundSites.keys():
+                text=foundSites[site]
                 with open(filename,'w') as f:
-                    f.write(req.text)
-                print "decoding json"
-                newSites=GenericJSONDecoder().decode(req.text)
+                    f.write(text)
+                newSites=GenericJSONDecoder().decode(text)
             else:
+                logger.debug("didn't download site %s within the time limit. Trying for the cache"%site)
+                logger.debug("enqueing site %s for background download"%site)
+                requestThread(site,backgroundQ).start()
+                nback=nback+1
                 with open(filename,'r') as f:
                     newSites=GenericJSONDecoder().decode(f)
             if (isinstance(newSites,list)):
@@ -71,6 +157,7 @@ def getSites(prefs,path):
             except Exception as e:
                 logger.debug("error retrieving the config for %s"%site)
                 logger.debug("%s"%e)
+    backgroundDownloadThread(backgroundQ,nback,path).start()
     return r
         
         
