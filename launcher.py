@@ -123,6 +123,7 @@ from menus.IdentityMenu import IdentityMenu
 import tempfile
 from cvlsshutils.KeyModel import KeyModel
 import siteConfig
+import Queue
 
 if sys.platform.startswith("darwin"):
     from MacMessageDialog import LauncherMessageDialog
@@ -186,21 +187,19 @@ class LauncherMainFrame(wx.Frame):
         assert self.prefs != None
         if window==None:
             window=self
-        window.Freeze()
         if (site==None):
             siteConfigComboBox=self.FindWindowByName('jobParams_configName')
             try:
                 site=siteConfigComboBox.GetValue()
             except:
                 pass
-            if (site==None or site==""):
-                if self.prefs.has_option("Launcher Config","siteConfigDefault"):
-                    siteConfigDefault = self.prefs.get("Launcher Config","siteConfigDefault")
-                    if siteConfigDefault in self.sites.keys():
-                        siteConfigComboBox.SetValue(siteConfigDefault)
-                        site=siteConfigDefault
-                        self.loadPrefs(window=self,site=site)
-                        #self.updateVisibility()
+#            if (site==None or site==""):
+#                if self.prefs.has_option("Launcher Config","siteConfigDefault"):
+#                    siteConfigDefault = self.prefs.get("Launcher Config","siteConfigDefault")
+#                    if siteConfigDefault in self.sites.keys():
+#                        siteConfigComboBox.SetValue(siteConfigDefault)
+#                        site=siteConfigDefault
+#                        self.loadPrefs(window=self,site=site)
         if (site != None):
             if self.prefs.has_section(site):
                 for item in window.GetChildren():
@@ -214,7 +213,6 @@ class LauncherMainFrame(wx.Frame):
                                 item.SetValue(int(val))
                     else:
                         self.loadPrefs(window=item,site=site)
-        window.Thaw()
 
     def savePrefsEventHandler(self,event):
         threading.Thread(target=self.savePrefs).start()
@@ -297,6 +295,7 @@ class LauncherMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.loadSessionEvent, id=loadSession.GetId())
         loadDefaultSessions=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load defaults")
         self.file_menu.AppendItem(loadDefaultSessions)
+        self.loadDefaultSessionsId=loadDefaultSessions.GetId()
         self.Bind(wx.EVT_MENU, self.loadDefaultSessionsEvent, id=loadDefaultSessions.GetId())
         manageSites=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Manage sites")
         self.file_menu.AppendItem(manageSites)
@@ -521,7 +520,7 @@ class LauncherMainFrame(wx.Frame):
         p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
         self.checkBoxPanel.GetSizer().Add(p,flag=wx.ALIGN_RIGHT)
 
-        self.loginFieldsPanel.GetSizer().Add(self.checkBoxPanel,flag=wx.ALIGN_BOTTOM)
+        self.loginFieldsPanel.GetSizer().Add(self.checkBoxPanel,flag=wx.ALIGN_BOTTOM|wx.EXPAND,proportion=1)
 
         #self.tabbedView.AddPage(self.loginFieldsPanel, "Login")
 
@@ -617,47 +616,94 @@ class LauncherMainFrame(wx.Frame):
         logger.debug('launcher commit hash: ' + commit_def.LATEST_COMMIT)
         logger.debug('cvlsshutils commit hash: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS)
         self.contacted_massive_website = False
+
+        self.startupinfo = None
+        try:
+            self.startupinfo = subprocess.STARTUPINFO()
+            self.startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
+            self.startupinfo.wShowWindow = subprocess.SW_HIDE
+        except:
+            # On non-Windows systems, the previous block will throw:
+            # "AttributeError: 'module' object has no attribute 'STARTUPINFO'".
+            if sys.platform.startswith("win"):
+                logger.debug('exception: ' + str(traceback.format_exc()))
+
+        self.creationflags = 0
+        try:
+            import win32process
+            self.creationflags = win32process.CREATE_NO_WINDOW
+        except:
+            # On non-Windows systems, the previous block will throw an exception.
+            if sys.platform.startswith("win"):
+                logger.debug('exception: ' + str(traceback.format_exc()))
+
+        # launcherMainFrame.keyModel must be initialized before the
+        # user presses the Login button, because the user might
+        # use the Identity Menu to delete their key etc. before
+        # pressing the Login button.
+        self.keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=False)
+
         #self.loadPrefs()
-        self.checkVersionNumber()
 
     def manageSitesEventHandler(self,event):
-        self.manageSites()
+        t=threading.Thread(target=self.manageSites)
+        t.start()
 
-    def manageSites(self):
-        import siteListDialog
-        siteList=[]
+    def getSitePrefs(self,queue):
         options = self.getPrefsSection('configured_sites')
+        siteList=[]
         for s in options.keys():
             if 'siteurl' in s:
                 site=options[s]
                 number=int(s[7:])
                 enabled=options['siteenabled%i'%number]
-                print "enabled %s"%enabled
                 if enabled=='True':
                     enabled=True
-                    print "site %s is enabled"%number
                 elif enabled=='False':
                     enabled=False
-                    print "site %s is disabled"%number
                 name=options['sitename%i'%number]
                 siteList.append({'url':site,'enabled':enabled,'name':name,'number':number})
                 siteList.sort(key=lambda x:x['number'])
-        origSiteList=siteList
-                
+        queue.put(siteList)
+
+    def getNewSites(self,queue):
+        newlist=[]
         try:
             f=open("masterList.url",'r')
             url=f.read().rstrip()
             logger.debug("master list of sites is available at %s"%url)
-            print url
             newlist=siteConfig.getMasterSites(url)
+            
         except Exception as e:
-            print e
+            pass 
         finally:
             f.close()
-        #newlist=[{'name':'CVL','url':'https://cvl.massive.org.au/cvl_flavours.json'},{'name':'MASSIVE','url':'http://cvl.massive.org.au/massive_flavours.json'}]
+        queue.put(newlist)
+
+
+    def showSiteListDialog(self,siteList,newlist,q):
+        import siteListDialog
         dlg=siteListDialog.siteListDialog(parent=self,siteList=siteList,newSites=newlist,style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
-        if (dlg.ShowModal() == wx.ID_OK):
-            newSiteList=dlg.getList()
+        r=dlg.ShowModal()
+        q.put([r,dlg.getList()])
+
+    def manageSites(self):
+        siteList=[]
+        q=Queue.Queue()
+        r=Queue.Queue()
+        tlist=[]
+        wx.CallAfter(wx.BeginBusyCursor)
+
+        threading.Thread(target=self.getSitePrefs,args=[q]).start()
+        threading.Thread(target=self.getNewSites,args=[r]).start()
+        origSiteList=q.get()
+        newlist=r.get()
+        q=Queue.Queue()
+        wx.CallAfter(wx.EndBusyCursor)
+        wx.CallAfter(self.showSiteListDialog,origSiteList,newlist,q)
+        r=q.get()
+        if (r[0] == wx.ID_OK):
+            newSiteList=r[1]
             changed=False
             if len(newSiteList) == len(origSiteList):
                 for i in range(0,len(newSiteList)):
@@ -673,13 +719,12 @@ class LauncherMainFrame(wx.Frame):
                     options['siteenabled%i'%i]='%s'%s['enabled']
                     options['sitename%i'%i]='%s'%s['name']
                     i=i+1
+
                 self.prefs.remove_section('configured_sites')
                 self.setPrefsSection('configured_sites',options)
                 self.savePrefs(section='configured_sites')
-                wx.CallAfter(launcherMainFrame.loadDefaultSessions)
-                wx.CallAfter(launcherMainFrame.updateVisibility)
 
-
+                wx.CallAfter(launcherMainFrame.loadDefaultSessions,(True))
 
     def loadSessionEvent(self,event):
         dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)
@@ -702,20 +747,35 @@ class LauncherMainFrame(wx.Frame):
         cb.SetSelection(0)
         self.updateVisibility()
 
-    def loadDefaultSessions(self):
+    def showModalFromThread(self,dlg,q):
+        r=dlg.ShowModal()
+        q.put(r)
+
+    def loadDefaultSessions(self,redraw=True):
         sites=self.getPrefsSection(section='configured_sites')
         while sites.keys() == []:
             dlg=wx.MessageDialog(self,message="Before you can use this program, you must select from a list of computer systems that you commonly use.\n\nBy checking and unchecking items in this list you can control which options appear in the dropdown menu of which computer to connect to.\n\nYou can access this list again from the File->Manage Sites menu.",style=wx.OK)
-            dlg.ShowModal()
+            q=Queue.Queue()
+            wx.CallAfter(self.showModalFromThread,dlg,q)
+            q.get()
             self.manageSites()
             sites=self.getPrefsSection(section='configured_sites')
             
+        wx.CallAfter(wx.BeginBusyCursor)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
-        for s in self.sites:
-            print s
+        wx.CallAfter(wx.EndBusyCursor)
+        wx.CallAfter(self.loadDefaultSessionsGUI,redraw)
+
+    def loadDefaultSessionsGUI(self,redraw):
         cb=self.FindWindowByName('jobParams_configName')
         # attempt to preserve the selection on the combo box if the site remains in the list. If not, set the selection to 0
         sn=cb.GetValue()
+        
+        if (sn==None or sn==""):
+            if self.prefs.has_option("Launcher Config","siteConfigDefault"):
+                sn = self.prefs.get("Launcher Config","siteConfigDefault")
+
+
         for i in range(0,cb.GetCount()):
             cb.Delete(0)
         for s in self.sites.keys():
@@ -726,10 +786,14 @@ class LauncherMainFrame(wx.Frame):
             cb.SetSelection(0)
             
         #cb.SetSelection(0)
-        self.updateVisibility(self.noneVisible)
+        if (redraw):
+            self.loadPrefs()
+            self.updateVisibility()
+        #    self.updateVisibility(self.noneVisible)
 
     def loadDefaultSessionsEvent(self,event):
-        self.loadDefaultSessions()
+        t=threading.Thread(target=self.loadDefaultSessions,args=[True])
+        t.start()
 
     def saveSessionEvent(self,event):
         self.saveSession()
@@ -796,7 +860,7 @@ class LauncherMainFrame(wx.Frame):
             self.contacted_massive_website = False
             dlg = wx.MessageDialog(self, "Warning: Could not contact the MASSIVE website to check version number.\n\n",
                                 "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
-            dlg.ShowModal()
+            wx.CallAfter(dlg.ShowModal)
 
             latestVersionNumber = launcher_version_number.version_number
             latestVersionChanges = ''
@@ -804,35 +868,10 @@ class LauncherMainFrame(wx.Frame):
         if latestVersionNumber > launcher_version_number.version_number:
             import new_version_alert_dialog
             newVersionAlertDialog = new_version_alert_dialog.NewVersionAlertDialog(self, wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
-            newVersionAlertDialog.ShowModal()
+            wx.CallAfter(newVersionAlertDialog.ShowModal)
             logger.debug('Old launcher version !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             logger.debug('launcher version: ' + str(launcher_version_number.version_number))
 
-        self.startupinfo = None
-        try:
-            self.startupinfo = subprocess.STARTUPINFO()
-            self.startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-            self.startupinfo.wShowWindow = subprocess.SW_HIDE
-        except:
-            # On non-Windows systems, the previous block will throw:
-            # "AttributeError: 'module' object has no attribute 'STARTUPINFO'".
-            if sys.platform.startswith("win"):
-                logger.debug('exception: ' + str(traceback.format_exc()))
-
-        self.creationflags = 0
-        try:
-            import win32process
-            self.creationflags = win32process.CREATE_NO_WINDOW
-        except:
-            # On non-Windows systems, the previous block will throw an exception.
-            if sys.platform.startswith("win"):
-                logger.debug('exception: ' + str(traceback.format_exc()))
-
-        # launcherMainFrame.keyModel must be initialized before the
-        # user presses the Login button, because the user might
-        # use the Identity Menu to delete their key etc. before
-        # pressing the Login button.
-        self.keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=False)
 
     def buildJobParams(self,window):
         jobParams={}
@@ -859,20 +898,22 @@ class LauncherMainFrame(wx.Frame):
     def showAll(self,window=None):
         if window==None:
             window=self
+        window.Show(True)
         for p in window.GetChildren():
             self.showAll(p)
-        window.Show()
 
     def updateVisibility(self,visible=None):
         #self.showAll()
+        #self.Fit()
+        #self.Layout()
         advanced=self.FindWindowByName('advancedCheckBox').GetValue()
         if visible==None:
             try:
-		sc=None
-		sc=self.FindWindowByName('jobParams_configName').GetValue()
+                sc=None
+                sc=self.FindWindowByName('jobParams_configName').GetValue()
                 visible = self.sites[sc].visibility
             except Exception as e:
-		logger.debug('updateVisibility: looking for site %s'%sc)
+                logger.debug('updateVisibility: looking for site %s'%sc)
                 logger.debug('updateVisibility: no visibility information associated with the siteConfig configName: %s'%sc)
                 logger.debug("sc: %s exception:%s"%(sc,e))
                 visible={}
@@ -934,9 +975,6 @@ class LauncherMainFrame(wx.Frame):
         for lp in self.loginProcess:
             logger.debug("LauncherMainFrame.onExit: calling shutdown on a loginprocess")
             lp.shutdown()
-#        for lp in self.loginProcess:
-#            while not lp.complete():
-#                time.sleep(0.5)
 
         try:
             if hasattr(self, 'loginProcess') and self.loginProcess is not None:
@@ -953,7 +991,6 @@ class LauncherMainFrame(wx.Frame):
     def onOptions(self, event, tabIndex=0):
 
         options = self.getPrefsSection("Global Preferences")
-        print options
         dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,tabIndex)
         rv = dlg.ShowModal()
         if rv == wx.OK:
@@ -962,7 +999,6 @@ class LauncherMainFrame(wx.Frame):
             self.savePrefs(section="Global Preferences")
         dlg.Destroy()
         auth_mode = int(self.getPrefsSection('Global Preferences')['auth_mode'])
-        print "setting the radio button in the menu %s"%auth_mode
         self.identity_menu.setRadio(auth_mode)
         self.identity_menu.disableItems(auth_mode)
 
@@ -1202,20 +1238,13 @@ class MyApp(wx.App):
         launcherMainFrame = sys.modules[__name__].launcherMainFrame
         launcherMainFrame.SetStatusBar(launcherMainFrame.loginDialogStatusBar)
         launcherMainFrame.SetMenuBar(launcherMainFrame.menu_bar)
-        launcherMainFrame.Show(True)
         launcherMainFrame.Fit()
         launcherMainFrame.Layout()
         launcherMainFrame.Center()
-        def loadPrefsDelayed():
-            # I don't know what this is about, but on Ubuntu 13.10 if you don't sleep for long
-            # enough before calling updateVisibility (which hides a lot of elements)
-            # Then fit and layout (above) will place things in incorrect locations
-            time.sleep(0.2)
-            wx.CallAfter(launcherMainFrame.loadPrefs)
-            wx.CallAfter(launcherMainFrame.loadDefaultSessions)
-            wx.CallAfter(launcherMainFrame.loadPrefs)
-            wx.CallAfter(launcherMainFrame.updateVisibility)
-        t=threading.Thread(target=loadPrefsDelayed)
+        launcherMainFrame.Show(True)
+        evt=wx.PyCommandEvent(wx.wxEVT_COMMAND_MENU_SELECTED,id=launcherMainFrame.loadDefaultSessionsId)
+        wx.PostEvent(launcherMainFrame.GetEventHandler(),evt)
+        t=threading.Thread(target=launcherMainFrame.checkVersionNumber)
         t.start()
 
         return True

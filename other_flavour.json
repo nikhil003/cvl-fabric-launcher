@@ -37,6 +37,7 @@
                 "__module__": "siteConfig",
                 "createNewKeyDialogNewPassphraseMismatch": "Passphrases don't match",
                 "helpEmailAddress": "help@massive.org.au",
+                "networkError": "It looks like a network error occured. You may be able to resume you work by logging in again.",
                 "newPassphrase": "Please enter a new passphrase",
                 "newPassphraseEmptyForbidden": "Sorry, you can't use an empty passphrase. Please enter a new passphrase",
                 "newPassphraseMismatch": "Sorry, the passphrases don't match. Please enter a new passphrase",
