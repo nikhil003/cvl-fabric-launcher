@@ -61,6 +61,8 @@ class LoginProcess():
             self.process.stdin.write("echo pong\n")
 
         def tunnelUp(self):
+            if self.cmdRegex.cmd==None:
+                return True
             try:
                 self.pingTunnel()
                 return True
