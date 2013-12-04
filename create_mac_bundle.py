@@ -57,7 +57,7 @@ import os
 import pkgutil
 myname="Strudel"
 
-resource_files=["MASSIVE.icns", requests.certs.where(), "sshHelpText.txt","masterList.url"]
+resource_files=["MASSIVE.icns", requests.certs.where(), "masterList.url"]
 
 launcherVersionNumberModulePath = os.path.dirname(pkgutil.get_loader("launcher_version_number").filename)
 helpFilesDirectory = os.path.join(launcherVersionNumberModulePath, "help", "helpfiles")
@@ -74,17 +74,17 @@ resource_files.append(resource_file)
 
 setup(
     options=dict(py2app=dict(
-        arch='x86_64',
+        arch='i386',
         plist=dict(
             CFBundleDevelopmentRegion="English",
             CFBundleDisplayName=myname,
             CFBundleExecutable=myname,
             CFBundleIconFile="MASSIVE.icns",
             CFBundleIdentifier="au.edu.monash.MASSIVE",
-            CFBundleName="Paridee",
+            CFBundleName="Strudel",
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + launcher_version_number.version_number,
-            LSArchitecturePriority=["x86_64"]
+            LSArchitecturePriority=["i386"]
             )
         )
     ),
