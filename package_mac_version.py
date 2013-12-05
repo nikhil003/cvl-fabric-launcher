@@ -47,8 +47,12 @@ cmd = 'certtool y | grep "Developer ID Application"'
 print cmd
 certificateLine = commands.getoutput(cmd)
 print "certificateLine: " + certificateLine
-certificateName = certificateLine.split(": ",1)[1]
-print "certificateName: " + certificateName
+try:
+    certificateName = certificateLine.split(": ",1)[1]
+    print "certificateName: " + certificateName
+    sign=True
+except:
+    sign=False
 
 INCLUDE_APPLICATIONS_SYMBOLIC_LINK = True
 ATTEMPT_TO_SET_ICON_SIZE_IN_DMG = True
@@ -77,7 +81,7 @@ version = sys.argv[1]
 os.system('rm -fr build/*')
 os.system('rm -fr dist/*')
 
-# Build "MASSIVE Launcher.app"
+# Build "Strudel.app"
 os.system('python create_mac_bundle.py py2app')
 
 # Digitally sign application:
@@ -85,20 +89,21 @@ cmd = "CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents/Developer/Platforms/iP
 print cmd
 os.environ['CODESIGN_ALLOCATE'] = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/codesign_allocate'
 # The bundle identifier (au.edu.monash.MASSIVE) referenced below is set in create_mac_bundle.py:
-cmd = 'codesign --force -i "au.edu.monash.MASSIVE" --sign "%s" --verbose=4 dist/MASSIVE\ Launcher.app' % (certificateName)
-print cmd
-os.system(cmd)
-cmd = 'codesign -vvvv dist/MASSIVE\ Launcher.app/'
-print cmd
-os.system(cmd)
-cmd = 'spctl --assess --raw --type execute --verbose=4 dist/MASSIVE\ Launcher.app/'
-print cmd
-os.system(cmd)
+if sign:
+    cmd = 'codesign --force -i "au.edu.monash.MASSIVE" --sign "%s" --verbose=4 dist/Strudel.app' % (certificateName)
+    print cmd
+    os.system(cmd)
+    cmd = 'codesign -vvvv dist/Strudel.app/'
+    print cmd
+    os.system(cmd)
+    cmd = 'spctl --assess --raw --type execute --verbose=4 dist/Strudel.app/'
+    print cmd
+    os.system(cmd)
 
 # Build DMG (disk image) :
 
 source = os.path.join(os.getcwd(),'dist')
-applicationName = "MASSIVE Launcher"
+applicationName = "Strudel"
 title = applicationName + " " + version
 size="80000"
 finalDmgName = applicationName + " " + version
