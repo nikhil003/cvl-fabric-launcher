@@ -769,7 +769,11 @@ class LauncherMainFrame(wx.Frame):
     def loadDefaultSessionsGUI(self,redraw):
         cb=self.FindWindowByName('jobParams_configName')
         # attempt to preserve the selection on the combo box if the site remains in the list. If not, set the selection to 0
-        sn=cb.GetValue()
+        try:
+            sn=cb.GetValue()
+        except:
+            sn=''
+                    
         
         if (sn==None or sn==""):
             if self.prefs.has_option("Launcher Config","siteConfigDefault"):
