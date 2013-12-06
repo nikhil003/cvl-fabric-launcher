@@ -3,6 +3,37 @@ import siteConfig
 import sys
 import collections
 
+
+class sshKeyDistDisplayStringsNCI(siteConfig.sshKeyDistDisplayStrings):
+    def __init__(self):
+        super(sshKeyDistDisplayStringsNCI, self).__init__()
+        self.passwdPrompt="""Please enter the password for your NCI account."""
+        self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
+        self.passphrasePrompt="Please enter the passphrase for your SSH key"
+        self.passphrasePromptIncorrect="""Sorry, that passphrase was incorrect.
+Please enter the passphrase for you SSH Key
+If you have forgoten the passphrase for you key, you may need to delete it and create a new key.
+You can find this option under the Identity menu.
+"""
+        self.newPassphrase="""It looks like this is the first time you're using Strudel on this
+computer. To use ssh key authentication, Strudel will generate a local
+passphrase protected key on your computer which is used to
+authenticate you to the NCI computers.
+
+Please enter a new passphrase (twice to avoid typos) to protect your local key. 
+After you've done this, your passphrase will be the primary method of
+authentication for the launcher."""
+        self.newPassphraseEmptyForbidden="Sorry, empty passphrases are forbidden.\n"+self.newPassphrase
+        self.createNewKeyDialogNewPassphraseEmptyForbidden="Sorry, empty passphrases are forbidden."
+        self.newPassphraseTooShort="Sorry, the passphrase must be at least six characters.\n"+self.newPassphrase
+        self.createNewKeyDialogNewPassphraseTooShort="Passphrase is too short."
+        self.newPassphraseMismatch="Sorry, the two passphrases you entered don't match.\n"+self.newPassphrase
+        self.createNewKeyDialogNewPassphraseMismatch="Passphrases don't match!"
+        self.newPassphraseTitle="Please enter a new passphrase"
+        self.persistentMessage="Would you like to leave your current session running so that you can reconnect later?"
+        self.reconnectMessage="An Existing Desktop was found. Would you like to reconnect or kill it and start a new desktop?"
+
+
 class sshKeyDistDisplayStringsCVL(siteConfig.sshKeyDistDisplayStrings):
     def __init__(self):
         super(sshKeyDistDisplayStringsCVL, self).__init__()
@@ -152,6 +183,9 @@ def getMassiveSiteConfig(loginHost):
 
 def getRaijinSiteConfig(queue):
     c = getCVLSiteConfig(queue)
+    s = sshKeyDistDisplayStringsNCI()
+    c.displayStrings.__dict__.update(s.__dict__)
+    c.visibility['resourcePanel']=True
     c.visibility['ppnLabel']=False
     c.visibility['jobParams_ppn']=False
     c.loginHost='raijin.nci.org.au'
