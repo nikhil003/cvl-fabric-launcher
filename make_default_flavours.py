@@ -408,8 +408,10 @@ def getGenericVNCSession():
 import utilityFunctions
 import json
 defaultSites=collections.OrderedDict()
-defaultSites['Desktop on m1.massive.org.au']  = getMassiveSiteConfig("m1.massive.org.au") 
-defaultSites['Desktop on m2.massive.org.au'] = getMassiveSiteConfig("m2.massive.org.au") 
+defaultSites['Desktop on m1-login2.massive.org.au']  = getMassiveSiteConfig("m1-login2.massive.org.au") 
+defaultSites['Desktop on m2-login2.massive.org.au'] = getMassiveSiteConfig("m2-login2.massive.org.au") 
+defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
+defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au") 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('massive_flavours.json','w') as f:
