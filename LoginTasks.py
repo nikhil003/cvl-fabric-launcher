@@ -1637,7 +1637,7 @@ class LoginProcess():
         self.removeKeyOnExit=removeKeyOnExit
         self.notify_window=wx.Window(parent=self.parentWindow)
         self.displayStrings=displayStrings
-        #self.notify_window.Hide()
+        self.notify_window.Hide()
         self.notify_window.Center()
         self.cancelCallback=cancelCallback
         self.shareHomeDir=shareHomeDir
