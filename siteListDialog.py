@@ -77,6 +77,9 @@ class siteListDialog(wx.Dialog):
         w=0
         for i in range(0,self.siteList.GetColumnCount()):
             w=w+self.siteList.GetColumnWidth(i)
+        # For some reason, even when I carefully calculate the column widths, on windows its still too small
+        if sys.platform.startswith('win'):
+            w=w+50
         self.siteList.SetMinSize((w,200))
         mainSizer.Add(self.siteList,flag=wx.EXPAND,proportion=1)
 
