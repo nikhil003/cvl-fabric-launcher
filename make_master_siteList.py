@@ -2,6 +2,7 @@ import json
 newlist=[
     {'name':'NeCTAR - Characterisation VL','url':'https://cvl.massive.org.au/cvl_flavours.json'},
     {'name':'Monash University - MASSIVE','url':'http://cvl.massive.org.au/massive_flavours.json'},
+    {'name':'Austrlian Synchrotron - MASSIVE','url':'http://cvl.massive.org.au/massive_flavours.json'},
     {'name':'CQUniversity - HPC Systesm','url':'http://hpc-stats.cqu.edu.au/cqu.json'}
 ]
 
