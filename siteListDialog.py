@@ -1,4 +1,5 @@
 import wx
+import sys
 from wx.lib.agw import ultimatelistctrl as ULC
 
 class newSiteDialog(wx.Dialog):
