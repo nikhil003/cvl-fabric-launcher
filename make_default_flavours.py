@@ -125,8 +125,8 @@ def getMassiveSiteConfig(loginHost):
     cmd='\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"'
     regex='.*<job_state>R</job_state>.*'
     c.running = siteConfig.cmdRegEx(cmd,regex)
-    c.stop=siteConfig.cmdRegEx('\'qdel -a {jobid}\'')
-    c.stopForRestart=siteConfig.cmdRegEx('qdel {jobid} ; sleep 5\'')
+    c.stop=siteConfig.cmdRegEx('\'qdel -a {jobidNumber}\'')
+    c.stopForRestart=siteConfig.cmdRegEx('qdel {jobidNumber} ; sleep 5\'')
     cmd='\"module load xmlstarlet ; qstat -x -f {jobid} | xml sel -t -m \\"/Data/Job/exec_host/text()\\" -c \\".\\" -n - | cut -f 1 -d \\"/\\"\"'
     regex='(?P<execHost>\S+)'
     c.execHost=siteConfig.cmdRegEx(cmd,regex)
@@ -194,7 +194,7 @@ def getRaijinSiteConfig(queue):
     regex='.*job_state = R.*'
     c.running=siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\"module load pbs ; qdel {jobidNumber}\"')
-    c.stopForRestart=siteConfig.cmdRegEx('\"module load pbs ; qdel {jobid}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"module load pbs ; qdel {jobidNumber}\"')
     c.agent=siteConfig.cmdRegEx()
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
     c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/passwdfile\'','^(?P<vncPasswd>\S+)$')
@@ -266,7 +266,7 @@ def getCVLSiteConfig(queue):
     regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\"module load pbs ; module load maui ; qdel -a {jobidNumber}\"')
-    c.stopForRestart=siteConfig.cmdRegEx('\"module load pbs ; module load maui ; qdel {jobid}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"module load pbs ; module load maui ; qdel {jobidNumber}\"')
     c.vncDisplay= siteConfig.cmdRegEx('\"cat /var/spool/torque/spool/{jobidNumber}.*\"' ,'^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$',host='exec')
     cmd= '\"module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\"'
     regex='^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$'
