@@ -324,6 +324,8 @@ def getCVLSiteConfig(queue):
 
     cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay}; wmctrl -F -i -c {webDavWindowID}\'"'
     c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
+    cmd = '"/usr/bin/ssh {execHost} \'module load keyutility ; mountUtility.py\'"'
+    c.onConnectScript = siteConfig.cmdRegEx(cmd)
     return c
 
 def getOtherTurboVNCConfig(configName):
