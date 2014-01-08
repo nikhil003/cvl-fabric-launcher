@@ -208,7 +208,7 @@ Do you want me to delete the job or leave it in the queue so you can reconnect l
         self.reconnectMessageYes="Reconnect"
         self.reconnectMessageNo="New desktop"
         self.createNewKeyDialogNewPassphraseMismatch="Passphrases don't match"
-        self.networkError="It looks like a network error occured. You may be able to resume you work by logging in again."
+        self.networkError="It looks like a network error has occured. You may be able to resume your work by logging in again."
         self.helpEmailAddress="help@massive.org.au"
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value
