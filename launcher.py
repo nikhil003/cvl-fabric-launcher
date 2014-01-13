@@ -738,7 +738,18 @@ class LauncherMainFrame(wx.Frame):
     def loadSession(self,f):
         import json
         saved=siteConfig.GenericJSONDecoder().decode(f.read())
-        self.sites=saved
+        if isinstance(saved,list):
+            self.sites={}
+            keyorder=saved[0]
+            for key in keyorder:
+                    nk = key
+                    i=1
+                    while nk in self.sites.keys():
+                        i=i+1
+                        nk = key+" %s"%i
+                    self.sites[nk]=saved[1][key]
+        else:
+            self.sites=saved
         cb=self.FindWindowByName('jobParams_configName')
         for i in range(0,cb.GetCount()):
             cb.Delete(0)
