@@ -1616,6 +1616,7 @@ class LoginProcess():
 
     def complete(self):
         return self._complete.isSet()
+
     myEVT_CUSTOM_LOGINPROCESS=None
     EVT_CUSTOM_LOGINPROCESS=None
     def __init__(self,parentWindow,jobParams,keyModel,siteConfig=None,displayStrings=None,autoExit=False,completeCallback=None,cancelCallback=None,globalOptions=None,contacted_massive_website=False,removeKeyOnExit=False,shareHomeDir=False,startupinfo=None,creationflags=0):
@@ -1671,6 +1672,8 @@ class LoginProcess():
         update['launcher_version_number']=launcher_version_number.version_number
         if self.siteConfig.loginHost!=None:
             update['loginHost']=self.siteConfig.loginHost
+        if self.siteConfig.username!=None:
+            update['username']=self.siteConfig.username
         self.jobParams.update(update)
 
         for k, v in self.__dict__.iteritems():

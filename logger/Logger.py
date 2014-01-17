@@ -30,7 +30,10 @@ class Logger():
 
     def sendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
         # Send all log messages to the debug window, which may or may not be visible.
-        log_window_handler = logging.StreamHandler(stream=logTextCtrl)
+        try:
+            log_window_handler = logging.StreamHandler(stream=logTextCtrl)
+        except:
+            log_window_handler = logging.StreamHandler(strm=logTextCtrl)
         log_window_handler.setLevel(logging.DEBUG)
         log_format_string = '%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s'
         log_window_handler.setFormatter(logging.Formatter(log_format_string))

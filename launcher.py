@@ -138,6 +138,18 @@ import LauncherOptionsDialog
 
 from utilityFunctions import LAUNCHER_URL
 
+class FileDrop(wx.FileDropTarget):
+    def __init__(self, window):
+        super(FileDrop,self).__init__()
+        self.window = window
+
+    def OnDropFiles(self, x, y, filenames):
+        if len(filenames)!=1:
+            pass
+        else:
+            self.window.loadSession(None,filenames[0])
+
+
 class LauncherMainFrame(wx.Frame):
     PERM_SSH_KEY=0
     TEMP_SSH_KEY=1
@@ -259,6 +271,8 @@ class LauncherMainFrame(wx.Frame):
     def __init__(self, parent, id, title):
 
         super(LauncherMainFrame,self).__init__(parent, id, title, style=wx.DEFAULT_FRAME_STYLE )
+        dt=FileDrop(self)
+        self.SetDropTarget(dt)
         self.programName=title
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         self.SetAutoLayout(0)
@@ -735,8 +749,10 @@ class LauncherMainFrame(wx.Frame):
         self.loadSession(f)
         f.close()
 
-    def loadSession(self,f):
+    def loadSession(self,f,path=None):
         import json
+        if path!=None:
+            f=open(path,'r')
         saved=siteConfig.GenericJSONDecoder().decode(f.read())
         if isinstance(saved,list):
             self.sites={}
@@ -756,6 +772,8 @@ class LauncherMainFrame(wx.Frame):
         for s in self.sites.keys():
             cb.Append(s)
         cb.SetSelection(0)
+        if path!=None:
+            f.close()
         self.updateVisibility()
 
     def showModalFromThread(self,dlg,q):
