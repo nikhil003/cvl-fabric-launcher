@@ -225,6 +225,8 @@ class LauncherMainFrame(wx.Frame):
                                 item.SetValue(val)
                             except TypeError:
                                 item.SetValue(int(val))
+                            except AttributeError:
+                                item.SetSelection(int(val))
                     else:
                         self.loadPrefs(window=item,site=site)
 
@@ -259,7 +261,11 @@ class LauncherMainFrame(wx.Frame):
             try:
                 for item in window.GetChildren():
                     if self.shouldSave(item):
-                        self.prefs.set(section,item.GetName(),'%s'%item.GetValue())
+                        print "saving item %s"%item.GetName()
+                        try:
+                            self.prefs.set(section,item.GetName(),'%s'%item.GetValue())
+                        except AttributeError:
+                            self.prefs.set(section,item.GetName(),'%s'%item.GetSelection())
                     else:
                         self.savePrefs(section=section,window=item)
             except:
@@ -272,7 +278,7 @@ class LauncherMainFrame(wx.Frame):
 
     def __init__(self, parent, id, title):
 
-        super(LauncherMainFrame,self).__init__(parent, id, title, style=wx.DEFAULT_FRAME_STYLE )
+        super(LauncherMainFrame,self).__init__(parent, id, title, style=wx.DEFAULT_FRAME_STYLE^wx.RESIZE_BORDER )
         dt=FileDrop(self)
         self.SetDropTarget(dt)
         self.programName=title
@@ -283,10 +289,12 @@ class LauncherMainFrame(wx.Frame):
         self.savedControls.append(wx.TextCtrl)
         self.savedControls.append(wx.ComboBox)
         self.savedControls.append(wx.SpinCtrl)
+        self.savedControls.append(wx.RadioBox)
 
         self.prefs=None
         self.loginProcess=[]
         self.logWindow = None
+        self.hiddenWindow = None
         self.progressDialog = None
 
         if sys.platform.startswith("win"):
@@ -508,6 +516,32 @@ class LauncherMainFrame(wx.Frame):
         self.sshTunnelCipherComboBox = wx.ComboBox(self.cipherPanel, wx.ID_ANY, value=defaultCipher, choices=sshTunnelCiphers, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_cipher')
         self.cipherPanel.GetSizer().Add(self.sshTunnelCipherComboBox, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.cipherPanel,proportion=0,flag=wx.EXPAND)
+        
+        p = wx.Panel(self.loginFieldsPanel,name='ssh_key_mode_panel')
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        var='auth_mode'
+        options=self.getPrefsSection('Global Preferences')
+        # Create a dialog that will never be shown just so we get an authorative list of options
+        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
+        auth_mode=dlg.FindWindowByName(var)
+        choices=[]
+        nmodes=auth_mode.GetCount()
+        for i in range(0,nmodes):
+            choices.append(auth_mode.GetString(i))
+        dlg.Destroy()
+        l=wx.RadioBox(p,wx.ID_ANY,majorDimension=3,name="jobParams_authMode",choices=choices,style=wx.NO_BORDER|wx.RA_SPECIFY_COLS)
+        l.SetSelection(2)
+        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.LEFT|wx.RIGHT|wx.EXPAND)
+        self.loginFieldsPanel.GetSizer().Add(p,flag=wx.EXPAND)
+
+        p = wx.Panel(self.loginFieldsPanel,name='copyid_mode_panel')
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        choices=['Use my password on this site','Use my AAF password']
+        l=wx.RadioBox(p,wx.ID_ANY,majorDimension=2,name="jobParams_copyidMode",choices=choices,style=wx.RA_SPECIFY_COLS|wx.NO_BORDER)
+        p.GetSizer().Add(l,border=5,flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND,proportion=1)
+        self.loginFieldsPanel.GetSizer().Add(p,flag=wx.EXPAND,proportion=1)
+
+
         self.checkBoxPanel = wx.Panel(self.loginFieldsPanel,name="checkBoxPanel")
         self.checkBoxPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         
@@ -567,6 +601,11 @@ class LauncherMainFrame(wx.Frame):
         #self.menu_bar.Show(False)
 
         #self.Centre()
+
+        self.hiddenWindow=wx.Frame(self)
+        # any controls created on this frame will be inaccessible to the user, but if we set them it will cause them to be saved to the config file
+        # this is kind of hackish, but supposed to be extensible
+        idp=wx.TextCtrl(self.hiddenWindow,name='jobParams_idp')
 
         self.logWindow = wx.Frame(self, title="%s Debug Log"%self.programName, name="%s Debug Log"%self.programName,pos=(200,150),size=(700,450))
         self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
@@ -1024,7 +1063,10 @@ class LauncherMainFrame(wx.Frame):
             name = item.GetName()
             if ('jobParam' in name):
                 (prefix,keyname) = name.split('_') 
-                jobParams[keyname]=item.GetValue()
+                if isinstance(item,wx.RadioBox):
+                    jobParams[keyname]=item.GetSelection()
+                else:
+                    jobParams[keyname]=item.GetValue()
             r = self.buildJobParams(item)
             jobParams.update(r)
         if jobParams.has_key('resolution'):
@@ -1085,6 +1127,7 @@ class LauncherMainFrame(wx.Frame):
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
+        self.hiddenWindow.Hide()
 
     def onDebugWindowCheckBoxStateChanged(self, event):
         self.logWindow.Show(event.GetEventObject().GetValue())
@@ -1372,13 +1415,14 @@ class LauncherMainFrame(wx.Frame):
         else:
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
+            removeKeyOnExit=False
         jobParams=self.buildJobParams(self)
         jobParams['strudel_platform']=platformstr
         jobParams['wallseconds']=int(jobParams['hours'])*60*60
         self.configName=self.FindWindowByName('jobParams_configName').GetValue()
         autoExit=False
         globalOptions = self.getPrefsSection("Global Preferences")
-        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[self.configName],displayStrings=self.sites[self.configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo)
+        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[self.configName],displayStrings=self.sites[self.configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo,removeKeyOnExit=removeKeyOnExit)
         oldParams  = jobParams.copy()
         lp.setCallback(lambda jobParams: self.loginComplete(lp,oldParams,jobParams))
         lp.setCancelCallback(lambda jobParams: self.loginCancel(lp,oldParams,jobParams))
