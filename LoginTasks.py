@@ -810,10 +810,8 @@ class LoginProcess():
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_DISTRIBUTE_KEY')
                 wx.CallAfter(event.loginprocess.updateProgressDialog, 2,"Configuring authorisation")
                 if int(event.loginprocess.globalOptions['copyid_mode'])==1:
-                    print "LoginTasks, using AAF"
                     event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,removeKeyOnExit=event.loginprocess.removeKeyOnExit,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,useAAF=True,authURL=event.loginprocess.siteConfig.authURL,aaf_username=event.loginprocess.globalOptions['aaf_username'],aaf_idp=event.loginprocess.globalOptions['aaf_idp'],jobParams=event.loginprocess.jobParams)
                 else:
-                    print "LoginTasks, not using AAF %s"%event.loginprocess.globalOptions['copyid_mode']
                     event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,removeKeyOnExit=event.loginprocess.removeKeyOnExit,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,jobParams=event.loginprocess.jobParams)
                 successevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK,event.loginprocess)
                 event.loginprocess.skd.distributeKey(callback_success=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),successevent),
@@ -1548,8 +1546,11 @@ class LoginProcess():
                 if event.loginprocess.skd!=None:
                     print "looking for an updateDict from the ssh key dist loop. %s"%event.loginprocess.skd.updateDict
                     event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict)
+<<<<<<< HEAD
                     print "checking the current username %s"%event.loginprocess.jobParams['username']
                     print "updateDict had %s"%event.loginprocess.skd.updateDict
+=======
+>>>>>>> Support for using a web server via Shibolet authentication to post a public key
                 if (event.loginprocess.canceled()):
                     if event.loginprocess.skd!=None and event.loginprocess.skd.canceled():
                         logger.debug("LoginProcess.complete: sshKeyDist was canceled.")
@@ -1651,10 +1652,29 @@ class LoginProcess():
         LoginProcess.myEVT_CUSTOM_LOGINPROCESS=wx.NewEventType()
         LoginProcess.EVT_CUSTOM_LOGINPROCESS=wx.PyEventBinder(self.myEVT_CUSTOM_LOGINPROCESS,1)
         self.keyModel=keyModel
+<<<<<<< HEAD
 #        if globalOtions['copyid_mode']==1 and siteConfig.has_key('authURL'):
 #            self.keyModel.useAAF(True,siteConfig['authURL'])
 #        else:
 #            self.keyModel.useAAF(False,None)
+=======
+        if jobParams.has_key('copyidMode'):
+            if jobParams['copyidMode']==0:
+                self.keyModel.useAAF(False)
+            elif jobParams['copyidMode']==1:
+                self.keyModel.useAAF(True)
+            else:
+                self.keyModel.useAAF(False)
+        elif siteConfig.has_key('copyidMode'):
+            if siteConfig['copyidMode']==0:
+                self.keyModel.useAAF(False)
+            elif siteConfig['copyidMode']==1:
+                self.keyModel.useAAF(True)
+            else:
+                self.keyModel.useAAF(False)
+        else:
+            self.keyModel.useAAF(False)
+>>>>>>> Support for using a web server via Shibolet authentication to post a public key
 
 
         #self.keyModel.useAAF(True)
