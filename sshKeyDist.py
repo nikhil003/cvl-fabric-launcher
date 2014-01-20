@@ -302,9 +302,10 @@ class KeyDist():
 
 
     class CopyIDThread(Thread):
-        def __init__(self,keydist):
+        def __init__(self,keydist,obj):
             Thread.__init__(self)
             self.keydistObject = keydist
+            self.obj=obj
             self._stop = Event()
 
         def stop(self):
@@ -315,33 +316,29 @@ class KeyDist():
 
         def run(self):
             try:
-                self.keydistObject.keyModel.copyID(host=self.keydistObject.host,username=self.keydistObject.username,password=self.keydistObject.password)
-                logger.debug("KeyDist.CopyIDThread: KeyModel.copyID returned without error")
+                pubKeyPath=self.keydistObject.keyModel.getPrivateKeyFilePath()+".pub"
+                with open(pubKeyPath,'r') as f:
+                    pubkey=f.read()
+                self.obj.copyID()
+                logger.debug("KeyDist.CopyIDThread: copyID returned without error")
                 event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_TESTAUTH,self.keydistObject)
-            except socket.gaierror as e:
-                logger.debug('CopyIDThread: socket.gaierror : ' + str(e))
-                self.keydistObject.cancel(message=str(e))
-                return
-            except socket.error as e:
-                logger.debug('CopyIDThread: socket.error : ' + str(e))
-                if str(e) == '[Errno 101] Network is unreachable':
-                    e = 'Network error, could not contact login host.'
-                self.keydistObject.cancel(message=str(e))
-                return
-            except ssh.AuthenticationException as e:
-                logger.debug('CopyIDThread: ssh.AuthenticationException: ' + str(e))
-                event = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COPYID_NEEDPASS,self.keydistObject,str(e))
-            except ssh.SSHException as e:
-                logger.debug('CopyIDThread: ssh.SSHException : ' + str(e))
-                self.keydistObject.cancel(message=str(e))
-                return
+                # If the object represented an attempt at logging onto AAF, then we will try to get the IdP and save it for next time.
+                # If its not an AAF login, we will catch the exception and pass
+                try:
+                    idp=self.obj.getIdP()
+                    print "got the IdP from the AAF login object %s"%idp
+                    self.keydistObject.updateDict['idp']=idp
+                except Exception as e:
+                    print "exception in testing %s"%e
+#                    pass
             except Exception as e:
-                logger.debug('CopyIDThread: Exception : ' + str(e))
+                logger.debug('CopyIDThread: threw exception : ' + str(e))
                 self.keydistObject.cancel(message=str(e))
                 return
             if (not self.stopped()):
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(), event)
-
+            self.keydistObject.keyModel.copiedID.set()
+            self.keydistObject.keycopied.set()
 
 
     class sshKeyDistEvent(wx.PyCommandEvent):
@@ -377,12 +374,19 @@ class KeyDist():
             event.Skip()
 
         def copyid(event):
-            if (event.GetId() == KeyDist.EVT_KEYDIST_COPYID_NEEDPASS):
-                logger.debug("received COPYID_NEEDPASS event")
-                wx.CallAfter(event.keydist.getLoginPassword,event.arg)
-            elif (event.GetId() == KeyDist.EVT_KEYDIST_COPYID):
+            import cvlsshutils.cvl_shib_auth
+            import cvlsshutils.password_copyid
+            if (event.GetId() == KeyDist.EVT_KEYDIST_COPYID):
+                pubKeyPath=event.keydist.keyModel.getPrivateKeyFilePath()+".pub"
+                with open(pubKeyPath,'r') as f:
+                    pubkey=f.read()
+                # Here we make the decision as to how to copy the public key to the users authorized keys file. This of this as a factory pattern, although I'm sure there are neater ways to implement it.
+                if event.keydist.keyModel.useAAF():
+                    obj=cvlsshutils.cvl_shib_auth.shibbolethDance(pubkey=pubkey,parent=event.keydist.parentWindow,displayStrings=event.keydist.displayStrings,**event.keydist.jobParams)
+                else:
+                    obj=cvlsshutils.password_copyid.genericCopyID(pubkey=pubkey,parent=event.keydist.parentWindow,host=event.keydist.host,username=event.keydist.username,displayStrings=event.keydist.displayStrings)
                 logger.debug("received COPYID event")
-                t = KeyDist.CopyIDThread(event.keydist)
+                t = KeyDist.CopyIDThread(event.keydist,obj=obj)
                 t.setDaemon(True)
                 t.start()
                 event.keydist.threads.append(t)
@@ -505,8 +509,8 @@ class KeyDist():
                         logger.debug("received AUTHFAIL event from thread %i %s posting TESTAUTH event in response"%(event.threadid,event.threadname))
                         wx.PostEvent(event.keydist.notifywindow.GetEventHandler(),newevent)
                     else:
-                        newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COPYID_NEEDPASS,event.keydist)
-                        logger.debug("received AUTHFAIL event from thread %i %s posting NEEDPASS event in response"%(event.threadid,event.threadname))
+                        newevent = KeyDist.sshKeyDistEvent(KeyDist.EVT_KEYDIST_COPYID,event.keydist)
+                        logger.debug("received AUTHFAIL event from thread %i %s posting COPYID event in response"%(event.threadid,event.threadname))
                         wx.PostEvent(event.keydist.notifywindow.GetEventHandler(),newevent)
             else:
                 event.Skip()
@@ -522,7 +526,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False,startupinfo=None,creationflags=0):
+    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False,startupinfo=None,creationflags=0,jobParams={}):
 
         logger.debug("KeyDist.__init__")
 
@@ -541,7 +545,6 @@ class KeyDist():
         KeyDist.EVT_KEYDIST_NEWPASS_RPT = wx.NewId()
         KeyDist.EVT_KEYDIST_NEWPASS_COMPLETE = wx.NewId()
         KeyDist.EVT_KEYDIST_COPYID = wx.NewId()
-        KeyDist.EVT_KEYDIST_COPYID_NEEDPASS = wx.NewId()
         KeyDist.EVT_KEYDIST_KEY_LOCKED = wx.NewId()
         KeyDist.EVT_KEYDIST_KEY_WRONGPASS = wx.NewId()
         KeyDist.EVT_KEYDIST_SCANHOSTKEYS = wx.NewId()
@@ -564,6 +567,7 @@ class KeyDist():
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.completeEvent)
         notifywindow.Bind(self.EVT_CUSTOM_SSHKEYDIST, KeyDist.sshKeyDistEvent.shutdownEvent)
 
+        self.updateDict={}
         self._completed=Event()
         self.parentWindow = parentWindow
         self.progressDialog = progressDialog
@@ -593,6 +597,7 @@ class KeyDist():
         self.startupinfo = startupinfo
         self.creationflags = creationflags
         self.shuttingDown=Event()
+        self.jobParams=jobParams
 
     def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):
