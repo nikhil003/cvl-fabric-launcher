@@ -230,6 +230,7 @@ class KeyDist():
             
             ssh_cmd = '{sshbinary} -o ConnectTimeout=10 -o IdentityFile={nonexistantpath} -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {login} {host} echo "success_testauth"'.format(sshbinary=self.keydistObject.keyModel.sshpaths.sshBinary,
                                                                                                                                                                                                              login=self.keydistObject.username,
+
                                                                                                                                                                                                              host=self.keydistObject.host,
                                                                                                                                                                                                              nonexistantpath=path)
 
