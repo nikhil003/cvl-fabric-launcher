@@ -329,8 +329,18 @@ def getCVLSiteConfig(queue):
     return c
 
 def getOtherTurboVNCConfig(configName):
+    Visible={}
+    Visible['usernamePanel']=True
+    Visible['projectPanel']=False
+    Visible['loginHostPanel']=True
+    Visible['resourcePanel']=False
+    Visible['resolutionPanel']='Advanced'
+    Visible['cipherPanel']='Advanced'
+    Visible['debugCheckBoxPanel']='Advanced'
+    Visible['advancedCheckBoxPanel']=True
+    Visible['optionsDialog']=False
     c = siteConfig.siteConfig()
-    c.loginHost=configName
+    c.visibility=Visible
     c.listAll=siteConfig.cmdRegEx('\'module load turbovnc ; vncserver -list\'','^(?P<vncDisplay>:[0-9]+)\s+[0-9]+\s*$',requireMatch=False)
     c.startServer=siteConfig.cmdRegEx('\"/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution}\"','^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$')
     c.stop=siteConfig.cmdRegEx('\'module load turbovnc ; vncserver -kill {vncDisplay}\'')
@@ -429,6 +439,7 @@ with open('cvl_flavours.json','w') as f:
 
 defaultSites=collections.OrderedDict()
 defaultSites['Other']=getGenericVNCSession()
+defaultSites['Other TurboVNC']=getOtherTurboVNCConfig("")
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('other_flavour.json','w') as f:
