@@ -277,11 +277,11 @@ class cmdRegEx():
 
     def getCmd(self,jobParam={}):
         if ('exec' in self.host):
-            sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {execHost} '
+            sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {execHost} '
         elif ('local' in self.host):
             sshCmd = ''
         else:
-            sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
+            sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
         cmd=self.cmd
         if sys.platform.startswith("win"):
             escapedChars={'ampersand':'^&','pipe':'^|'}
