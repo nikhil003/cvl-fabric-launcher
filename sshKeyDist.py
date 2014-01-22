@@ -327,10 +327,18 @@ class KeyDist():
                 # If its not an AAF login, we will catch the exception and pass
                 try:
                     idp=self.obj.getIdP()
-                    print "got the IdP from the AAF login object %s"%idp
                     self.keydistObject.updateDict['idp']=idp
                 except Exception as e:
-                    print "exception in testing %s"%e
+                    pass
+                # This try catch means that if, in the course of authenticing the user, the authentication mechanism was able to tell us the username
+                # That username will be updated. Example. Authenticing via AAF, I know I'm at Monash, and my Monash username is chines.
+                # Monash will tell CVL what my email address is. CVL can look up my CVL username based on my email address.
+                try:
+                    newusername=self.obj.getUsername()
+                    self.keydistObject.updateDict['username']=newusername
+                except Exception as e:
+                    print "exception getting the username from the AAF auth object"
+                    print e
 #                    pass
             except Exception as e:
                 logger.debug('CopyIDThread: threw exception : ' + str(e))
@@ -340,6 +348,7 @@ class KeyDist():
                 wx.PostEvent(self.keydistObject.notifywindow.GetEventHandler(), event)
             self.keydistObject.keyModel.copiedID.set()
             self.keydistObject.keycopied.set()
+            self.keydistObject.__dict__.update(self.keydistObject.updateDict)
 
 
     class sshKeyDistEvent(wx.PyCommandEvent):
