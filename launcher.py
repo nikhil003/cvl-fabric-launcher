@@ -694,6 +694,10 @@ class LauncherMainFrame(wx.Frame):
             f.close()
         queue.put(newlist)
 
+    def showDialogAndEnqueue(self,dlg,queue):
+        dlg.ShowModal()
+        queue.put([])
+
 
     def showSiteListDialog(self,siteList,newlist,q):
         import siteListDialog
@@ -712,6 +716,13 @@ class LauncherMainFrame(wx.Frame):
         threading.Thread(target=self.getNewSites,args=[r]).start()
         origSiteList=q.get()
         newlist=r.get()
+        if origSiteList==[] and newlist==[]:
+            dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,title="",message="It looks like I was unable to contact the server for a list of sites to connect to. If your on a VPN you may want to check your network connectivity")
+            q=Queue.Queue()
+            print "try to call showmodal"
+            wx.CallAfter(self.showDialogAndEnqueue,dlg,q)
+            q.get()
+
         q=Queue.Queue()
         wx.CallAfter(wx.EndBusyCursor)
         wx.CallAfter(self.showSiteListDialog,origSiteList,newlist,q)
