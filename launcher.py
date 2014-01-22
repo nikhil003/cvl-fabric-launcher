@@ -719,7 +719,6 @@ class LauncherMainFrame(wx.Frame):
         if origSiteList==[] and newlist==[]:
             dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,title="",message="It looks like I was unable to contact the server for a list of sites to connect to. If your on a VPN you may want to check your network connectivity")
             q=Queue.Queue()
-            print "try to call showmodal"
             wx.CallAfter(self.showDialogAndEnqueue,dlg,q)
             q.get()
 
