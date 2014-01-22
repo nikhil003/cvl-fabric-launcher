@@ -818,6 +818,18 @@ class LoginProcess():
 
         def runSanityCheck(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK):
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                # If we have completed KeyDistribution, we may have some updates to the jobParameters from the key distribution process
+                if event.loginprocess.skd!=None:
+                    print "updating jobParams with results from skd"
+                    event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict) 
+                    print event.loginprocess.jobParams['username']
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_RUN_SANITY_CHECK')
                 event.loginprocess.updateProgressDialog( 3, "Running the sanity check script")
                 nextevent = LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CHECK_RUNNING_SERVER,event.loginprocess)
@@ -1531,6 +1543,8 @@ class LoginProcess():
                 if event.loginprocess.skd!=None:
                     print "looking for an updateDict from the ssh key dist loop. %s"%event.loginprocess.skd.updateDict
                     event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict)
+                    print "checking the current username %s"%event.loginprocess.jobParams['username']
+                    print "updateDict had %s"%event.loginprocess.skd.updateDict
                 if (event.loginprocess.canceled()):
                     if event.loginprocess.skd!=None and event.loginprocess.skd.canceled():
                         logger.debug("LoginProcess.complete: sshKeyDist was canceled.")
