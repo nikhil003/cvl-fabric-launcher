@@ -467,6 +467,13 @@ defaultSites=collections.OrderedDict()
 defaultSites['CVL Desktop']=  getCVLSiteConfig("batch")
 defaultSites['Huygens on the CVL']= getCVLSiteConfig("huygens")
 defaultSites['CVL GPU node']= getCVLSiteConfig("vis")
+
+multicpu=getCVLSiteConfig("multicpu")
+cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=1 -l walltime=10000:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
+regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+multicpu.startServer=siteConfig.cmdRegEx(cmd,regex)
+defaultSites['CPU 16 core node']=multicpu
+
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_flavours.json','w') as f:
