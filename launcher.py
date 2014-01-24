@@ -728,6 +728,7 @@ class LauncherMainFrame(wx.Frame):
         try:
             newlist=self.loadNewSitesNonBlocking()
         except:
+            newlist=[]
             retry=False
 
 
