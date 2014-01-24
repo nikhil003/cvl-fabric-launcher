@@ -337,9 +337,7 @@ class KeyDist():
                     newusername=self.obj.getUsername()
                     self.keydistObject.updateDict['username']=newusername
                 except Exception as e:
-                    print "exception getting the username from the AAF auth object"
-                    print e
-#                    pass
+                    pass
             except Exception as e:
                 logger.debug('CopyIDThread: threw exception : ' + str(e))
                 self.keydistObject.cancel(message=str(e))

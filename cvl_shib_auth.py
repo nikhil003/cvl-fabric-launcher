@@ -19,7 +19,6 @@ class shibbolethDance():
         data={}
         data['ssh_pub_key']=self.pubkey
         r=self.session.post(url,data=data,verify=False)
-        print "shibboletDance, posted key, got text %s"%r.text
         if r.status_code==200:
             if 'json' in r.headers['content-type']:
                 returned=json.loads(r.text)
@@ -45,6 +44,4 @@ class shibbolethDance():
         destURL="https://118.138.241.242/cvl/"
         auth=cvlsshutils.AAF_Auth.AAF_Auth(self.session,destURL,parent=self.parent,idp=self.idp)
         self.idp=auth.getIdP()
-        print "self before postKey %s"%self.__dict__
         self.postKey(destURL)
-        print "self after postKey %s"%self.__dict__
