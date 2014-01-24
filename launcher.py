@@ -689,15 +689,12 @@ class LauncherMainFrame(wx.Frame):
             newlist=siteConfig.getMasterSites(url)
             
         except Exception as e:
+            logger.debug("getNewSites: Exception %s"%e)
+            logger.debug("getNewSites: Traceback %s"%traceback.formate_exc())
             pass 
         finally:
             f.close()
         queue.put(newlist)
-
-    def showDialogAndEnqueue(self,dlg,queue):
-        dlg.ShowModal()
-        queue.put([])
-
 
     def showSiteListDialog(self,siteList,newlist,q):
         import siteListDialog
@@ -705,26 +702,65 @@ class LauncherMainFrame(wx.Frame):
         r=dlg.ShowModal()
         q.put([r,dlg.getList()])
 
+    def loadNewSitesNonBlocking(self):
+        r=Queue.Queue()
+        threading.Thread(target=self.getNewSites,args=[r]).start()
+        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="Loading Site List",ButtonLabels=["Cancel"],q=r)
+        progressdlg=r.get()
+        wx.CallAfter(self.showModalFromThread,progressdlg,r)
+        wx.CallAfter(wx.BeginBusyCursor)
+        newlist=r.get()
+        wx.CallAfter(wx.EndBusyCursor)
+        if isinstance(newlist,type([])):
+            try:
+                wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
+            except:
+                pass
+        else:
+            raise Exception("Canceled load new sites")
+        return newlist
+
     def manageSites(self):
         siteList=[]
-        q=Queue.Queue()
-        r=Queue.Queue()
         tlist=[]
-        wx.CallAfter(wx.BeginBusyCursor)
 
-        threading.Thread(target=self.getSitePrefs,args=[q]).start()
-        threading.Thread(target=self.getNewSites,args=[r]).start()
-        origSiteList=q.get()
-        newlist=r.get()
-        if origSiteList==[] and newlist==[]:
-            dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,title="",message="It looks like I was unable to contact the server for a list of sites to connect to. If your on a VPN you may want to check your network connectivity")
-            q=Queue.Queue()
-            print "try to call showmodal"
-            wx.CallAfter(self.showDialogAndEnqueue,dlg,q)
-            q.get()
+        retry=True
+        try:
+            newlist=self.loadNewSitesNonBlocking()
+        except:
+            retry=False
+
 
         q=Queue.Queue()
+        threading.Thread(target=self.getSitePrefs,args=[q]).start()
+        wx.CallAfter(wx.BeginBusyCursor)
+        origSiteList=q.get()
         wx.CallAfter(wx.EndBusyCursor)
+
+        if origSiteList==[] and newlist==[] and retry==True:
+
+
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="It looks like I was unable to contact the server for a list of sites to connect to. If your on a VPN you may want to check your network connectivity",ButtonLabels=["Cancel","Retry"],q=q)
+            dlg=q.get()
+            wx.CallAfter(self.showModalFromThread,dlg,q)
+            button=q.get()
+            if button==0:
+                retry=False
+            while retry:
+                try:
+                    newlist=self.loadNewSitesNonBlocking()
+                    if newlist!=[]:
+                        retry=False
+                except:
+                    retry=False
+                if retry:
+                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    button=q.get()
+                    if button==0:
+                        retry=False
+                
+
+        q=Queue.Queue()
         wx.CallAfter(self.showSiteListDialog,origSiteList,newlist,q)
         r=q.get()
         if (r[0] == wx.ID_OK):
@@ -749,7 +785,7 @@ class LauncherMainFrame(wx.Frame):
                 self.setPrefsSection('configured_sites',options)
                 self.savePrefs(section='configured_sites')
 
-                wx.CallAfter(launcherMainFrame.loadDefaultSessions,(True))
+                launcherMainFrame.loadDefaultSessions(True)
 
     def loadSessionEvent(self,event):
         dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)
@@ -787,22 +823,37 @@ class LauncherMainFrame(wx.Frame):
             f.close()
         self.updateVisibility()
 
+
+    def createMultiButtonDialog(self,q,*args,**kwargs):
+        dlg=LauncherOptionsDialog.multiButtonDialog(*args,**kwargs)
+        q.put(dlg)
+
     def showModalFromThread(self,dlg,q):
         r=dlg.ShowModal()
         q.put(r)
 
     def loadDefaultSessions(self,redraw=True):
         sites=self.getPrefsSection(section='configured_sites')
-        while sites.keys() == []:
-            dlg=wx.MessageDialog(self,message="Before you can use this program, you must select from a list of computer systems that you commonly use.\n\nBy checking and unchecking items in this list you can control which options appear in the dropdown menu of which computer to connect to.\n\nYou can access this list again from the File->Manage Sites menu.",style=wx.OK)
+        retry=True
+        while sites.keys() == [] and retry:
             q=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,message="Before you can use this program, you must select from a list of computer systems that you commonly use.\n\nBy checking and unchecking items in this list you can control which options appear in the dropdown menu of which computer to connect to.\n\nYou can access this list again from the File->Manage Sites menu.",ButtonLabels=["Cancel","OK"],title="",q=q)
+            dlg=q.get()
             wx.CallAfter(self.showModalFromThread,dlg,q)
-            q.get()
-            self.manageSites()
-            sites=self.getPrefsSection(section='configured_sites')
+            button=q.get()
+            if button==0:
+                retry=False
+            else:
+                self.manageSites()
+                sites=self.getPrefsSection(section='configured_sites')
             
         wx.CallAfter(wx.BeginBusyCursor)
+        q=Queue.Queue()
+        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="Loading flavours",ButtonLabels=[],q=q)
+        dlg=q.get()
+        wx.CallAfter(dlg.ShowModal)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
+        wx.CallAfter(dlg.EndModal,0)
         wx.CallAfter(wx.EndBusyCursor)
         wx.CallAfter(self.loadDefaultSessionsGUI,redraw)
 
