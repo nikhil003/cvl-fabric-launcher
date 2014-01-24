@@ -472,7 +472,7 @@ multicpu=getCVLSiteConfig("multicpu")
 cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=1 -l walltime=10000:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
 regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
 multicpu.startServer=siteConfig.cmdRegEx(cmd,regex)
-defaultSites['CPU 16 core node']=multicpu
+defaultSites['CVL 16 core node']=multicpu
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
