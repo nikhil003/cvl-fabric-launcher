@@ -954,7 +954,7 @@ class LoginProcess():
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_START_SERVER')
                 event.loginprocess.updateProgressDialog( 5,"Starting a new desktop session")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_WAIT_FOR_SERVER,event.loginprocess)
-                t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.startServer,nextevent,"Error starting the VNC server. This could occur")
+                t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.startServer,nextevent,"Error starting the VNC server. This is probably a bug to be reported to your system administrator")
                 t.setDaemon(False)
                 logger.debug('setting queued_job so that we can ask about qdel in the event of a cancel event')
                 event.loginprocess.queued_job.set()
