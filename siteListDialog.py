@@ -87,14 +87,17 @@ class siteListDialog(wx.Dialog):
         p=wx.Panel(self,wx.ID_ANY)
         s=wx.BoxSizer(wx.HORIZONTAL)
         b=wx.Button(p,id=wx.ID_OK,label="OK")
-        s.Add(b)
+        s.Add(b,flag=wx.ALL,border=5)
         b.Bind(wx.EVT_BUTTON,self.onClose)
         b=wx.Button(p,id=wx.ID_NEW,label="New")
-        s.Add(b)
+        s.Add(b,flag=wx.ALL,border=5)
         b.Bind(wx.EVT_BUTTON,self.onNew)
         b=wx.Button(p,id=wx.ID_DELETE,label="Delete")
-        s.Add(b)
+        s.Add(b,flag=wx.ALL,border=5)
         b.Bind(wx.EVT_BUTTON,self.onDelete)
+        b=wx.Button(p,id=wx.ID_CANCEL,label="Cancel")
+        s.Add(b,flag=wx.ALL,border=5)
+        b.Bind(wx.EVT_BUTTON,self.onCancel)
         p.SetSizer(s)
         mainSizer.Add(p,proportion=0,flag=wx.EXPAND)
         self.Fit()
@@ -117,6 +120,9 @@ class siteListDialog(wx.Dialog):
         if i >=0:
             self.siteList.DeleteItem(i)
     def onClose(self,evt):
+        self.EndModal(evt.GetEventObject().GetId())
+
+    def onCancel(self,evt):
         self.EndModal(evt.GetEventObject().GetId())
 
     def getList(self):
