@@ -687,6 +687,8 @@ class LauncherMainFrame(wx.Frame):
             url=f.read().rstrip()
             logger.debug("master list of sites is available at %s"%url)
             newlist=siteConfig.getMasterSites(url)
+        except socket.timeout as e:
+            raise siteConfig.TimeoutException("socket timeout")
             
         except Exception as e:
             logger.debug("getNewSites: Exception %s"%e)
@@ -702,9 +704,13 @@ class LauncherMainFrame(wx.Frame):
         r=dlg.ShowModal()
         q.put([r,dlg.getList()])
 
-    def loadNewSitesNonBlocking(self):
+    def loadNewSitesNonBlocking(self,time=None):
         r=Queue.Queue()
+        timeoutObject=object()
         threading.Thread(target=self.getNewSites,args=[r]).start()
+        if time!=None:
+            timer=threading.Timer(time,r.put,args=[timeoutObject])
+            timer.start()
         wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="Loading Site List",ButtonLabels=["Cancel"],q=r)
         progressdlg=r.get()
         wx.CallAfter(self.showModalFromThread,progressdlg,r)
@@ -716,8 +722,20 @@ class LauncherMainFrame(wx.Frame):
                 wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
             except:
                 pass
+        elif newlist == timeoutObject:
+            try:
+                wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
+            except:
+                pass
+            raise siteConfig.TimeoutException("Timeout loading new sites")
+        elif isinstance(newlist,type("")):
+            try:
+                wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
+            except:
+                pass
+            raise siteConfig.StatusCode(newlist)
         else:
-            raise Exception("Canceled load new sites")
+            raise siteConfig.CancelException("Canceled load new sites")
         return newlist
 
     def manageSites(self):
@@ -726,10 +744,21 @@ class LauncherMainFrame(wx.Frame):
 
         retry=True
         try:
-            newlist=self.loadNewSitesNonBlocking()
-        except:
+            newlist=self.loadNewSitesNonBlocking(time=10)
+        except siteConfig.CancelException:
             newlist=[]
             retry=False
+        except siteConfig.TimeoutException:
+            newlist=[]
+            retry=True
+        except siteConfig.StatusCode as e:
+            newlist=[]
+            retry=False
+            q=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="I was unable to download the master list of sites for use with Strudel. You can still use Strudel (although you will have to do more manual configuration). The fact that this happened may indicate a problem with your connection to the internet. The HTTP status code returned was %s"%e,ButtonLabels=["OK"],q=q)
+            dlg=q.get()
+            wx.CallAfter(self.showModalFromThread,dlg,q)
+            button=q.get()
 
 
         q=Queue.Queue()
@@ -749,7 +778,7 @@ class LauncherMainFrame(wx.Frame):
                 retry=False
             while retry:
                 try:
-                    newlist=self.loadNewSitesNonBlocking()
+                    newlist=self.loadNewSitesNonBlocking(time=None)
                     if newlist!=[]:
                         retry=False
                 except:
