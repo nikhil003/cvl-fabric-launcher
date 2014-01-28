@@ -25,10 +25,13 @@ class requestThread(Thread):
         
     def run(self):
         import time
-        req=requests.get(self.url,verify=False)
-        if req.status_code == 200:
-            self.queue.put([self.url,req.text])
-        else:
+        try:
+            req=requests.get(self.url,verify=False)
+            if req.status_code == 200:
+                self.queue.put([self.url,req.text])
+            else:
+                self.queue.put([self.url,None])
+        except:
             self.queue.put([self.url,None])
 
 # this thread will wait until either it has pulled nthreads items of the queue, or it has pulled a None object off the queue.
@@ -40,16 +43,17 @@ class waitThread(Thread):
         self.nthreads=nthreads
 
     def run(self):
-        r=self.qin.get()
-        results=0
-        while r!=None:
-            results=results+1
-            if r[1]!=None:
-                self.res[r[0]] = r[1]
-            if results<self.nthreads:
-                r=self.qin.get()
-            else:
-                r=None
+        if self.nthreads > 0:
+            r=self.qin.get()
+            results=0
+            while r!=None:
+                results=results+1
+                if r[1]!=None:
+                    self.res[r[0]] = r[1]
+                if results<self.nthreads:
+                    r=self.qin.get()
+                else:
+                    r=None
         
 # This thread will place a none object on the queue after a specified time to terminate the wait thread above
 class timerThread(Thread):
