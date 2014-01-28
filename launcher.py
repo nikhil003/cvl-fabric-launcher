@@ -876,10 +876,16 @@ class LauncherMainFrame(wx.Frame):
             cb.Delete(0)
         for s in self.sites.keys():
             cb.Append(s)
-        if sn in self.sites.keys():
+        if sn!=None and sn in self.sites.keys():
             cb.SetValue(sn)
         else:
-            cb.SetSelection(0)
+            try:
+                if len(self.sites.keys()>0):
+                    cb.SetSelection(0)
+                else:
+                    logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
+            except:
+                logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
             
         #cb.SetSelection(0)
         if (redraw):
