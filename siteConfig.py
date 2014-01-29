@@ -8,14 +8,20 @@ import Queue
 
 def getMasterSites(url):
     logger.debug("Getting the master list of all known sites/HPC installations")
-    r=requests.get(url,verify=False)
+    r=requests.get(url,verify=False,timeout=2)
     if r.status_code==200:
         logger.debug("loading master sites %s"%r.text)
         return json.loads(r.text)
     else:
         logger.debug("Master site list unavailable status code %s"%r.status_code)
-        return []
+        return "%s"%r.status_code
     
+class CancelException(Exception):
+    pass
+class TimeoutException(Exception):
+    pass
+class StatusCode(Exception):
+    pass
     
 class requestThread(Thread):
     def __init__(self,url,queue):

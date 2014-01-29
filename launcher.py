@@ -137,6 +137,8 @@ import optionsDialog
 import LauncherOptionsDialog
 
 from utilityFunctions import LAUNCHER_URL
+import dialogtext
+dialogs=dialogtext.default()
 
 class FileDrop(wx.FileDropTarget):
     def __init__(self, window):
@@ -687,14 +689,19 @@ class LauncherMainFrame(wx.Frame):
             url=f.read().rstrip()
             logger.debug("master list of sites is available at %s"%url)
             newlist=siteConfig.getMasterSites(url)
-            
+            queue.put(newlist)
+        except requests.exceptions.RequestException as e:
+            logger.debug("getNewSites: Exception %s"%e)
+            logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
+            print "putting None on the return queue"
+            queue.put(None)
         except Exception as e:
             logger.debug("getNewSites: Exception %s"%e)
-            logger.debug("getNewSites: Traceback %s"%traceback.formate_exc())
-            pass 
+            logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
+            print "putting None on the return queue"
+            queue.put(None)
         finally:
             f.close()
-        queue.put(newlist)
 
     def showSiteListDialog(self,siteList,newlist,q):
         import siteListDialog
@@ -702,22 +709,35 @@ class LauncherMainFrame(wx.Frame):
         r=dlg.ShowModal()
         q.put([r,dlg.getList()])
 
-    def loadNewSitesNonBlocking(self):
+    def loadNewSitesNonBlocking(self,time=None):
         r=Queue.Queue()
+        timeoutObject=object()
         threading.Thread(target=self.getNewSites,args=[r]).start()
-        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="Loading Site List",ButtonLabels=["Cancel"],q=r)
-        progressdlg=r.get()
+        if time!=None:
+            timer=threading.Timer(time,r.put,args=[timeoutObject])
+            timer.start()
+        dq=Queue.Queue()
+        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingSiteList.message,ButtonLabels=dialogs.loadingSiteList.ButtonLabels,q=dq)
+        progressdlg=dq.get()
         wx.CallAfter(self.showModalFromThread,progressdlg,r)
         wx.CallAfter(wx.BeginBusyCursor)
         newlist=r.get()
         wx.CallAfter(wx.EndBusyCursor)
+        print "newlist is %s"%newlist
+        try:
+            wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
+        except:
+            pass
         if isinstance(newlist,type([])):
-            try:
-                wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
-            except:
-                pass
+            pass
+        elif newlist == timeoutObject:
+            raise siteConfig.TimeoutException("Timeout loading new sites")
+        elif newlist == None:
+            raise siteConfig.TimeoutException("Timeout loading new sites")
+        elif isinstance(newlist,type("")):
+            raise siteConfig.StatusCode(newlist)
         else:
-            raise Exception("Canceled load new sites")
+            raise siteConfig.CancelException("Canceled load new sites")
         return newlist
 
     def manageSites(self):
@@ -726,10 +746,22 @@ class LauncherMainFrame(wx.Frame):
 
         retry=True
         try:
-            newlist=self.loadNewSitesNonBlocking()
-        except:
+            newlist=self.loadNewSitesNonBlocking(time=10)
+        except siteConfig.CancelException:
             newlist=[]
             retry=False
+        except siteConfig.TimeoutException:
+            newlist=[]
+            retry=True
+        except siteConfig.StatusCode as e:
+            newlist=[]
+            retry=False
+            dq=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
+            dlg=dq.get()
+            q=Queue.Queue()
+            wx.CallAfter(self.showModalFromThread,dlg,q)
+            button=q.get()
 
 
         q=Queue.Queue()
@@ -741,18 +773,30 @@ class LauncherMainFrame(wx.Frame):
         if origSiteList==[] and newlist==[] and retry==True:
 
 
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="It looks like I was unable to contact the server for a list of sites to connect to. If your on a VPN you may want to check your network connectivity",ButtonLabels=["Cancel","Retry"],q=q)
-            dlg=q.get()
+            q=Queue.Queue()
+            dq=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels,q=dq)
+            dlg=dq.get()
             wx.CallAfter(self.showModalFromThread,dlg,q)
             button=q.get()
             if button==0:
                 retry=False
             while retry:
                 try:
-                    newlist=self.loadNewSitesNonBlocking()
-                    if newlist!=[]:
+                    newlist=self.loadNewSitesNonBlocking(time=None)
+                    if isinstance(newlist,type([])) and newlist!=[]:
                         retry=False
-                except:
+                    if newlist==None:
+                        retry=True
+                except Exception as e:
+                    logger.debug("getNewSites: Exception %s"%e)
+                    logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
+                    q=Queue.Queue()
+                    dq=Queue.Queue()
+                    wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
+                    dlg=dq.get()
+                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    button=q.get()
                     retry=False
                 if retry:
                     wx.CallAfter(self.showModalFromThread,dlg,q)
@@ -838,8 +882,9 @@ class LauncherMainFrame(wx.Frame):
         retry=True
         while sites.keys() == [] and retry:
             q=Queue.Queue()
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,message="Before you can use this program, you must select from a list of computer systems that you commonly use.\n\nBy checking and unchecking items in this list you can control which options appear in the dropdown menu of which computer to connect to.\n\nYou can access this list again from the File->Manage Sites menu.",ButtonLabels=["Cancel","OK"],title="",q=q)
-            dlg=q.get()
+            dq=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,message=dialogs.siteListFirstUseInfo.message,ButtonLabels=dialogs.siteListFirstUseInfo.ButtonLabels,title="",q=dq)
+            dlg=dq.get()
             wx.CallAfter(self.showModalFromThread,dlg,q)
             button=q.get()
             if button==0:
@@ -850,7 +895,7 @@ class LauncherMainFrame(wx.Frame):
             
         wx.CallAfter(wx.BeginBusyCursor)
         q=Queue.Queue()
-        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message="Loading flavours",ButtonLabels=[],q=q)
+        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingFlavours.message,ButtonLabels=dialogs.loadingFlavours.ButtonLabels,q=q)
         dlg=q.get()
         wx.CallAfter(dlg.ShowModal)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
@@ -880,7 +925,8 @@ class LauncherMainFrame(wx.Frame):
             cb.SetValue(sn)
         else:
             try:
-                if len(self.sites.keys()>0):
+                print "attempting to  set selection %s"%self.sites.keys()
+                if len(self.sites.keys())>0:
                     cb.SetSelection(0)
                 else:
                     logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
@@ -1061,12 +1107,7 @@ class LauncherMainFrame(wx.Frame):
         logger.dump_log(launcherMainFrame,submit_log=True,showFailedToOpenRemoteDesktopMessage=False)
 
     def onAbout(self, event):
-        import commit_def
-        msg="Strudel is the ScienTific Remote Desktop Launcher\n\n"
-        msg=msg+"Strudel was created with funding through the NeCTAR Characterisation Virtual Laboratory by the team at the Monash e-Research Center (Monash University, Australia)\n\n"
-        msg=msg+"Strudel is open source (GPL3) software available from https://github.com/CVL-dev/cvl-fabric-launcher\n\n"
-        msg=msg+"Version " + launcher_version_number.version_number + "\n" + 'Strudel Commit: ' + commit_def.LATEST_COMMIT + '\n' + 'cvlsshutils Commit: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS + '\n'
-        dlg = LauncherMessageDialog(self, msg, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
+        dlg = LauncherMessageDialog(self, message.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -1173,15 +1214,8 @@ class LauncherMainFrame(wx.Frame):
         for i in range(0,nmodes):
             choices.append(auth_mode.GetString(i))
         dlg.Destroy()
-        message = """
-Would you like to use an SSH key pair or your password to authenticate yourself?
-
-If this computer is shared by a number of people then passwords are preferable.
-
-If this computer is not shared, then an SSH key pair will give you advanced features for managing your access.
-"""
         configName=self.FindWindowByName('jobParams_configName').GetValue()
-        dlg = LauncherOptionsDialog.multiButtonDialog(launcherMainFrame,message.strip(),title=self.programName,ButtonLabels=choices,helpEmailAddress=self.sites[configName].displayStrings.helpEmailAddress)
+        dlg = LauncherOptionsDialog.multiButtonDialog(launcherMainFrame,message=dialogs.queryAuthMode.message,title=self.programName,ButtonLabels=choices,helpEmailAddress=self.sites[configName].displayStrings.helpEmailAddress)
         rv=dlg.ShowModal()
         if rv in range(0,nmodes):
             options['auth_mode'] = int(rv)
