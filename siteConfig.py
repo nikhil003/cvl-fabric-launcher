@@ -8,7 +8,7 @@ import Queue
 
 def getMasterSites(url):
     logger.debug("Getting the master list of all known sites/HPC installations")
-    r=requests.get(url,verify=False,timeout=2)
+    r=requests.get(url,verify=False)
     if r.status_code==200:
         logger.debug("loading master sites %s"%r.text)
         return json.loads(r.text)
