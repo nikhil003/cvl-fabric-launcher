@@ -268,7 +268,7 @@ class GenericJSONDecoder(json.JSONDecoder):
         return inst
 
 class cmdRegEx():
-    def __init__(self,cmd=None,regex=None,requireMatch=True,loop=False,async=False,host='login',failFatal=True):
+    def __init__(self,cmd=None,regex=None,requireMatch=True,loop=False,async=False,host='login',failFatal=True,*args,**kwargs):
 
         self.cmd=cmd
         if (not isinstance(regex,list)):
