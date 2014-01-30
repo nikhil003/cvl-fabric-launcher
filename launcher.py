@@ -1281,18 +1281,25 @@ class LauncherMainFrame(wx.Frame):
             return
         jobParams={}
         import platform
-        platformstr=""
-        platformstr=platformstr+'platform.architecture: '  + str(platform.architecture())+'\n'
-        platformstr=platformstr+'platform.machine: '       + str(platform.machine())+'\n'
-        platformstr=platformstr+'platform.node: '          + str(platform.node())+'\n'
-        platformstr=platformstr+'platform.platform: '      + str(platform.platform())+'\n'
-        platformstr=platformstr+'platform.processor: '     + str(platform.processor())+'\n'
-        platformstr=platformstr+'platform.release: '       + str(platform.release())+'\n'
-        platformstr=platformstr+'platform.system: '        + str(platform.system())+'\n'
-        platformstr=platformstr+'platform.version: '       + str(platform.version())+'\n'
-        platformstr=platformstr+'platform.uname: '         + str(platform.uname())+'\n'
+        platformstr="\""
+#        platformstr=platformstr+'platform.architecture: '  + str(platform.architecture())+'\n'
+#        platformstr=platformstr+'platform.machine: '       + str(platform.machine())+'\n'
+#        platformstr=platformstr+'platform.node: '          + str(platform.node())+'\n'
+#        platformstr=platformstr+'platform.platform: '      + str(platform.platform())+'\n'
+#        platformstr=platformstr+'platform.processor: '     + str(platform.processor())+'\n'
+#        platformstr=platformstr+'platform.release: '       + str(platform.release())+'\n'
+#        platformstr=platformstr+'platform.system: '        + str(platform.system())+'\n'
+#        platformstr=platformstr+'platform.version: '       + str(platform.version())+'\n'
+#        platformstr=platformstr+'platform.uname: '         + str(platform.uname())+'\n'
+        platformstr=platformstr+'platform.machine: '       + str(platform.machine())
+        platformstr=platformstr+'platform.node: '          + str(platform.node())
+        platformstr=platformstr+'platform.platform: '      + str(platform.platform())
+        platformstr=platformstr+'platform.processor: '     + str(platform.processor())
+        platformstr=platformstr+'platform.release: '       + str(platform.release())
+        platformstr=platformstr+'platform.system: '        + str(platform.system())
+        platformstr=platformstr+'platform.version: '       + str(platform.version())
+        platformstr=platformstr+"\""
         jobParams = self.buildJobParams(self)
-        jobParams['strudel_platform']=platformstr
         if jobParams['username'] == "":
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
@@ -1345,6 +1352,7 @@ class LauncherMainFrame(wx.Frame):
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
         jobParams=self.buildJobParams(self)
+        jobParams['strudel_platform']=platformstr
         jobParams['wallseconds']=int(jobParams['hours'])*60*60
         self.configName=self.FindWindowByName('jobParams_configName').GetValue()
         autoExit=False
