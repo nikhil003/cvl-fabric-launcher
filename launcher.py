@@ -1280,7 +1280,19 @@ class LauncherMainFrame(wx.Frame):
             dlg.ShowModal()
             return
         jobParams={}
+        import platform
+        platformstr=""
+        platformstr=platformstr+'platform.architecture: '  + str(platform.architecture())+'\n'
+        platformstr=platformstr+'platform.machine: '       + str(platform.machine())+'\n'
+        platformstr=platformstr+'platform.node: '          + str(platform.node())+'\n'
+        platformstr=platformstr+'platform.platform: '      + str(platform.platform())+'\n'
+        platformstr=platformstr+'platform.processor: '     + str(platform.processor())+'\n'
+        platformstr=platformstr+'platform.release: '       + str(platform.release())+'\n'
+        platformstr=platformstr+'platform.system: '        + str(platform.system())+'\n'
+        platformstr=platformstr+'platform.version: '       + str(platform.version())+'\n'
+        platformstr=platformstr+'platform.uname: '         + str(platform.uname())+'\n'
         jobParams = self.buildJobParams(self)
+        jobParams['strudel_platform']=platformstr
         if jobParams['username'] == "":
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
