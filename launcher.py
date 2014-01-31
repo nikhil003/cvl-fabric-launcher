@@ -481,19 +481,14 @@ class LauncherMainFrame(wx.Frame):
         self.resolutionLabel = wx.StaticText(self.resolutionPanel, wx.ID_ANY, 'Resolution',name='label_resolution')
         self.resolutionPanel.GetSizer().Add(self.resolutionLabel, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
-        displaySize = wx.DisplaySize()
-        desiredWidth = displaySize[0] * 0.99
-        desiredHeight = displaySize[1] * 0.85
-        defaultResolution = str(int(desiredWidth)) + "x" + str(int(desiredHeight))
 
-        displaySize = wx.DisplaySize()
-        desiredWidth = displaySize[0] * 0.99
-        desiredHeight = displaySize[1] * 0.85
-        defaultResolution = str(int(desiredWidth)) + "x" + str(int(desiredHeight))
+        defaultResolution = "Default resolution"
         vncDisplayResolutions = [
             defaultResolution, "1024x768", "1152x864", "1280x800", "1280x1024", "1360x768", "1366x768", "1440x900", "1600x900", "1680x1050", "1920x1080", "1920x1200", "7680x3200",
             ]
         self.resolutionField = wx.ComboBox(self.resolutionPanel, wx.ID_ANY, value=defaultResolution, choices=vncDisplayResolutions, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_resolution')
+        print "setting default resoultion to %s"%defaultResolution
+        print "resolution list %s"%vncDisplayResolutions
         self.resolutionPanel.GetSizer().Add(self.resolutionField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.resolutionPanel,proportion=0,flag=wx.EXPAND)
 
@@ -1030,6 +1025,15 @@ class LauncherMainFrame(wx.Frame):
                 jobParams[keyname]=item.GetValue()
             r = self.buildJobParams(item)
             jobParams.update(r)
+        if jobParams.has_key('resolution'):
+            try:
+                a=int(jobParams['resolution'][0])
+            except:
+                displaySize = wx.DisplaySize()
+                desiredWidth = displaySize[0] * 0.99
+                desiredHeight = displaySize[1] * 0.85
+                jobParams['resolution'] = str(int(desiredWidth)) + "x" + str(int(desiredHeight))
+
         return jobParams
 
     def onSiteConfigChanged(self,event):
@@ -1327,6 +1331,7 @@ class LauncherMainFrame(wx.Frame):
         # project hours and nodes will be ignored for the CVL login, but they will be used for Massive.
         configName=self.FindWindowByName('jobParams_configName').GetValue()
         options=self.getPrefsSection('Global Preferences')
+        self.savePrefs(section="Global Preferences")
         if not options.has_key('auth_mode'):
             mode=self.queryAuthMode()
             if mode==wx.ID_CANCEL:
@@ -1336,6 +1341,14 @@ class LauncherMainFrame(wx.Frame):
             self.setPrefsSection('Global Preferences',options)
             self.savePrefs(section="Global Preferences")
             self.identity_menu.disableItems(mode)
+#        if not options.has_key('logstats'):
+#            options['logstats']=0
+        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
+        dlg.onOK(object())
+        print "looking for dlg uuid element %s"%dlg.FindWindowByName('uuid').GetValue()
+        options=dlg.getOptions()
+        self.setPrefsSection('Global Preferences',options)
+        self.savePrefs(section="Global Preferences")
         jobParams=self.buildJobParams(self)
         jobParams['wallseconds']=int(jobParams['hours'])*60*60
         if int(options['auth_mode'])==LauncherMainFrame.TEMP_SSH_KEY:
