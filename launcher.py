@@ -1254,10 +1254,21 @@ class LauncherMainFrame(wx.Frame):
             wx.CallAfter(self.Refresh)
             threading.Thread(target=self.savePrefs).start()
         self.loginButton.Enable()
+        options = self.getPrefsSection("Global Preferences")
+        if int(options['logstats'])==0:
+            import StatsLogger
+            statslogger=StatsLogger.StatsLogger(options['uuid'],success=True,jobParams=jobParams)
+            threading.Thread(target=statslogger.post,args=["https://cvl.massive.org.au/logstats"]).start()
 
     def loginCancel(self,lp,oldParams,jobParams):
         self.loginProcess.remove(lp)
         self.loginButton.Enable()
+        options = self.getPrefsSection("Global Preferences")
+        if int(options['logstats'])==0:
+            import StatsLogger
+            statslogger=StatsLogger.StatsLogger(options['uuid'],success=False,jobParams=jobParams)
+            threading.Thread(target=statslogger.post,args=["https://cvl.massive.org.au/logstats"]).start()
+
 
     def onLoginProcessComplete(self, jobParams):
         self.loginProcess = None
