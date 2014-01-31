@@ -855,6 +855,19 @@ class GlobalOptionsDialog(wx.Dialog):
             self.vncViewerLogFilenameTextField.Disable()
             self.browseButton.Disable()
 
+        self.statsPanel=wx.Panel(self.globalsBottomPanel,wx.ID_ANY)
+        self.statsPanel.SetSizer(wx.FlexGridSizer(rows=2,cols=2,vgap=5,hgap=5))
+        self.globalsBottomPanelSizer.Add(self.statsPanel)
+        t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="UUID")
+        self.statsPanel.GetSizer().Add(t)
+        uuid=wx.TextCtrl(self.statsPanel,wx.ID_ANY,name='uuid')
+        self.statsPanel.GetSizer().Add(uuid)
+        t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="Send anonymous usage statistics")
+        self.statsPanel.GetSizer().Add(t)
+        log=wx.ComboBox(self.statsPanel,wx.ID_ANY,name='logstats',choices=["Yes please","No thanks"])
+        self.statsPanel.GetSizer().Add(log)
+
+
         # Globals panels
 
         self.globalsTopPanel.SetSizerAndFit(self.globalsTopPanelSizer)
@@ -907,6 +920,19 @@ If you use a password to authenticate, a new keypair will be generated each time
             nextevent = wx.CommandEvent(wx.wxEVT_COMMAND_RADIOBOX_SELECTED, auth_mode.GetId())
             nextevent.SetEventObject(auth_mode)
             wx.PostEvent(auth_mode.GetEventHandler(),nextevent)
+        var='uuid'
+        uuidtc = self.FindWindowByName(var)
+        if var in globalOptions:
+            uuidtc.SetValue(globalOptions[var])
+        else:
+            import uuid
+            uuidtc.SetValue("%s"%uuid.uuid4())
+        var='logstats'
+        logstats = self.FindWindowByName(var)
+        if var in globalOptions:
+            logstats.SetSelection(int(globalOptions[var]))
+        else:
+            logstats.SetSelection(0)
 
 #        self.privacyPanel = wx.Panel(self.tabbedView, wx.ID_ANY)
 #        self.privacyPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=15, hgap=25)
@@ -1100,6 +1126,8 @@ If you use a password to authenticate, a new keypair will be generated each time
             self.globalOptions['logfile'] = self.vncViewerLogFilenameTextField.GetValue()
         self.globalOptions['share_local_home_directory_on_remote_desktop'] = self.shareLocalHomeDirectoryOnRemoteDesktopCheckBox.GetValue()
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
+        self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
+        self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
         self.Show(False)
         self.EndModal(wx.OK)
       
