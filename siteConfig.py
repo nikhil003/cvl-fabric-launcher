@@ -268,7 +268,7 @@ class GenericJSONDecoder(json.JSONDecoder):
         return inst
 
 class cmdRegEx():
-    def __init__(self,cmd=None,regex=None,requireMatch=True,loop=False,async=False,host='login',failFatal=True,*args,**kwargs):
+    def __init__(self,cmd=None,regex=None,requireMatch=True,loop=False,async=False,host='login',failFatal=True,formatFatal=False,*args,**kwargs):
 
         self.cmd=cmd
         if (not isinstance(regex,list)):
@@ -284,6 +284,7 @@ class cmdRegEx():
         if (self.async):
             self.host='local'
         self.failFatal=failFatal
+        self.formatFatal=formatFatal
 
     def getCmd(self,jobParam={}):
         if ('exec' in self.host):
@@ -299,7 +300,24 @@ class cmdRegEx():
             escapedChars={'ampersand':'&','pipe':'|'}
         formatdict = jobParam.copy()
         formatdict.update(escapedChars)
-        string=sshCmd.format(**formatdict).encode('ascii')+cmd.format(**formatdict).encode('ascii')
+        if self.formatFatal:
+            try:
+                string=sshCmd.format(**formatdict).encode('ascii')+cmd.format(**formatdict).encode('ascii')
+            except:
+                raise Exception("I was unable to determine all the parameters in the command %s"%sshCmd)
+        else:
+            retry=True
+            while retry:
+                try:
+                    string=sshCmd.format(**formatdict).encode('ascii')+cmd.format(**formatdict).encode('ascii')
+                    retry=False
+                except KeyError as e:
+                    update={}
+                    for a in e.args:
+                        update[a]=''
+                    formatdict.update(update)
+                    retry=True
+
         return string
 
 

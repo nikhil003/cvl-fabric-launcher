@@ -1282,22 +1282,13 @@ class LauncherMainFrame(wx.Frame):
         jobParams={}
         import platform
         platformstr="\""
-#        platformstr=platformstr+'platform.architecture: '  + str(platform.architecture())+'\n'
-#        platformstr=platformstr+'platform.machine: '       + str(platform.machine())+'\n'
-#        platformstr=platformstr+'platform.node: '          + str(platform.node())+'\n'
-#        platformstr=platformstr+'platform.platform: '      + str(platform.platform())+'\n'
-#        platformstr=platformstr+'platform.processor: '     + str(platform.processor())+'\n'
-#        platformstr=platformstr+'platform.release: '       + str(platform.release())+'\n'
-#        platformstr=platformstr+'platform.system: '        + str(platform.system())+'\n'
-#        platformstr=platformstr+'platform.version: '       + str(platform.version())+'\n'
-#        platformstr=platformstr+'platform.uname: '         + str(platform.uname())+'\n'
         platformstr=platformstr+'platform.machine: '       + str(platform.machine())
-        platformstr=platformstr+'platform.node: '          + str(platform.node())
-        platformstr=platformstr+'platform.platform: '      + str(platform.platform())
-        platformstr=platformstr+'platform.processor: '     + str(platform.processor())
-        platformstr=platformstr+'platform.release: '       + str(platform.release())
-        platformstr=platformstr+'platform.system: '        + str(platform.system())
-        platformstr=platformstr+'platform.version: '       + str(platform.version())
+        platformstr=platformstr+' platform.node: '          + str(platform.node())
+        platformstr=platformstr+' platform.platform: '      + str(platform.platform())
+        platformstr=platformstr+' platform.processor: '     + str(platform.processor())
+        platformstr=platformstr+' platform.release: '       + str(platform.release())
+        platformstr=platformstr+' platform.system: '        + str(platform.system())
+        platformstr=platformstr+' platform.version: '       + str(platform.version())
         platformstr=platformstr+"\""
         jobParams = self.buildJobParams(self)
         if jobParams['username'] == "":
