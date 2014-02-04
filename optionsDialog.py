@@ -608,7 +608,7 @@ class GlobalOptionsDialog(wx.Dialog):
 
         self.globalsBottomPanel = wx.Panel(self.globalsPanel, wx.ID_ANY)
         self.globalsPanelSizer.Add(self.globalsBottomPanel, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=25)
-        self.globalsBottomPanelSizer = wx.FlexGridSizer(rows=1, cols=1, vgap=5, hgap=5)
+        self.globalsBottomPanelSizer = wx.FlexGridSizer(cols=1, vgap=5, hgap=5)
 
         self.globalsBottomBorderPanel = wx.Panel(self.globalsPanel, wx.ID_ANY)
         self.globalsPanelSizer.Add(self.globalsBottomBorderPanel, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=25)
