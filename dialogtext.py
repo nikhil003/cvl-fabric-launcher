@@ -23,6 +23,9 @@ class default(object):
         self.loadingSiteList=dialog()
         self.loadingSiteList.message="Loading Site List"
         self.loadingSiteList.ButtonLabels=["Cancel"]
+        self.confirmQuit=dialog()
+        self.confirmQuit.message="Are you sure you want to quit?"
+        self.confirmQuit.ButtonLabels=["Yes","No"]
         self.queryAuthMode=dialog()
         self.queryAuthMode.message = """
 Would you like to use an SSH key pair or your password to authenticate yourself?
