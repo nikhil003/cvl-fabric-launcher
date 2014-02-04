@@ -1120,6 +1120,10 @@ class LauncherMainFrame(wx.Frame):
         # Clean-up (including qdel if necessary) is now done in LoginTasks.py
         # No longer using temporary private key file, 
         # so there's no need to delete it as part of clean-up.
+        if len(self.loginProcess)>0:
+            dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,message=dialogs.confirmQuit.message,ButtonLabels=dialogs.confirmQuit.ButtonLabels,title="")
+            if dlg.ShowModal()==1:
+                return
         for lp in self.loginProcess:
             logger.debug("LauncherMainFrame.onExit: calling shutdown on a loginprocess")
             lp.shutdown()
