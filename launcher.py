@@ -628,6 +628,7 @@ class LauncherMainFrame(wx.Frame):
         logger.debug('cvlsshutils commit hash: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS)
         self.contacted_massive_website = False
 
+        self.Bind(wx.EVT_CLOSE,self.onExit)
         self.startupinfo = None
         try:
             self.startupinfo = subprocess.STARTUPINFO()
