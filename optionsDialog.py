@@ -858,14 +858,16 @@ class GlobalOptionsDialog(wx.Dialog):
         self.statsPanel=wx.Panel(self.globalsBottomPanel,wx.ID_ANY)
         self.statsPanel.SetSizer(wx.FlexGridSizer(rows=2,cols=2,vgap=5,hgap=5))
         self.globalsBottomPanelSizer.Add(self.statsPanel)
+        t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="Send anonymous usage statistics to help make Strudel better")
+        self.statsPanel.GetSizer().Add(t,flag=wx.CENTER|wx.ALL,border=5)
+        log=wx.ComboBox(self.statsPanel,wx.ID_ANY,name='logstats',choices=["Yes please","No thanks"])
+        self.statsPanel.GetSizer().Add(log,flag=wx.ALL,border=5)
         t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="UUID")
+        t.Hide()
         self.statsPanel.GetSizer().Add(t)
         uuid=wx.TextCtrl(self.statsPanel,wx.ID_ANY,name='uuid')
         self.statsPanel.GetSizer().Add(uuid)
-        t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="Send anonymous usage statistics")
-        self.statsPanel.GetSizer().Add(t)
-        log=wx.ComboBox(self.statsPanel,wx.ID_ANY,name='logstats',choices=["Yes please","No thanks"])
-        self.statsPanel.GetSizer().Add(log)
+        uuid.Hide()
 
 
         # Globals panels
@@ -932,7 +934,7 @@ If you use a password to authenticate, a new keypair will be generated each time
         if var in globalOptions:
             logstats.SetSelection(int(globalOptions[var]))
         else:
-            logstats.SetSelection(0)
+            logstats.SetSelection(1)
 
 #        self.privacyPanel = wx.Panel(self.tabbedView, wx.ID_ANY)
 #        self.privacyPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=15, hgap=25)
