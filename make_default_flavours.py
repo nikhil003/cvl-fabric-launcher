@@ -394,7 +394,7 @@ def getCVLSiteConfig(queue):
     cmd='\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"'
     regex='.*<job_state>R</job_state>.*'
     c.running=siteConfig.cmdRegEx(cmd,regex)
-    cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q %s -l nodes=1:ppn=1 -l walltime=10000:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""%queue
+    cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q %s -l nodes=1:ppn=1 -l walltime=48:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""%queue
     regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\"module load pbs ; module load maui ; qdel -a {jobidNumber}\"')
@@ -601,7 +601,7 @@ defaultSites['Huygens on the CVL']= getCVLSiteConfig("huygens")
 defaultSites['CVL GPU node']= getCVLSiteConfig("vis")
 
 multicpu=getCVLSiteConfig("multicpu")
-cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=16 -l walltime=10000:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
+cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=16 -l walltime=48:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
 regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
 multicpu.startServer=siteConfig.cmdRegEx(cmd,regex)
 defaultSites['CVL 16 core node']=multicpu
