@@ -873,6 +873,7 @@ class LoginProcess():
                 else:
                     dialog=LoginProcess.SimpleOptionDialog(event.loginprocess.notify_window,-1,"Reconnect to Existing Desktop",event.loginprocess.displayStrings.reconnectMessage,event.loginprocess.displayStrings.reconnectMessageNo,event.loginprocess.displayStrings.reconnectMessageYes,NewDesktopCallback,ReconnectCallback)
                 showModal(dialog,event.loginprocess)
+                dialog.Destroy()
             else:
                 event.Skip()
 
@@ -943,6 +944,7 @@ class LoginProcess():
                     cancelCallback=lambda x: event.loginprocess.cancel(x)
                     dlg=ListSelectionDialog(parent=event.loginprocess.notify_window, progressDialog=event.loginprocess.progressDialog, title=event.loginprocess.parentWindow.programName, headers=None, message=msg, noSelectionMessage="Please select a valid project from the list.", items=grouplist, okCallback=okCallback, cancelCallback = cancelCallback, style=wx.DEFAULT_DIALOG_STYLE, helpEmailAddress=event.loginprocess.displayStrings.helpEmailAddress)
                     showModal(dlg,event.loginprocess)
+                    dlg.Destroy()
                 if (not event.loginprocess.canceled()):
                     nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_START_SERVER,event.loginprocess)
                     wx.PostEvent(event.loginprocess.notify_window,nextevent)
@@ -1384,6 +1386,8 @@ class LoginProcess():
                     else:
                         dlg = LauncherMessageDialog(event.loginprocess.notify_window,title=event.loginprocess.parentWindow.programName,message=event.string,helpEmailAddress=event.loginprocess.displayStrings.helpEmailAddress)
                     showModal(dlg,event.loginprocess)
+                    dlg.Destroy()
+
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_COMPLETE,event.loginprocess)
                 event.loginprocess.shutdownThread = threading.Thread(target=event.loginprocess.shutdownReal,args=[nextevent])
                 event.loginprocess.shutdownThread.start()
@@ -1822,7 +1826,6 @@ class LoginProcess():
         wx.PostEvent(self.notify_window.GetEventHandler(),event)
 
     def shutdown(self):
-        print "posting shutdown event"
         event=self.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_SHUTDOWN,self)
         wx.PostEvent(self.notify_window.GetEventHandler(),event)
 
@@ -1889,19 +1892,27 @@ class LoginProcess():
         else:
             return False
 
+    def showModalFromThread(self,dlg,q):
+        r=dlg.ShowModal()
+        q.put(r)
+    
+
     def networkFaultShutdown(self):
         import requests
         from utilityFunctions import LAUNCHER_URL
         logger.debug("Processing networkFaultShutdown")
         if not self._canceled.isSet() and not self._shutdown.isSet():
+            msg=self.displayStrings.networkError
+            dlg = LauncherMessageDialog(self.notify_window,title=self.parentWindow.programName,message=msg,helpEmailAddress=self.displayStrings.helpEmailAddress)
+            import Queue
+            q=Queue.Queue()
+            wx.CallAfter(self.showModalFromThread(dlg,q))
+            q.get()
             try:
                 r=requests.get(LAUNCHER_URL,timeout=10)
                 self.shutdown()
             except:
                 self.cancel()
-            msg=self.displayStrings.networkError
-            dlg = LauncherMessageDialog(self.notify_window,title=self.parentWindow.programName,message=msg,helpEmailAddress=self.displayStrings.helpEmailAddress)
-            wx.CallAfter(dlg.ShowModal)
 
     def userCancel(self,error=""):
         self.userCanceled.set()
