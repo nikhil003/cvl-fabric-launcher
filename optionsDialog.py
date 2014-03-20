@@ -1095,7 +1095,7 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.Show(False)
         self.EndModal(wx.CANCEL)
 
-    def onOK(self, event):
+    def saveOptions(self):
         self.okClicked = True
         self.globalOptions['jpeg_compression'] = self.jpegCompressionCheckBox.GetValue()
         self.globalOptions['jpeg_chrominance_subsampling'] = self.jpegChrominanceSubsamplingCommandLineString[self.jpegChrominanceSubsamplingSlider.GetValue()]
@@ -1130,6 +1130,9 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
         self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
         self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
+
+    def onOK(self, event):
+        self.saveOptions()
         self.Show(False)
         self.EndModal(wx.OK)
       

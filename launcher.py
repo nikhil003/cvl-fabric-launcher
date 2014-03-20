@@ -1349,7 +1349,7 @@ class LauncherMainFrame(wx.Frame):
 #        if not options.has_key('logstats'):
 #            options['logstats']=0
         dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
-        dlg.onOK(object())
+        dlg.saveOptions()
         print "looking for dlg uuid element %s"%dlg.FindWindowByName('uuid').GetValue()
         options=dlg.getOptions()
         self.setPrefsSection('Global Preferences',options)
