@@ -1093,12 +1093,9 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.okClicked = False
         #self.Close(True)
         self.Show(False)
-        try:
-            self.EndModal(wx.CANCEL)
-        except:
-            pass
+        self.EndModal(wx.CANCEL)
 
-    def onOK(self, event):
+    def saveOptions(self):
         self.okClicked = True
         self.globalOptions['jpeg_compression'] = self.jpegCompressionCheckBox.GetValue()
         self.globalOptions['jpeg_chrominance_subsampling'] = self.jpegChrominanceSubsamplingCommandLineString[self.jpegChrominanceSubsamplingSlider.GetValue()]
@@ -1133,11 +1130,11 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
         self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
         self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
+
+    def onOK(self, event):
+        self.saveOptions()
         self.Show(False)
-        try:
-            self.EndModal(wx.OK)
-        except:
-            pass
+        self.EndModal(wx.OK)
       
     def enableZlibCompressionLevelWidgets(self):
         self.zlibCompressionLevelLabel.Enable()
