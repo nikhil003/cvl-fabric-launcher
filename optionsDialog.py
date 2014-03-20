@@ -1093,7 +1093,10 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.okClicked = False
         #self.Close(True)
         self.Show(False)
-        self.EndModal(wx.CANCEL)
+        try:
+            self.EndModal(wx.CANCEL)
+        except:
+            pass
 
     def onOK(self, event):
         self.okClicked = True
@@ -1131,7 +1134,10 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
         self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
         self.Show(False)
-        self.EndModal(wx.OK)
+        try:
+            self.EndModal(wx.OK)
+        except:
+            pass
       
     def enableZlibCompressionLevelWidgets(self):
         self.zlibCompressionLevelLabel.Enable()
