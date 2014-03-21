@@ -243,6 +243,21 @@ class KeyModel():
                 if 'SSH_AUTH_SOCK' in os.environ:
                     os.environ['PREVIOUS_SSH_AUTH_SOCK'] = os.environ['SSH_AUTH_SOCK']
                 os.environ['SSH_AUTH_SOCK'] = agentenv
+                if sys.platform.startswith('win'):
+                    from _winreg import *
+                    import win32gui, win32con
+                    try:
+                        path = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+                        reg = ConnectRegistry(None, HKEY_LOCAL_USER)
+                        key = OpenKey(reg, path, 0, KEY_ALL_ACCESS)
+                        try:
+                            (value,type_id) = QueryValueEx(key,'SSH_AUTH_SOCK')
+                        except:
+                            print("couldn't query regkey ssh_auth_sock")
+                    except:
+                        print("couldn't open registery properly")
+
+
             match2 = re.search("^SSH_AGENT_PID=(?P<pid>[0-9]+);.*$",line)
             if match2:
                 pid = match2.group('pid')
