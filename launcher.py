@@ -261,7 +261,6 @@ class LauncherMainFrame(wx.Frame):
             try:
                 for item in window.GetChildren():
                     if self.shouldSave(item):
-                        print "saving item %s"%item.GetName()
                         try:
                             self.prefs.set(section,item.GetName(),'%s'%item.GetValue())
                         except AttributeError:
