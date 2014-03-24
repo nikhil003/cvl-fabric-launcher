@@ -113,6 +113,8 @@ def getMassiveSiteConfig(loginHost):
     massivevisible['optionsDialog']=False
     massivevisible['ppnLabel']=False
     massivevisible['jobParams_ppn']=False
+    massivevisible['ssh_key_mode_panel']='Advanced'
+    massivevisible['copyid_mode_panel']=False
     c = siteConfig.siteConfig()
     c.visibility=massivevisible
     displayStrings=sshKeyDistDisplayStringsMASSIVE()
@@ -217,6 +219,8 @@ def getRaijinSiteConfig(queue):
     c.visibility['resourcePanel']=True
     c.visibility['ppnLabel']=False
     c.visibility['jobParams_ppn']=False
+    c.visibility['ssh_key_mode_panel']='Advanced'
+    c.visibility['copyid_mode_panel']=False
     c.loginHost='raijin.nci.org.au'
     c.directConnect=False
     cmd='\"module load pbs ; qstat -f {jobidNumber} \"'
@@ -240,6 +244,8 @@ def getRaijinSiteConfig(queue):
 def getRaijinLoginSiteConfig(loginnode):
     c = getCVLSiteConfig(" ")
     c.visibility['resourcePanel']=False
+    c.visibility['ssh_key_mode_panel']='Advanced'
+    c.visibility['copyid_mode_panel']=False
     c.loginHost=loginnode
     c.directConnect=False
     cmd='\" pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,pgrp,user --no-headers 2>/dev/null\"'
@@ -273,6 +279,8 @@ def getCVLSiteConfigXML(queue):
     cvlvisible['optionsDialog']=False
     cvlvisible['ppnLabel']=False
     cvlvisible['jobParams_ppn']=False
+    cvlvisible['ssh_key_mode_panel']='Advanced'
+    cvlvisible['copyid_mode_panel']='Advanced'
     c = siteConfig.siteConfig()
     cvlstrings = sshKeyDistDisplayStringsCVL()
     c.displayStrings.__dict__.update(cvlstrings.__dict__)
@@ -541,7 +549,7 @@ def getGenericVNCSession():
     c.stop=siteConfig.cmdRegEx('\'vncserver -kill {vncDisplay}\'')
     c.stopForRestart=siteConfig.cmdRegEx('\'vncserver -kill {vncDisplay}\'')
     #c.otp= siteConfig.cmdRegEx('\'vncpasswd -o -display localhost{vncDisplay}\'','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
-    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    c.otp= siteConfig.cmdRegEx('\'echo "vncpasswd:" `cat ~/.vnc/clearpass`\'','^vncpasswd: (?P<vncPasswd>\S+)$')
     c.agent=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -l {username} {loginHost} "echo agent_hello; bash "','agent_hello',async=True)
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
 
