@@ -31,7 +31,7 @@ mkdir -p strudel-${VERSION}/usr/share/applications
 rm -f strudel-${VERSION}.tar.gz SOURCES/strudel-${VERSION}.tar.gz 
 
 cp ../Strudel.desktop strudel-${VERSION}/usr/share/applications/
-cp -r ../dist/MassiveLauncher-${VERSION}_${ARCHITECTURE}/* strudel-${VERSION}/opt/Strudel
+cp -r ../dist/Strudel-${VERSION}_${ARCHITECTURE}/* strudel-${VERSION}/opt/Strudel
 
 tar zcf strudel-${VERSION}.tar.gz strudel-${VERSION}
 cp strudel-${VERSION}.tar.gz SOURCES/
