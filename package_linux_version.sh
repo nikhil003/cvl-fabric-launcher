@@ -33,6 +33,7 @@ cp `python -c 'import requests; print requests.certs.where()'` dist/launcher/
 mkdir -p dist/launcher/help/helpfiles/
 cp help/helpfiles/* dist/launcher/help/helpfiles/
 cp help/README.txt dist/launcher/help/
+cp masterList.url dist/launcher/
 
 cd dist
 mv launcher Strudel-${VERSION}_${ARCHITECTURE}
