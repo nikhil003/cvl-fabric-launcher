@@ -118,6 +118,12 @@ class KeyModel():
         self.copiedID=threading.Event()
         self.startupinfo=startupinfo
         self.creationflags=creationflags
+        self._useAAF=False
+
+    def useAAF(self,value=None):
+        if value!=None:
+            self._useAAF=value
+        return self._useAAF
 
        
 
@@ -237,6 +243,21 @@ class KeyModel():
                 if 'SSH_AUTH_SOCK' in os.environ:
                     os.environ['PREVIOUS_SSH_AUTH_SOCK'] = os.environ['SSH_AUTH_SOCK']
                 os.environ['SSH_AUTH_SOCK'] = agentenv
+                if sys.platform.startswith('win'):
+                    from _winreg import *
+                    import win32gui, win32con
+                    try:
+                        path = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+                        reg = ConnectRegistry(None, HKEY_LOCAL_USER)
+                        key = OpenKey(reg, path, 0, KEY_ALL_ACCESS)
+                        try:
+                            (value,type_id) = QueryValueEx(key,'SSH_AUTH_SOCK')
+                        except:
+                            print("couldn't query regkey ssh_auth_sock")
+                    except:
+                        print("couldn't open registery properly")
+
+
             match2 = re.search("^SSH_AGENT_PID=(?P<pid>[0-9]+);.*$",line)
             if match2:
                 pid = match2.group('pid')
@@ -645,56 +666,6 @@ class KeyModel():
 
         return True
 
-    def copyID(self,host,username,password):
-        import ssh
-        sshClient = ssh.SSHClient()
-        sshClient.set_missing_host_key_policy(ssh.AutoAddPolicy())
-        sshClient.connect(hostname=host,timeout=10,username=username,password=password,allow_agent=False,look_for_keys=False)
-
-        # SSH keys won't work if the user's home directory is writeable by other users.
-        writeableDirectoryErrorMessage = "" + \
-            "Your home directory is writeable by users other than yourself. " + \
-            "As a result, you won't be able to authenticate with SSH keys, so you can't use the Launcher. " + \
-            "Please correct the permissions on your home directory, e.g.\n\n" + \
-            "chmod 700 ~"
-        (stdin,stdout,stderr)=sshClient.exec_command('ls -ld ~ | grep -q "^d....w" && echo HOME_DIRECTORY_WRITEABLE_BY_OTHER_USERS')
-        err=stdout.readlines()
-        if err!=[]:
-            raise Exception(writeableDirectoryErrorMessage)
-        (stdin,stdout,stderr)=sshClient.exec_command('ls -ld ~ | grep -q "^d.......w" && echo HOME_DIRECTORY_WRITEABLE_BY_OTHER_USERS')
-        err=stdout.readlines()
-        if err!=[]:
-            raise Exception(writeableDirectoryErrorMessage)
-
-        (stdin,stdout,stderr)=sshClient.exec_command("module load massive")
-        err=stderr.readlines()
-        if err!=[]:
-            logger.debug("KeyModel.copyID: Exception raised")
-            logger.debug("KeyModel.copyID: %s"%err)
-            #raise Exception
-        (stdin,stdout,stderr)=sshClient.exec_command("/bin/mkdir -p ~/.ssh")
-        err=stderr.readlines()
-        if err!=[]:
-            raise Exception
-        (stdin,stdout,stderr)=sshClient.exec_command("/bin/chmod 700 ~/.ssh")
-        err=stderr.readlines()
-        if err!=[]:
-            raise Exception
-        (stdin,stdout,stderr)=sshClient.exec_command("/bin/touch ~/.ssh/authorized_keys")
-        err=stderr.readlines()
-        if err!=[]:
-            raise Exception
-        (stdin,stdout,stderr)=sshClient.exec_command("/bin/chmod 600 ~/.ssh/authorized_keys")
-        err=stderr.readlines()
-        if err!=[]:
-            raise Exception
-        (stdin,stdout,stderr)=sshClient.exec_command("/bin/echo \"%s\" >> ~/.ssh/authorized_keys"%self.pubKey)
-        err=stderr.readlines()
-        if err!=[]:
-            raise Exception
-        # FIXME The exec_commands above can fail if the user is over quota. We should really raise the message rather than just throwing an exception.
-        sshClient.close()
-        self.copiedID.set()
 
     def listKey(self):
         import re
