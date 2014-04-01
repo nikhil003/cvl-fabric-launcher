@@ -507,29 +507,6 @@ class LauncherMainFrame(wx.Frame):
         self.cipherPanel.GetSizer().Add(self.sshTunnelCipherComboBox, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.cipherPanel,proportion=0,flag=wx.EXPAND)
         
-        p = wx.Panel(self.loginFieldsPanel,name='ssh_key_mode_panel')
-        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        var='auth_mode'
-        options=self.getPrefsSection('Global Preferences')
-        # Create a dialog that will never be shown just so we get an authorative list of options
-        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
-        auth_mode=dlg.FindWindowByName(var)
-        choices=[]
-        nmodes=auth_mode.GetCount()
-        for i in range(0,nmodes):
-            choices.append(auth_mode.GetString(i))
-        dlg.Destroy()
-        l=wx.RadioBox(p,wx.ID_ANY,majorDimension=3,name="jobParams_authMode",choices=choices,style=wx.NO_BORDER|wx.RA_SPECIFY_COLS)
-        l.SetSelection(2)
-        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.LEFT|wx.RIGHT|wx.EXPAND)
-        self.loginFieldsPanel.GetSizer().Add(p,flag=wx.EXPAND)
-
-        p = wx.Panel(self.loginFieldsPanel,name='copyid_mode_panel')
-        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        choices=['Use my password on this site','Use my AAF password']
-        l=wx.RadioBox(p,wx.ID_ANY,majorDimension=2,name="jobParams_copyidMode",choices=choices,style=wx.RA_SPECIFY_COLS|wx.NO_BORDER)
-        p.GetSizer().Add(l,border=5,flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND,proportion=1)
-        self.loginFieldsPanel.GetSizer().Add(p,flag=wx.EXPAND,proportion=1)
 
         self.checkBoxPanel = wx.Panel(self.loginFieldsPanel,name="checkBoxPanel")
         self.checkBoxPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
@@ -593,8 +570,6 @@ class LauncherMainFrame(wx.Frame):
 
         self.hiddenWindow=wx.Frame(self)
         # any controls created on this frame will be inaccessible to the user, but if we set them it will cause them to be saved to the config file
-        # this is kind of hackish, but supposed to be extensible
-        idp=wx.TextCtrl(self.hiddenWindow,name='jobParams_idp')
 
         self.logWindow = wx.Frame(self, title="%s Debug Log"%self.programName, name="%s Debug Log"%self.programName,pos=(200,150),size=(700,450))
         self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
@@ -1271,6 +1246,10 @@ class LauncherMainFrame(wx.Frame):
 
     def loginComplete(self,lp,oldParams,jobParams):
         shouldSave=False
+        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
+        dlg.saveOptions()
+        globaloptions=dlg.getOptions()
+        dlg.Destroy()
         for k in jobParams:
             if oldParams.has_key(k): 
                 # This is a bit messy, but some of our parameters get converted from ints to strings
@@ -1377,23 +1356,6 @@ class LauncherMainFrame(wx.Frame):
 
         # project hours and nodes will be ignored for the CVL login, but they will be used for Massive.
         configName=self.FindWindowByName('jobParams_configName').GetValue()
-        options=self.getPrefsSection('Global Preferences')
-        self.savePrefs(section="Global Preferences")
-        if not options.has_key('auth_mode'):
-            mode=self.queryAuthMode()
-            if mode==wx.ID_CANCEL:
-                self.onLoginProcessComplete(None)
-                return
-            options['auth_mode']=mode
-            self.setPrefsSection('Global Preferences',options)
-            self.savePrefs(section="Global Preferences")
-            self.identity_menu.disableItems(mode)
-#        if not options.has_key('logstats'):
-#            options['logstats']=0
-        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
-        dlg.saveOptions()
-        options=dlg.getOptions()
-        self.setPrefsSection('Global Preferences',options)
         self.savePrefs(section="Global Preferences")
         jobParams=self.buildJobParams(self)
         jobParams['wallseconds']=int(jobParams['hours'])*60*60

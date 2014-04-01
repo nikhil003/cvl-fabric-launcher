@@ -1647,22 +1647,10 @@ class LoginProcess():
         LoginProcess.myEVT_CUSTOM_LOGINPROCESS=wx.NewEventType()
         LoginProcess.EVT_CUSTOM_LOGINPROCESS=wx.PyEventBinder(self.myEVT_CUSTOM_LOGINPROCESS,1)
         self.keyModel=keyModel
-        if jobParams.has_key('copyidMode'):
-            if jobParams['copyidMode']==0:
-                self.keyModel.useAAF(False)
-            elif jobParams['copyidMode']==1:
-                self.keyModel.useAAF(True)
-            else:
-                self.keyModel.useAAF(False)
-        elif siteConfig.has_key('copyidMode'):
-            if siteConfig['copyidMode']==0:
-                self.keyModel.useAAF(False)
-            elif siteConfig['copyidMode']==1:
-                self.keyModel.useAAF(True)
-            else:
-                self.keyModel.useAAF(False)
-        else:
-            self.keyModel.useAAF(False)
+#        if globalOtions['copyid_mode']==1 and siteConfig.has_key('authURL'):
+#            self.keyModel.useAAF(True,siteConfig['authURL'])
+#        else:
+#            self.keyModel.useAAF(False,None)
 
 
         #self.keyModel.useAAF(True)
