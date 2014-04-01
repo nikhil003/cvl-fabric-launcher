@@ -53,12 +53,6 @@ class IdentityMenu(wx.Menu):
         self.AppendItem(self.authOpts)
         self.launcherMainFrame.Bind(wx.EVT_MENU, self.onAuthenticationOptions, id=self.authOpts.GetId())
         
-        self.usePassword = wx.MenuItem(self,wx.ID_ANY,"Use a password for authentication",kind=wx.ITEM_RADIO)
-        self.launcherMainFrame.Bind(wx.EVT_MENU,self.onUsePassword,id=self.usePassword.GetId())
-        self.AppendItem(self.usePassword)
-        self.useSSHKey = wx.MenuItem(self,wx.ID_ANY,"Use an SSH Key ",kind=wx.ITEM_RADIO)
-        self.launcherMainFrame.Bind(wx.EVT_MENU,self.onSSHKey,id=self.useSSHKey.GetId())
-        self.AppendItem(self.useSSHKey)
         
 
         self.AppendSeparator()
@@ -66,46 +60,12 @@ class IdentityMenu(wx.Menu):
         helpAboutKeysMenuItem = wx.NewId()
         self.Append(helpAboutKeysMenuItem, "&Help about keys")
         self.launcherMainFrame.Bind(wx.EVT_MENU, self.onHelpAboutKeys, id=helpAboutKeysMenuItem)
-        self.setRadio(auth_mode)
-        self.disableItems(auth_mode)
 
-    def onUsePassword(self,event):
-        options = self.launcherMainFrame.getPrefsSection('Global Preferences')
-        options['auth_mode'] = self.launcherMainFrame.TEMP_SSH_KEY
-        self.launcherMainFrame.setPrefsSection('Global Preferences',options)
-        self.launcherMainFrame.savePrefs(section='Global Preferences')
-        self.disableItems(self.launcherMainFrame.TEMP_SSH_KEY)
-
-    def onSSHKey(self,event):
-        options = self.launcherMainFrame.getPrefsSection('Global Preferences')
-        options['auth_mode'] = self.launcherMainFrame.PERM_SSH_KEY
-        self.launcherMainFrame.setPrefsSection('Global Preferences',options)
-        self.launcherMainFrame.savePrefs(section='Global Preferences')
-        self.disableItems(self.launcherMainFrame.PERM_SSH_KEY)
-
-    def setRadio(self,state):
-        if state == self.launcherMainFrame.PERM_SSH_KEY:
-            self.useSSHKey.Check(True)
-            self.usePassword.Check(False)
-        else:
-            self.useSSHKey.Check(False)
-            self.usePassword.Check(True)
-    
-    def disableItems(self,state):
-        if state == self.launcherMainFrame.PERM_SSH_KEY:
-            enable=True
-        else:
-            enable=False
-        iditems = self.GetMenuItems()
-        for item in iditems:
-            item.Enable(enable)
-        self.authOpts.Enable(True)
-        self.usePassword.Enable(True)
-        self.useSSHKey.Enable(True)
 
     def privateKeyExists(self,warnIfNotFoundInLocalSettings=False):
+        import cvlsshutils
 
-        km=cvlsshutils.KeyModel()
+        km=cvlsshutils.KeyModel.KeyModel()
         #exists=self.launcherMainFrame.keyModel.privateKeyExists()
         #self.privateKeyFilePath = os.path.join(os.path.expanduser('~'), '.ssh', "MassiveLauncherKey")
         #if self.massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_launcher_private_key_path"):
