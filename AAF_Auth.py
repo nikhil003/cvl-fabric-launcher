@@ -113,7 +113,9 @@ class AAF_Auth():
     def queryIdP(self,options,queue,idp=None):
         o=[list(t) for t in zip(*options)]
 
-        if idp==None or idp=="":
+        print("IdP is %s"%idp)
+        if idp==None or idp=="" or "Select the" in idp:
+            print("Showing IdP dialog")
             dlg=AAF_Auth.IdPDialog(parent=self.parent,id=wx.ID_ANY,options=o[1],idp=idp)
             wx.EndBusyCursor()
             if dlg.ShowModal()==wx.ID_OK:
