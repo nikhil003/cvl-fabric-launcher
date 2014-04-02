@@ -1246,10 +1246,6 @@ class LauncherMainFrame(wx.Frame):
 
     def loginComplete(self,lp,oldParams,jobParams):
         shouldSave=False
-        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
-        dlg.saveOptions()
-        globaloptions=dlg.getOptions()
-        dlg.Destroy()
         for k in jobParams:
             if oldParams.has_key(k): 
                 # This is a bit messy, but some of our parameters get converted from ints to strings
