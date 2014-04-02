@@ -113,26 +113,34 @@ class AAF_Auth():
     def queryIdP(self,options,queue,idp=None):
         o=[list(t) for t in zip(*options)]
 
-        dlg=AAF_Auth.IdPDialog(parent=self.parent,id=wx.ID_ANY,options=o[1],idp=idp)
-        wx.EndBusyCursor()
-        if dlg.ShowModal()==wx.ID_OK:
-            res=dlg.GetValue()
-            while res==None:
-                dlg1=wx.MessageDialog(parent=self.parent,message='You must select and IdP to continue',style=wx.OK)
-                dlg1.ShowModal()
-                btn=dlg.ShowModal()
-                if btn==wx.ID_OK:
-                    res=dlg.GetValue()
-                else:
-                    break
-            queue.put((o[0][res[0]],res[1]))
+        if idp==None or idp=="":
+            dlg=AAF_Auth.IdPDialog(parent=self.parent,id=wx.ID_ANY,options=o[1],idp=idp)
+            wx.EndBusyCursor()
+            if dlg.ShowModal()==wx.ID_OK:
+                res=dlg.GetValue()
+                while res==None:
+                    dlg1=wx.MessageDialog(parent=self.parent,message='You must select and IdP to continue',style=wx.OK)
+                    dlg1.ShowModal()
+                    btn=dlg.ShowModal()
+                    if btn==wx.ID_OK:
+                        res=dlg.GetValue()
+                    else:
+                        break
+                queue.put((o[0][res[0]],res[1]))
+            else:
+                queue.put(None)
+            dlg.Destroy()
+            wx.BeginBusyCursor()
         else:
-            queue.put(None)
-        wx.BeginBusyCursor()
-        dlg.Destroy()
+            for i in range(0,len(o[1])):
+                if o[1][i]==idp:
+                    queue.put((o[0][i],o[1][i]))
 
-    def getPass(self,queue):
-        dlg=wx.PasswordEntryDialog(self.parent,"Please enter the password for your IdP")
+    def getPass(self,queue,user,idpName):
+        if user==None or idpName==None:
+            dlg=wx.PasswordEntryDialog(self.parent,"Please enter the password for your IdP")
+        else:
+            dlg=wx.PasswordEntryDialog(self.parent,"Please enter the password for %s at %s"%(user,idpName))
         wx.EndBusyCursor()
         retval=dlg.ShowModal()
         if retval==wx.ID_OK:
@@ -151,8 +159,16 @@ class AAF_Auth():
             queue.put(None)
         wx.BeginBusyCursor()
         dlg.Destroy()
+
+    def getIdPChoices(self,session):
+        url='https://ds.aaf.edu.au/discovery/DS'
+        r=session.get(url)
+        p=AAF_Auth.DSForm()
+        p.feed(r.text)
+        return p.options
+
                     
-    def processIdP(self,session,text,url):
+    def processIdP(self,session,text,url,idpName):
         p = AAF_Auth.genericForm()
         p.feed(text)
         import getpass
@@ -163,7 +179,10 @@ class AAF_Auth():
         queue=Queue.Queue()
         for i in p.inputs.keys():
             if ('user' in i or 'User' in i) and p.inputs[i]==None:
-                userRequired=True
+                if self.username==None or self.username=="":
+                    userRequired=True
+                else:
+                    user=self.username
             if ('pass' in i or 'Pass' in i) and p.inputs[i]==None:
                 passwordRequired=True
         if userRequired:
@@ -172,7 +191,7 @@ class AAF_Auth():
             if user==None:
                 raise Exception("Login canceled")
         if passwordRequired:
-            wx.CallAfter(self.getPass,queue)
+            wx.CallAfter(self.getPass,queue,user,idpName)
             pw=queue.get()
             if pw==None:
                 raise Exception("Login canceled")
@@ -192,9 +211,15 @@ class AAF_Auth():
         return self.idp
         
 
-    def __init__(self,s,destURL,parent,idp=None):
+    def __init__(self,s,destURL,parent,idp=None,*args,**kwargs):
         self.parent=parent
         self.idp=idp
+        if kwargs.has_key('aaf_username'):
+            self.username=kwargs['aaf_username']
+        else:
+            self.username=None
+        if destURL==None:
+            return
         r=s.get(destURL,verify=False)
         if destURL in r.url: # We already have a valid session with the web service
             logger.debug('AAF cycle unnecessary, we\'re already auth\'d to this service')
@@ -235,7 +260,7 @@ class AAF_Auth():
             if destURL in r.url: # I'm puzzled by this, I though the SAMLResponse would always come as a hidden field in a form from the IdP along with a redirect, but apparently not
                 self.response=r
                 return
-            r=self.processIdP(s,r.text,r.url)
+            r=self.processIdP(s,r.text,r.url,self.idp)
             p=AAF_Auth.genericForm()
             p.feed(r.text)
 
