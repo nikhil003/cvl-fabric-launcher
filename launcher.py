@@ -802,6 +802,7 @@ class LauncherMainFrame(wx.Frame):
                 
 
         q=Queue.Queue()
+        print("queugin showsitelistdialog")
         wx.CallAfter(self.showSiteListDialog,origSiteList,newlist,q)
         r=q.get()
         if (r[0] == wx.ID_OK):
@@ -1232,10 +1233,6 @@ class LauncherMainFrame(wx.Frame):
 
     def loginComplete(self,lp,oldParams,jobParams):
         shouldSave=False
-        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
-        dlg.saveOptions()
-        globaloptions=dlg.getOptions()
-        dlg.Destroy()
         for k in jobParams:
             if oldParams.has_key(k): 
                 # This is a bit messy, but some of our parameters get converted from ints to strings
