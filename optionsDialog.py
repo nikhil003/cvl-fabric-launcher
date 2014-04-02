@@ -882,17 +882,13 @@ class GlobalOptionsDialog(wx.Dialog):
         # Privacy tab
 
         explanation1 = """
-When we communicate with the another computer, we use a cryptographic token called an RSA Key Pair. You can either generate a permanent key pair, store it on your computer and authorize it for repeated use (remember me), generate a temporary keypair and authorize it each time you use the launcher (don't remember me).
+Remember me stores an access token on your computers. You will need to enter a passphrase to unlock this token each time your computer boots. This is not recomended if many people share this computer (as in a lab environment)
 
-If you choose "Remember me on this computer", you will be asked to unlock your keys the first time you use the Launcher after a reboot. Thereafter you won't be asked for a password. This method is advisable if you are the only person who uses this account to log into your computer.
-
-If you choose "Don't remember me", a new keypair will be generated each time you use the launcher, and you will need to authorize the new key each time you connect. This method is advisable if multiple people share this computer (as in a computer lab).
+Don't remember me does not store this token permantly. You will need to enter a password (or some other authentication) each time you access a remote computer.
 """
 
         explanation2 = """
-The traditional way to authorize an RSA Key Pair is to enter your password.
-
-Some sites may implement an advanced method using the Austrlian Access Federation to authorize your key. If your site supports this, it means that you will be able to select your University from a list of identity providers (IdPs) and enter your username and password for your home university.
+Usually the first time you access a remote computer you will enter your passwordeven if Strudel is set to subsequently remember you. For some remote computers it is possible to use the Australian Access Federation, which links your account on a remote computer such as the Characterisation VL to your username and password at your University.
 """
 
 
@@ -905,7 +901,8 @@ Some sites may implement an advanced method using the Austrlian Access Federatio
         self.authModeExplanation.SetFont(self.smallFont)
         # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
         # The Static text will expand and wrap anyway
-        self.authModeExplanation.SetMinSize(wx.Size(1,200))
+        #self.authModeExplanation.SetMinSize(wx.Size(1,200))
+        self.authModeExplanation.SetMinSize(wx.Size(1,-1))
 
         self.copyIDModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation2)
         self.copyIDModeExplanation.SetFont(self.smallFont)
@@ -938,7 +935,7 @@ Some sites may implement an advanced method using the Austrlian Access Federatio
         IdPComboBox = wx.ComboBox(p, wx.ID_ANY, choices=self.idpchoices[1], style=wx.CB_READONLY,name='aaf_idp')
         t = wx.StaticText(p,wx.ID_ANY,label='AAF IdP')
         p.GetSizer().Add(t,flag=wx.ALL,border=15)
-        p.GetSizer().Add(IdPComboBox,flag=wx.ALIGN_RIGHT|wx.ALL,proportion=1,border=5)
+        p.GetSizer().Add(IdPComboBox,flag=wx.ALIGN_RIGHT|wx.ALL,proportion=1,border=15)
         self.authPanel.GetSizer().Add(p,flag=wx.EXPAND)
         self.authPanel.GetSizer().Add(self.copyIDModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
 
