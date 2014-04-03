@@ -118,13 +118,14 @@ class KeyModel():
         self.copiedID=threading.Event()
         self.startupinfo=startupinfo
         self.creationflags=creationflags
-        self._useAAF=False
-
-    def useAAF(self,value=None):
-        if value!=None:
-            self._useAAF=value
-        return self._useAAF
-
+#        self._useAAF=False
+#
+#    def useAAF(self,value=None,url=None):
+#        if value!=None:
+#            self._useAAF=value
+#            self._authURL=url
+#        return self._useAAF
+#
        
 
     def getFingerprintAndKeyTypeFromPrivateKeyFile(self):

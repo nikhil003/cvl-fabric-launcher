@@ -327,7 +327,7 @@ class KeyDist():
                 # If its not an AAF login, we will catch the exception and pass
                 try:
                     idp=self.obj.getIdP()
-                    self.keydistObject.updateDict['idp']=idp
+                    self.keydistObject.updateDict['aaf_idp']=idp
                 except Exception as e:
                     pass
                 # This try catch means that if, in the course of authenticing the user, the authentication mechanism was able to tell us the username
@@ -335,7 +335,7 @@ class KeyDist():
                 # Monash will tell CVL what my email address is. CVL can look up my CVL username based on my email address.
                 try:
                     newusername=self.obj.getUsername()
-                    self.keydistObject.updateDict['username']=newusername
+                    self.keydistObject.updateDict['aaf_username']=newusername
                 except Exception as e:
                     pass
             except Exception as e:
@@ -389,8 +389,9 @@ class KeyDist():
                 with open(pubKeyPath,'r') as f:
                     pubkey=f.read()
                 # Here we make the decision as to how to copy the public key to the users authorized keys file. This of this as a factory pattern, although I'm sure there are neater ways to implement it.
-                if event.keydist.keyModel.useAAF():
-                    obj=cvlsshutils.cvl_shib_auth.shibbolethDance(pubkey=pubkey,parent=event.keydist.parentWindow,displayStrings=event.keydist.displayStrings,**event.keydist.jobParams)
+                if event.keydist.useAAF:
+                    print "using AAF to auth key"
+                    obj=cvlsshutils.cvl_shib_auth.shibbolethDance(pubkey=pubkey,parent=event.keydist.parentWindow,displayStrings=event.keydist.displayStrings,url=event.keydist.authURL,aaf_username=event.keydist.aaf_username,idp=event.keydist.aaf_idp)
                 else:
                     obj=cvlsshutils.password_copyid.genericCopyID(pubkey=pubkey,parent=event.keydist.parentWindow,host=event.keydist.host,username=event.keydist.username,displayStrings=event.keydist.displayStrings)
                 logger.debug("received COPYID event")
@@ -534,7 +535,7 @@ class KeyDist():
 
     myEVT_CUSTOM_SSHKEYDIST=None
     EVT_CUSTOM_SSHKEYDIST=None
-    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False,startupinfo=None,creationflags=0,jobParams={}):
+    def __init__(self,parentWindow,progressDialog,username,host,configName,notifywindow,keyModel,displayStrings=None,removeKeyOnExit=False,startupinfo=None,creationflags=0,useAAF=False,authURL=None,aaf_idp=None,aaf_username=None,jobParams={}):
 
         logger.debug("KeyDist.__init__")
 
@@ -606,6 +607,10 @@ class KeyDist():
         self.creationflags = creationflags
         self.shuttingDown=Event()
         self.jobParams=jobParams
+        self.useAAF=useAAF
+        self.authURL=authURL
+        self.aaf_idp=aaf_idp
+        self.aaf_username=aaf_username
 
     def GetKeyPassphrase(self,incorrect=False):
         if (incorrect):

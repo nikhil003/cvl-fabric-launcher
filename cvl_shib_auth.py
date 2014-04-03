@@ -10,10 +10,7 @@ class shibbolethDance():
     def __init__(self,pubkey,parent,*args,**kwargs):
         self.pubkey=pubkey
         self.parent=parent
-        if kwargs.has_key('idp'):
-            self.idp=kwargs['idp']
-        else:
-            self.idp=None
+        self.kwargs=kwargs
 
     def postKey(self,url):
         data={}
@@ -41,7 +38,7 @@ class shibbolethDance():
 
         # Use of a singleton here means that we should be able to do SSO on any AAF/Shibolleth web service. However we might have to guess the IdP.
         self.session=cvlsshutils.RequestsSessionSingleton.RequestsSessionSingleton().GetSession()
-        destURL="https://118.138.241.242/cvl/"
-        auth=cvlsshutils.AAF_Auth.AAF_Auth(self.session,destURL,parent=self.parent,idp=self.idp)
+        destURL="https://autht.massive.org.au/cvl/"
+        auth=cvlsshutils.AAF_Auth.AAF_Auth(self.session,destURL,parent=self.parent,**self.kwargs)
         self.idp=auth.getIdP()
         self.postKey(destURL)
