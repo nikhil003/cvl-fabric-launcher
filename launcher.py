@@ -349,11 +349,12 @@ class LauncherMainFrame(wx.Frame):
         self.edit_menu.Append(wx.ID_SELECTALL, "Select &All")
         self.Bind(wx.EVT_MENU, self.onSelectAll, id=wx.ID_SELECTALL)
         self.edit_menu.AppendSeparator()
+        id_preferences=wx.NewId()
         if sys.platform.startswith("win") or sys.platform.startswith("linux"):
-            self.edit_menu.Append(wx.ID_PREFERENCES, "P&references\tCtrl-P")
+            self.edit_menu.Append(id_preferences, "P&references\tCtrl-P")
         else:
-            self.edit_menu.Append(wx.ID_PREFERENCES, "&Preferences")
-        self.Bind(wx.EVT_MENU, self.onOptions, id=wx.ID_PREFERENCES)
+            self.edit_menu.Append(id_preferences, "&Preferences")
+        self.Bind(wx.EVT_MENU, self.onOptions, id=id_preferences)
         self.menu_bar.Append(self.edit_menu, "&Edit")
 
         self.identity_menu = IdentityMenu()
@@ -1112,7 +1113,7 @@ class LauncherMainFrame(wx.Frame):
         logger.dump_log(launcherMainFrame,submit_log=True,showFailedToOpenRemoteDesktopMessage=False)
 
     def onAbout(self, event):
-        dlg = LauncherMessageDialog(self, message.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
+        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
