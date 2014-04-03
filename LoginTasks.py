@@ -809,7 +809,12 @@ class LoginProcess():
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_DISTRIBUTE_KEY):
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_DISTRIBUTE_KEY')
                 wx.CallAfter(event.loginprocess.updateProgressDialog, 2,"Configuring authorisation")
-                event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,removeKeyOnExit=event.loginprocess.removeKeyOnExit,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags)
+                if int(event.loginprocess.globalOptions['copyid_mode'])==1:
+                    print "LoginTasks, using AAF"
+                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,removeKeyOnExit=event.loginprocess.removeKeyOnExit,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,useAAF=True,authURL=event.loginprocess.siteConfig.authURL,aaf_username=event.loginprocess.globalOptions['aaf_username'],aaf_idp=event.loginprocess.globalOptions['aaf_idp'],jobParams=event.loginprocess.jobParams)
+                else:
+                    print "LoginTasks, not using AAF %s"%event.loginprocess.globalOptions['copyid_mode']
+                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,removeKeyOnExit=event.loginprocess.removeKeyOnExit,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,jobParams=event.loginprocess.jobParams)
                 successevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK,event.loginprocess)
                 event.loginprocess.skd.distributeKey(callback_success=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),successevent),
                                                      callback_fail=event.loginprocess.cancel)
@@ -818,6 +823,18 @@ class LoginProcess():
 
         def runSanityCheck(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK):
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                print "running sanity check"
+                # If we have completed KeyDistribution, we may have some updates to the jobParameters from the key distribution process
+                if event.loginprocess.skd!=None:
+                    print "updating jobParams with results from skd"
+                    event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict) 
+                    print event.loginprocess.jobParams['username']
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_RUN_SANITY_CHECK')
                 event.loginprocess.updateProgressDialog( 3, "Running the sanity check script")
                 nextevent = LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CHECK_RUNNING_SERVER,event.loginprocess)
@@ -1527,6 +1544,12 @@ class LoginProcess():
         def complete(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_COMPLETE):
                 event.loginprocess.shutdownThread.join() #These events aren't processed until the thread is complete anyway.
+                # Give the ssh key dist process a chance to update the jobParams
+                if event.loginprocess.skd!=None:
+                    print "looking for an updateDict from the ssh key dist loop. %s"%event.loginprocess.skd.updateDict
+                    event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict)
+                    print "checking the current username %s"%event.loginprocess.jobParams['username']
+                    print "updateDict had %s"%event.loginprocess.skd.updateDict
                 if (event.loginprocess.canceled()):
                     if event.loginprocess.skd!=None and event.loginprocess.skd.canceled():
                         logger.debug("LoginProcess.complete: sshKeyDist was canceled.")
@@ -1628,6 +1651,13 @@ class LoginProcess():
         LoginProcess.myEVT_CUSTOM_LOGINPROCESS=wx.NewEventType()
         LoginProcess.EVT_CUSTOM_LOGINPROCESS=wx.PyEventBinder(self.myEVT_CUSTOM_LOGINPROCESS,1)
         self.keyModel=keyModel
+#        if globalOtions['copyid_mode']==1 and siteConfig.has_key('authURL'):
+#            self.keyModel.useAAF(True,siteConfig['authURL'])
+#        else:
+#            self.keyModel.useAAF(False,None)
+
+
+        #self.keyModel.useAAF(True)
         self.threads=[]
         self._canceled=threading.Event()
         self._shutdown=threading.Event()

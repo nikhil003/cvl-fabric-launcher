@@ -881,47 +881,83 @@ class GlobalOptionsDialog(wx.Dialog):
 
         # Privacy tab
 
-        self.authPanel = wx.Panel(self.tabbedView,wx.ID_ANY)
-        self.authPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
-        self.authPanel.Fit()
-        choices=["Use an SSH key pair","Use my password"]
-        if sys.platform.startswith("darwin"):
-            self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
-        rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Authentication Mode",choices=choices)
-        self.authPanel.GetSizer().Add(rb,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
-#        explanation = "The Launcher's preferred mode of operating (\"private mode\") involves creating a \"~/.ssh/MassiveLauncherKey\" private key file within your home directory, " + \
-#                        "and using an SSH Agent (e.g. PuTTY's Pageant) to load the private key into memory, so that you don't need to enter your password " + \
-#                        "every time you run the Launcher.\n\n" + \
-#                        "If you are running the Launcher on a shared computer (e.g. if you are using a \"Guest\") account, then you should use \"public mode\". " + \
-#                        "When running in \"public mode\", you will need to enter your password every time you run the Launcher.\n\n"
-        explanation = """
-When we communicate with the desktop, we use a cryptographic token called an RSA Key Pair. You can either generate a permanent key pair, and store it on your computer, or use your password to generate a temporary keypair each time you use the launcher.
+        explanation1 = """
+Remember me stores an access token on your computers. You will need to enter a passphrase to unlock this token each time your computer boots. This is not recomended if many people share this computer (as in a lab environment)
 
-If you use a permanent SSH key pair, you will be asked to unlock your keys the first time you use the Launcher after a reboot. Thereafter you won't be asked for a password. This method is advisable if you are the only person who uses this account to log into your computer.
+Don't remember me does not store this token permantly. You will need to enter a password (or some other authentication) each time you access a remote computer.
+"""
 
-If you use a password to authenticate, a new keypair will be generated each time you use the launcher, and you will need to re-enter your password each time you connect. This method is advisable if multiple people share this computer (as in a computer lab).
+        explanation2 = """
+Usually the first time you access a remote computer you will enter your passwordeven if Strudel is set to subsequently remember you. For some remote computers it is possible to use the Australian Access Federation, which links your account on a remote computer such as the Characterisation VL to your username and password at your University.
 """
 
 
- #       explanation = "The Launcher's preferred mode of operating (\"private mode\") involves creating a \"~/.ssh/MassiveLauncherKey\" private key file within your home directory, and using an SSH Agent (e.g. PuTTY's Pageant) to load the private key into memory, so that you don't need to enter your password every time you run the Launcher.\nIf you are running the Launcher on a shared computer (e.g. if you are using a \"Guest\") account, then you should use \"public mode\". When running in \"public mode\", you will need to enter your password every time you run the Launcher."
-                        #"Future versions of the Launcher may have the ability to manage multiple private key files from within a single " + \
-                        #"\"Guest\" account, so it may then be possible to run the Launcher in \"private mode\" from within a \"Guest\" " + \
-                        #"account."
-        self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation)
+
+        self.authPanel = wx.Panel(self.tabbedView,wx.ID_ANY)
+        self.authPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        self.authPanel.Fit()
+
+        self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation1)
         self.authModeExplanation.SetFont(self.smallFont)
         # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
         # The Static text will expand and wrap anyway
-        self.authModeExplanation.SetMinSize(wx.Size(1,1))
+        #self.authModeExplanation.SetMinSize(wx.Size(1,200))
+        self.authModeExplanation.SetMinSize(wx.Size(1,-1))
+
+        self.copyIDModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation2)
+        self.copyIDModeExplanation.SetFont(self.smallFont)
+        # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
+        # The Static text will expand and wrap anyway
+        self.copyIDModeExplanation.SetMinSize(wx.Size(1,-1))
+
+
+        choices=["Remember me on this computer","Don't remember me","Use default behaviour"]
+        if sys.platform.startswith("darwin"):
+            self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
+        rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Remember me on this computer",choices=choices)
+        self.authPanel.GetSizer().Add(rb,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
         self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
+
+        choices=['Use my password on this site','Use my AAF password']
+        l=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="copyid_mode",label="Authentication Provider",choices=choices)
+        self.authPanel.GetSizer().Add(l,border=15,flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND)
+        import cvlsshutils.AAF_Auth
+        import cvlsshutils.RequestsSessionSingleton
+        p=wx.Panel(self.authPanel)
+        p.SetSizer(wx.FlexGridSizer(rows=1, cols=4))
+        t=wx.StaticText(p,wx.ID_ANY,label='AAF Username')
+        p.GetSizer().Add(t,flag=wx.ALL,border=15)
+        tc=wx.TextCtrl(p,wx.ID_ANY,value='',name='aaf_username')
+        p.GetSizer().Add(tc,flag=wx.ALL|wx.EXPAND,border=15,proportion=0)
+        session=cvlsshutils.RequestsSessionSingleton.RequestsSessionSingleton().GetSession()
+        choices=cvlsshutils.AAF_Auth.AAF_Auth(None,None,None).getIdPChoices(session)
+        self.idpchoices=[list(t) for t in zip(*choices)]
+        IdPComboBox = wx.ComboBox(p, wx.ID_ANY, choices=self.idpchoices[1], style=wx.CB_READONLY,name='aaf_idp')
+        t = wx.StaticText(p,wx.ID_ANY,label='AAF IdP')
+        p.GetSizer().Add(t,flag=wx.ALL,border=15)
+        p.GetSizer().Add(IdPComboBox,flag=wx.ALIGN_RIGHT|wx.ALL,proportion=1,border=15)
+        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND)
+        self.authPanel.GetSizer().Add(self.copyIDModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
+
+
+
         self.authPanel.Layout()
         var='auth_mode'
         if var in globalOptions:
             auth_mode = self.FindWindowByName(var)
             auth_mode.SetSelection(int(globalOptions[var]))
-            # Fire the event manually, as this will control enabled/disabled of some menu items
-            nextevent = wx.CommandEvent(wx.wxEVT_COMMAND_RADIOBOX_SELECTED, auth_mode.GetId())
-            nextevent.SetEventObject(auth_mode)
-            wx.PostEvent(auth_mode.GetEventHandler(),nextevent)
+        var='copyid_mode'
+        if var in globalOptions:
+            copyid_mode = self.FindWindowByName(var)
+            copyid_mode.SetSelection(int(globalOptions[var]))
+        var='aaf_username'
+        if var in globalOptions:
+            username = self.FindWindowByName(var)
+            username.SetValue(globalOptions[var])
+        var='aaf_idp'
+        if var in globalOptions:
+            idp = self.FindWindowByName(var)
+            idp.SetValue(globalOptions[var])
         var='uuid'
         uuidtc = self.FindWindowByName(var)
         if var in globalOptions:
@@ -1128,6 +1164,9 @@ If you use a password to authenticate, a new keypair will be generated each time
             self.globalOptions['logfile'] = self.vncViewerLogFilenameTextField.GetValue()
         self.globalOptions['share_local_home_directory_on_remote_desktop'] = self.shareLocalHomeDirectoryOnRemoteDesktopCheckBox.GetValue()
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
+        self.globalOptions['copyid_mode']=self.FindWindowByName('copyid_mode').GetSelection()
+        self.globalOptions['aaf_username']=self.FindWindowByName('aaf_username').GetValue()
+        self.globalOptions['aaf_idp']=self.FindWindowByName('aaf_idp').GetValue()
         self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
         self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
 
