@@ -1113,7 +1113,7 @@ class LauncherMainFrame(wx.Frame):
         logger.dump_log(launcherMainFrame,submit_log=True,showFailedToOpenRemoteDesktopMessage=False)
 
     def onAbout(self, event):
-        dlg = LauncherMessageDialog(self, message.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
+        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
