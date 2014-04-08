@@ -334,8 +334,8 @@ class KeyDist():
                 # That username will be updated. Example. Authenticing via AAF, I know I'm at Monash, and my Monash username is chines.
                 # Monash will tell CVL what my email address is. CVL can look up my CVL username based on my email address.
                 try:
-                    newusername=self.obj.getUsername()
-                    self.keydistObject.updateDict['aaf_username']=newusername
+                    newusername=self.obj.getLocalUsername()
+                    self.keydistObject.updateDict['username']=newusername
                 except Exception as e:
                     pass
             except Exception as e:
