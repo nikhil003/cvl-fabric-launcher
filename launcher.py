@@ -690,12 +690,10 @@ class LauncherMainFrame(wx.Frame):
         except requests.exceptions.RequestException as e:
             logger.debug("getNewSites: Exception %s"%e)
             logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
-            print "putting None on the return queue"
             queue.put(None)
         except Exception as e:
             logger.debug("getNewSites: Exception %s"%e)
             logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
-            print "putting None on the return queue"
             queue.put(None)
         finally:
             f.close()
@@ -720,7 +718,6 @@ class LauncherMainFrame(wx.Frame):
         wx.CallAfter(wx.BeginBusyCursor)
         newlist=r.get()
         wx.CallAfter(wx.EndBusyCursor)
-        print "newlist is %s"%newlist
         try:
             wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
         except:
@@ -803,6 +800,20 @@ class LauncherMainFrame(wx.Frame):
                 
 
         q=Queue.Queue()
+
+        import copy
+        for newsite in newlist:
+            print newsite
+            if newsite.has_key('replaces'):
+                replaced=False
+                urls=newsite['replaces']
+                siteListCopy=copy.copy(origSiteList)
+                for site in siteListCopy:
+                    if site['url'] in urls:
+                        if not newsite.has_key('enabled'):
+                            newsite['enabled']=site['enabled']
+                        origSiteList.remove(site)
+
         wx.CallAfter(self.showSiteListDialog,origSiteList,newlist,q)
         r=q.get()
         if (r[0] == wx.ID_OK):

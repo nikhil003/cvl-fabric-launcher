@@ -66,7 +66,10 @@ class siteListDialog(wx.Dialog):
                 self.siteList.InsertStringItem(i,"%s"%s['name'])
                 self.siteList.SetStringItem(i,1,"%s"%s['url'])
                 cb=wx.CheckBox(self.siteList)
-                cb.SetValue(False)
+                if s.has_key('enabled'):
+                    cb.SetValue(s['enabled'])
+                else:
+                    cb.SetValue(False)
                 self.siteList.SetItemWindow(i,col=2,wnd=cb)
                 i=i+1
                 
