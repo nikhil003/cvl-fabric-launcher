@@ -488,8 +488,6 @@ class LauncherMainFrame(wx.Frame):
             defaultResolution, "1024x768", "1152x864", "1280x800", "1280x1024", "1360x768", "1366x768", "1440x900", "1600x900", "1680x1050", "1920x1080", "1920x1200", "7680x3200",
             ]
         self.resolutionField = wx.ComboBox(self.resolutionPanel, wx.ID_ANY, value=defaultResolution, choices=vncDisplayResolutions, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_resolution')
-        print "setting default resoultion to %s"%defaultResolution
-        print "resolution list %s"%vncDisplayResolutions
         self.resolutionPanel.GetSizer().Add(self.resolutionField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.resolutionPanel,proportion=0,flag=wx.EXPAND)
 
@@ -803,7 +801,6 @@ class LauncherMainFrame(wx.Frame):
 
         import copy
         for newsite in newlist:
-            print newsite
             if newsite.has_key('replaces'):
                 replaced=False
                 urls=newsite['replaces']
@@ -933,7 +930,6 @@ class LauncherMainFrame(wx.Frame):
             cb.SetValue(sn)
         else:
             try:
-                print "attempting to  set selection %s"%self.sites.keys()
                 if len(self.sites.keys())>0:
                     cb.SetSelection(0)
                 else:
@@ -1362,7 +1358,6 @@ class LauncherMainFrame(wx.Frame):
 #            options['logstats']=0
         dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
         dlg.saveOptions()
-        print "looking for dlg uuid element %s"%dlg.FindWindowByName('uuid').GetValue()
         options=dlg.getOptions()
         self.setPrefsSection('Global Preferences',options)
         self.savePrefs(section="Global Preferences")
