@@ -600,7 +600,7 @@ defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-
 defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au") 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('massive_flavours.json','w') as f:
+with open('massive_flavours_20140408.json','w') as f:
     f.write(jsons)
 
 defaultSites=collections.OrderedDict()

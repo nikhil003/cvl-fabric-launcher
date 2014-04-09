@@ -44,7 +44,6 @@ class LauncherMessageDialog(wx.Dialog):
             b.Bind(wx.EVT_BUTTON,self.onClose)
             buttonPanel.GetSizer().Add(b,flag=wx.ALL,border=5)
         buttonPanel.Fit()
-        print "button panel size %s"%buttonPanel.GetSize()
 
 
         self.Bind(wx.EVT_CLOSE, self.onClose)
@@ -66,11 +65,6 @@ class LauncherMessageDialog(wx.Dialog):
         self.GetSizer().Add(leftPanel)
         self.GetSizer().Add(rightPanel,flag=wx.EXPAND,proportion=1)
         self.Fit()
-        print "button panel size %s"%buttonPanel.GetSize()
-        print "bottom panel size %s"%bottomPanel.GetSize()
-        print "right panel size %s"%rightPanel.GetSize()
-        print "left panel size %s"%leftPanel.GetSize()
-        print "self size %s"%self.GetSize()
 
     def onClose(self, event):
         obj=event.GetEventObject()
@@ -93,7 +87,6 @@ class MyApp(wx.App):
         message = "You have requested 2880 CPU hours, but you only have 455.0 CPU hours remaining in your quota for project \"Desc002\". Much long text\n asdf asdf asdf asdf asdf asdf asdf asdfasdfajkl; ajkl;sadf ajskl;asd asjkl;a ajkl;a aj kl;as ajkl;dfsa jakl;sdf jiopwerqjl k;cvxaj kl;asihjwelrqj kl;samcvkl;uzlxk asjdfkl; "
         dialog = LauncherMessageDialog(parent=None, message=message, title="Undefined program name",ButtonLabels=["OK","Cancel","Do the other thing","Use more buttons","Bring about world peace"])
         b=dialog.ShowModal()
-        print "pressed the %i button"%b
         return True
 if __name__ == '__main__':
     app = MyApp(False)

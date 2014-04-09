@@ -1863,12 +1863,9 @@ class LoginProcess():
     def getSharedSession(self,queue):
         from siteConfig import cmdRegEx
         from siteConfig import siteConfig
-        print "in get shared session"
         t = LoginProcess.runServerCommandThread(self,self.siteConfig.otp,None,"Unable to determine the one-time password for the VNC session")
         t.start()
-        print "waiting for the new otp"
         t.join()
-        print "new otp generated"
         Visible={}
         Visible['usernamePanel']=True
         Visible['loginHostPanel']=False
