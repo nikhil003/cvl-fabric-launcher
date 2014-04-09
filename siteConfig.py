@@ -326,7 +326,7 @@ class siteConfig():
     def __init__(self,**kwargs):
         self.loginHost=None
         self.username=None
-        self.authURL='https://autht.massive.org.au/cvl/'
+        self.authURL=None
         self.listAll=cmdRegEx(failFatal=False)
         self.running=cmdRegEx()
         self.stop=cmdRegEx(failFatal=False)
