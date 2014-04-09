@@ -47,6 +47,10 @@ cmd = 'certtool y | grep "Developer ID Application"'
 print cmd
 certificateLine = commands.getoutput(cmd)
 print "certificateLine: " + certificateLine
+cmd = 'security default-keychain'
+print cmd
+keychainName=commands.getoutput(cmd)
+print "defaultKeychain: " + keychainName
 try:
     certificateName = certificateLine.split(": ",1)[1]
     print "certificateName: " + certificateName
@@ -90,7 +94,7 @@ print cmd
 os.environ['CODESIGN_ALLOCATE'] = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/codesign_allocate'
 # The bundle identifier (au.edu.monash.MASSIVE) referenced below is set in create_mac_bundle.py:
 if sign:
-    cmd = 'codesign --force -i "au.edu.monash.MASSIVE" --sign "%s" --verbose=4 dist/Strudel.app' % (certificateName)
+    cmd = 'codesign --force -i "au.edu.monash.MASSIVE" --sign "%s" --verbose=4 dist/Strudel.app --keychain "%s"' % (certificateName,keychainName)
     print cmd
     os.system(cmd)
     cmd = 'codesign -vvvv dist/Strudel.app/'
