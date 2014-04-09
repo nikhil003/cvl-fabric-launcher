@@ -1100,6 +1100,14 @@ class LauncherMainFrame(wx.Frame):
                     window.Hide()
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
+        globalOptions = self.getPrefsSection("Global Preferences")
+        if globalOptions.has_key('copyid_mode'):
+            if sc==None:
+                sc=self.FindWindowByName('jobParams_configName').GetValue()
+            if self.sites[sc].authURL!=None and int(globalOptions['copyid_mode'])==1:
+                self.FindWindowByName('usernamePanel').Hide()
+            else:
+                print "authurl is %s"%self.sites[sc].authURL
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
 
@@ -1168,6 +1176,7 @@ class LauncherMainFrame(wx.Frame):
             self.setPrefsSection("Global Preferences",options)
             self.savePrefs(section="Global Preferences")
         dlg.Destroy()
+        self.updateVisibility()
 
     def onCut(self, event):
         textCtrl = self.FindFocus()
@@ -1328,7 +1337,7 @@ class LauncherMainFrame(wx.Frame):
 
 
         jobParams = self.buildJobParams(self)
-        if jobParams['username'] == "":
+        if jobParams['username'] == "" and int(options['copyid_mode'])!=1:
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
                     #"MASSIVE/CVL Launcher", style=wx.OK | wx.ICON_INFORMATION)

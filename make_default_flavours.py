@@ -388,6 +388,7 @@ def getCVLSiteConfig(queue):
     c = siteConfig.siteConfig()
     cvlstrings = sshKeyDistDisplayStringsCVL()
     c.displayStrings.__dict__.update(cvlstrings.__dict__)
+    c.authURL="https://autht.massive.org.au/cvl/"
     c.visibility=cvlvisible
     c.loginHost='login.cvl.massive.org.au'
     c.directConnect=True
@@ -616,7 +617,7 @@ defaultSites['CVL 16 core node']=multicpu
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('cvl_flavours.json','w') as f:
+with open('cvl_flavours_20140410.json','w') as f:
     f.write(jsons)
 
 defaultSites=collections.OrderedDict()
