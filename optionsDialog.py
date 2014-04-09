@@ -911,16 +911,15 @@ Usually the first time you access a remote computer you will enter your password
         self.copyIDModeExplanation.SetMinSize(wx.Size(1,-1))
 
 
-        choices=["Remember me on this computer","Don't remember me","Use default behaviour"]
+        choices=["Remember me on this computer","Don't remember me"]
         if sys.platform.startswith("darwin"):
             self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
         rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Remember me on this computer",choices=choices)
-        self.authPanel.GetSizer().Add(rb,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
         self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
+        self.authPanel.GetSizer().Add(rb,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
 
         choices=['Use my password on this site','Use my AAF password']
         l=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="copyid_mode",label="Authentication Provider",choices=choices)
-        self.authPanel.GetSizer().Add(l,border=15,flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND)
         import cvlsshutils.AAF_Auth
         import cvlsshutils.RequestsSessionSingleton
         p=wx.Panel(self.authPanel)
@@ -936,8 +935,9 @@ Usually the first time you access a remote computer you will enter your password
         t = wx.StaticText(p,wx.ID_ANY,label='AAF IdP')
         p.GetSizer().Add(t,flag=wx.ALL,border=15)
         p.GetSizer().Add(IdPComboBox,flag=wx.ALIGN_RIGHT|wx.ALL,proportion=1,border=15)
-        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND)
         self.authPanel.GetSizer().Add(self.copyIDModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
+        self.authPanel.GetSizer().Add(l,border=15,flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND)
+        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND)
 
 
 
