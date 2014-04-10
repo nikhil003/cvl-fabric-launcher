@@ -47,9 +47,7 @@ cmd = 'certtool y | grep "Developer ID Application"'
 print cmd
 certificateLine = commands.getoutput(cmd)
 print "certificateLine: " + certificateLine
-cmd = 'security default-keychain'
-print cmd
-keychainName=commands.getoutput(cmd)
+keychainName=os.environ['STRUDEL_KEYCHAIN']
 print "defaultKeychain: " + keychainName
 try:
     certificateName = certificateLine.split(": ",1)[1]
