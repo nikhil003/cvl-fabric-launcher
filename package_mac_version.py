@@ -94,7 +94,7 @@ print cmd
 os.environ['CODESIGN_ALLOCATE'] = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/codesign_allocate'
 # The bundle identifier (au.edu.monash.MASSIVE) referenced below is set in create_mac_bundle.py:
 if sign:
-    cmd = 'codesign --force -i "au.edu.monash.MASSIVE" --sign "%s" --verbose=4 dist/Strudel.app --keychain "%s"' % (certificateName,keychainName)
+    cmd = 'codesign --force -i "au.edu.monash.MASSIVE" --sign "%s" --verbose=4 dist/Strudel.app --keychain %s' % (certificateName,keychainName)
     print cmd
     os.system(cmd)
     cmd = 'codesign -vvvv dist/Strudel.app/'
@@ -109,7 +109,7 @@ if sign:
 source = os.path.join(os.getcwd(),'dist')
 applicationName = "Strudel"
 title = applicationName + " " + version
-size="80000"
+size="160000"
 finalDmgName = applicationName + " " + version
 
 tempDmgFile=tempfile.NamedTemporaryFile(prefix=finalDmgName+"_",suffix=".dmg",delete=True)
