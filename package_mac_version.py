@@ -43,14 +43,12 @@ certificateName = defaultCertificateName
 # So far, I haven't had any luck with using a 
 # generic (non-Apple) code-signing certificate.
 
-cmd = 'certtool y | grep "Developer ID Application"'
+keychainName=os.environ['STRUDEL_KEYCHAIN']
+print "defaultKeychain: " + keychainName
+cmd = 'certtool y k=%s | grep "Developer ID Application"'%keychainName
 print cmd
 certificateLine = commands.getoutput(cmd)
 print "certificateLine: " + certificateLine
-cmd = 'security default-keychain'
-print cmd
-keychainName=commands.getoutput(cmd)
-print "defaultKeychain: " + keychainName
 try:
     certificateName = certificateLine.split(": ",1)[1]
     print "certificateName: " + certificateName
