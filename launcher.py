@@ -680,7 +680,10 @@ class LauncherMainFrame(wx.Frame):
     def getNewSites(self,queue):
         newlist=[]
         try:
-            f=open(os.path.join(sys.path[0],"masterList.url"),'r')
+            if sys.platform.startswith("linux"):
+                f=open(os.path.join(sys.path[0],"masterList.url"),'r')
+            else:
+                f=open("masterList.url",'r')
             url=f.read().rstrip()
             logger.debug("master list of sites is available at %s"%url)
             newlist=siteConfig.getMasterSites(url)
