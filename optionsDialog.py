@@ -892,21 +892,24 @@ Don't remember me does not store this token permantly. You will need to enter a 
 """
 
         explanation2 = """
-Regardless of whether you choose "Remember me" "Don't Remember Me" you will at some point be required to authenticate yourself. 
-Many computer systems are setup to authenticate you by comparing your password to a local database. In this case the main screen of Strudel will ask for your username and you will be prompted for a password when you need to authenticate. Other systems are setup to query the Australian Access Federation. In this case you will be prompted for your academic institution, your username at that institution and your password at that insitution. To save time when logging into these systems (since most people have only one academic institution and username) you may prefill that information here. Otherwise you will be prompted when you log in.
+Regardless of whether you choose "Remember me" "Don't Remember Me" you will at some point be required to authenticate yourself.
+
+Many computer systems are setup to authenticate you by comparing your password to a local database. 
+
+Other systems are setup to query the Australian Access Federation. To save time when logging into these systems (since most people have only one academic institution and username) you may prefill that information here.
 """
 
 
 
         self.authPanel = wx.Panel(self.tabbedView,wx.ID_ANY)
         self.authPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
-        self.authPanel.Fit()
 
         self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation1)
         self.authModeExplanation.SetFont(self.smallFont)
         # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
         # The Static text will expand and wrap anyway
         self.authModeExplanation.SetMinSize(wx.Size(1,-1))
+        self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
 
         self.copyIDModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation2)
         self.copyIDModeExplanation.SetFont(self.smallFont)
@@ -944,7 +947,6 @@ Many computer systems are setup to authenticate you by comparing your password t
         p.GetSizer().Add(t,flag=wx.ALL,border=15)
         p.GetSizer().Add(IdPComboBox,flag=wx.ALIGN_RIGHT|wx.ALL,proportion=1,border=15)
         self.authPanel.GetSizer().Add(self.copyIDModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
-        self.authPanel.GetSizer().Add(l,border=15,flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND)
         self.authPanel.GetSizer().Add(p,flag=wx.EXPAND)
 
 

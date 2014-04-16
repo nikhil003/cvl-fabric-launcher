@@ -53,37 +53,62 @@ class IdentityMenu(wx.Menu):
         self.AppendItem(self.authOpts)
         self.launcherMainFrame.Bind(wx.EVT_MENU, self.onAuthenticationOptions, id=self.authOpts.GetId())
         
+        self.permSSHKey = wx.MenuItem(self,wx.ID_ANY,"Remember me on this computer",kind=wx.ITEM_RADIO)
+        self.launcherMainFrame.Bind(wx.EVT_MENU,self.onPermSSHKey,id=self.permSSHKey.GetId())
+        self.AppendItem(self.permSSHKey)
+
+        self.tempSSHKey = wx.MenuItem(self,wx.ID_ANY,"Don't remember me",kind=wx.ITEM_RADIO)
+        self.launcherMainFrame.Bind(wx.EVT_MENU,self.onTempSSHKey,id=self.tempSSHKey.GetId())
+        self.AppendItem(self.tempSSHKey)
         
 
         self.AppendSeparator()
 
         helpAboutKeysMenuItem = wx.NewId()
-        self.Append(helpAboutKeysMenuItem, "&Help about keys")
+        self.Append(helpAboutKeysMenuItem, "&Help about \"Remember me\"")
         self.launcherMainFrame.Bind(wx.EVT_MENU, self.onHelpAboutKeys, id=helpAboutKeysMenuItem)
+        self.setRadio(auth_mode)
+        self.disableItems(auth_mode)
+
+    def onTempSSHKey(self,event):
+        options = self.launcherMainFrame.getPrefsSection('Global Preferences')
+        options['auth_mode'] = self.launcherMainFrame.TEMP_SSH_KEY
+        self.launcherMainFrame.setPrefsSection('Global Preferences',options)
+        self.launcherMainFrame.savePrefs(section='Global Preferences')
+        self.disableItems(self.launcherMainFrame.TEMP_SSH_KEY)
+
+    def onPermSSHKey(self,event):
+        options = self.launcherMainFrame.getPrefsSection('Global Preferences')
+        options['auth_mode'] = self.launcherMainFrame.PERM_SSH_KEY
+        self.launcherMainFrame.setPrefsSection('Global Preferences',options)
+        self.launcherMainFrame.savePrefs(section='Global Preferences')
+        self.disableItems(self.launcherMainFrame.PERM_SSH_KEY)
+
+    def setRadio(self,state):
+        if state == self.launcherMainFrame.PERM_SSH_KEY:
+            self.permSSHKey.Check(True)
+            self.tempSSHKey.Check(False)
+        else:
+            self.permSSHKey.Check(False)
+            self.tempSSHKey.Check(True)
+    
+    def disableItems(self,state):
+        if state == self.launcherMainFrame.PERM_SSH_KEY:
+            enable=True
+        else:
+            enable=False
+        iditems = self.GetMenuItems()
+        for item in iditems:
+            item.Enable(enable)
+        self.authOpts.Enable(True)
+        self.tempSSHKey.Enable(True)
+        self.permSSHKey.Enable(True)
 
 
     def privateKeyExists(self,warnIfNotFoundInLocalSettings=False):
         import cvlsshutils
 
         km=cvlsshutils.KeyModel.KeyModel()
-        #exists=self.launcherMainFrame.keyModel.privateKeyExists()
-        #self.privateKeyFilePath = os.path.join(os.path.expanduser('~'), '.ssh', "MassiveLauncherKey")
-        #if self.massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_launcher_private_key_path"):
-        #    self.privateKeyFilePath = self.massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_launcher_private_key_path")
-        #else:
-        #    defaultKeyPath = os.path.join(os.path.expanduser('~'), '.ssh', "MassiveLauncherKey")
-        #    if warnIfNotFoundInLocalSettings:
-        #        dlg = wx.MessageDialog(None,
-        #                    "Warning: Launcher key path was not found in your local settings.\n\n"
-        #                    "I'll assume it to be: " + defaultKeyPath,
-        #                    "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
-        #        dlg.ShowModal()
-        #    self.massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_launcher_private_key_path", defaultKeyPath)
-        #    with open(self.massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-        #        self.massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-
-        #self.sshPathsObject = sshpaths
-
         return km.privateKeyExists()
 
     def offerToCreateKey(self):
