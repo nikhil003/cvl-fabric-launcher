@@ -884,6 +884,12 @@ class LauncherMainFrame(wx.Frame):
         self.updateVisibility()
 
 
+
+    def createAndShowModalDialog(self,q,dlgclass,*args,**kwargs):
+        dlg=dlgclass(*args,**kwargs)
+        r=dlg.ShowModal()
+        q.put(r)
+
     def createMultiButtonDialog(self,q,*args,**kwargs):
         dlg=LauncherOptionsDialog.multiButtonDialog(*args,**kwargs)
         q.put(dlg)
@@ -1030,8 +1036,9 @@ class LauncherMainFrame(wx.Frame):
 
         if latestVersionNumber > launcher_version_number.version_number:
             import new_version_alert_dialog
-            newVersionAlertDialog = new_version_alert_dialog.NewVersionAlertDialog(self, wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
-            wx.CallAfter(newVersionAlertDialog.ShowModal)
+            q=Queue.Queue()
+            wx.CallAfter(self.createAndShowModalDialog,q,new_version_alert_dialog.NewVersionAlertDialog,self,wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
+            q.get()
             logger.debug('Old launcher version !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             logger.debug('launcher version: ' + str(launcher_version_number.version_number))
 
@@ -1170,9 +1177,12 @@ class LauncherMainFrame(wx.Frame):
             self.setPrefsSection("Global Preferences",options)
             self.savePrefs(section="Global Preferences")
         dlg.Destroy()
-        auth_mode = int(self.getPrefsSection('Global Preferences')['auth_mode'])
-        self.identity_menu.setRadio(auth_mode)
-        self.identity_menu.disableItems(auth_mode)
+        options=self.getPrefsSection('Global Preferences')
+        #auth_mode won't be set if, for example, this is the first use and the user displayed options then canceled
+        if options.has_key('auth_mode'): 
+            auth_mode = int(options['auth_mode'])
+            self.identity_menu.setRadio(auth_mode)
+            self.identity_menu.disableItems(auth_mode)
 
     def onCut(self, event):
         textCtrl = self.FindFocus()
