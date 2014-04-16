@@ -326,6 +326,7 @@ class siteConfig():
     def __init__(self,**kwargs):
         self.loginHost=None
         self.username=None
+        self.defaultHours=48
         self.listAll=cmdRegEx(failFatal=False)
         self.running=cmdRegEx()
         self.stop=cmdRegEx(failFatal=False)

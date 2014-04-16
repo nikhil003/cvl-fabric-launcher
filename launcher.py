@@ -196,6 +196,13 @@ class LauncherMainFrame(wx.Frame):
             self.prefs.set(section,key,"%s"%options[key])
         pass
     
+    def loadSiteDefaults(self,configName):
+        try:
+            site=self.sites[configName]
+            self.FindWindowByName("jobParams_hours").SetValue(int(site.defaultHours))
+        except:
+            logger.debug("unable to set the default wall time hours")
+
 # Use this method to a) Figure out if we have a default site b) load the parameters for that site.
     def loadPrefs(self,window=None,site=None):
         assert self.prefs != None
@@ -942,6 +949,7 @@ class LauncherMainFrame(wx.Frame):
             
         #cb.SetSelection(0)
         if (redraw):
+            self.loadSiteDefaults(configName=self.FindWindowByName('jobParams_configName').GetValue())
             self.loadPrefs()
             self.updateVisibility()
         #    self.updateVisibility(self.noneVisible)
@@ -1050,6 +1058,7 @@ class LauncherMainFrame(wx.Frame):
 
     def onSiteConfigChanged(self,event):
         self.Freeze()
+        self.loadSiteDefaults(configName=event.GetEventObject().GetValue())
         self.loadPrefs(site=event.GetEventObject().GetValue())
         self.updateVisibility()
         self.Thaw()
