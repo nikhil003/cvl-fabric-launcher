@@ -68,7 +68,7 @@ class NewVersionAlertDialog(wx.Dialog):
 
         newVersionAlertPanel = wx.Panel(self)
 
-        newVersionAlertPanelSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=5, hgap=5)
+        newVersionAlertPanelSizer = wx.BoxSizer(wx.VERTICAL)
         newVersionAlertPanel.SetSizer(newVersionAlertPanelSizer)
 
         newVersionAlertTitleLabel = wx.StaticText(newVersionAlertPanel,
@@ -77,9 +77,9 @@ class NewVersionAlertDialog(wx.Dialog):
         font.SetPointSize(14)
         font.SetWeight(wx.BOLD)
         newVersionAlertTitleLabel.SetFont(font)
-        newVersionAlertPanelSizer.Add(wx.StaticText(newVersionAlertPanel))
+        newVersionAlertPanelSizer.Add(wx.StaticText(newVersionAlertPanel,label=""))
         newVersionAlertPanelSizer.Add(newVersionAlertTitleLabel, flag=wx.EXPAND)
-        newVersionAlertPanelSizer.Add(wx.StaticText(newVersionAlertPanel))
+        newVersionAlertPanelSizer.Add(wx.StaticText(newVersionAlertPanel,label=""))
 
         newVersionAlertTextLabel1 = wx.StaticText(newVersionAlertPanel,
             label =
@@ -150,7 +150,7 @@ class NewVersionAlertDialog(wx.Dialog):
         okButton = wx.Button(newVersionAlertPanel, 1, ' OK ')
         okButton.SetDefault()
         newVersionAlertPanelSizer.Add(okButton, flag=wx.ALIGN_RIGHT)
-        newVersionAlertPanelSizer.Add(wx.StaticText(newVersionAlertPanel))
+        newVersionAlertPanelSizer.Add(wx.StaticText(newVersionAlertPanel,label=""))
         newVersionAlertPanelSizer.Fit(newVersionAlertPanel)
 
         self.Bind(wx.EVT_BUTTON, onOK, id=1)
