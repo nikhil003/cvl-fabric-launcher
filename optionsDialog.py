@@ -859,13 +859,17 @@ class GlobalOptionsDialog(wx.Dialog):
         self.statsPanel.SetSizer(wx.FlexGridSizer(rows=2,cols=2,vgap=5,hgap=5))
         self.globalsBottomPanelSizer.Add(self.statsPanel)
         t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="Send anonymous usage statistics to help make Strudel better")
-        self.statsPanel.GetSizer().Add(t,flag=wx.CENTER|wx.ALL,border=5)
+        t.SetFont(self.smallFont)
+        self.statsPanel.GetSizer().Add(t,flag=wx.ALIGN_CENTER|wx.ALL,border=5)
         log=wx.ComboBox(self.statsPanel,wx.ID_ANY,name='logstats',choices=["Yes please","No thanks"])
-        self.statsPanel.GetSizer().Add(log,flag=wx.ALL,border=5)
+        log.SetFont(self.smallFont)
+        self.statsPanel.GetSizer().Add(log,flag=wx.CENTER|wx.ALL,border=5)
         t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="UUID")
+        t.SetFont(self.smallFont)
         t.Hide()
         self.statsPanel.GetSizer().Add(t)
         uuid=wx.TextCtrl(self.statsPanel,wx.ID_ANY,name='uuid')
+        uuid.SetFont(self.smallFont)
         self.statsPanel.GetSizer().Add(uuid)
         uuid.Hide()
 
@@ -887,8 +891,16 @@ class GlobalOptionsDialog(wx.Dialog):
         choices=["Use an SSH key pair","Use my password"]
         if sys.platform.startswith("darwin"):
             self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
-        rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Authentication Mode",choices=choices)
-        self.authPanel.GetSizer().Add(rb,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
+        #rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Authentication Mode",choices=choices)
+        p=wx.Panel(self.authPanel)
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        t=wx.StaticText(p,wx.ID_ANY,"Authentication Mode")
+        t.SetFont(self.smallFont)
+        p.GetSizer().Add(t,flag=wx.ALIGN_CENTER)
+        cb=wx.ComboBox(p,wx.ID_ANY,name="auth_mode",choices=choices,style=wx.CB_READONLY)
+        cb.SetFont(self.smallFont)
+        p.GetSizer().Add(cb,flag=wx.ALIGN_CENTER|wx.LEFT,border=15,proportion=0)
+        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
 #        explanation = "The Launcher's preferred mode of operating (\"private mode\") involves creating a \"~/.ssh/MassiveLauncherKey\" private key file within your home directory, " + \
 #                        "and using an SSH Agent (e.g. PuTTY's Pageant) to load the private key into memory, so that you don't need to enter your password " + \
 #                        "every time you run the Launcher.\n\n" + \
