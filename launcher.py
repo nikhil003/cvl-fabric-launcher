@@ -431,7 +431,7 @@ class LauncherMainFrame(wx.Frame):
         self.siteConfigPanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY)
         self.siteConfigPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.configLabel = wx.StaticText(self.siteConfigPanel, wx.ID_ANY, 'Site')
-        self.siteConfigPanel.GetSizer().Add(self.configLabel, proportion=0, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, border=5)
+        self.siteConfigPanel.GetSizer().Add(self.configLabel, proportion=0, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, border=5)
         self.siteConfigComboBox = wx.ComboBox(self.siteConfigPanel, wx.ID_ANY, choices=self.sites.keys(), style=wx.CB_READONLY,name='jobParams_configName')
         self.siteConfigComboBox.Bind(wx.EVT_COMBOBOX, self.onSiteConfigChanged)
         self.siteConfigPanel.GetSizer().Add(self.siteConfigComboBox, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
@@ -440,7 +440,7 @@ class LauncherMainFrame(wx.Frame):
         self.loginHostPanel=wx.Panel(self.loginFieldsPanel,name='loginHostPanel')
         self.loginHostPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.loginHostLabel = wx.StaticText(self.loginHostPanel, wx.ID_ANY, 'Server name or IP',name='label_loginHost')
-        self.loginHostPanel.GetSizer().Add(self.loginHostLabel, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginHostPanel.GetSizer().Add(self.loginHostLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginHostTextField = wx.TextCtrl(self.loginHostPanel, wx.ID_ANY, size=(widgetWidth2, -1),name='jobParams_loginHost')
         self.loginHostPanel.GetSizer().Add(self.loginHostTextField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.loginHostPanel,proportion=0,flag=wx.EXPAND)
@@ -449,7 +449,7 @@ class LauncherMainFrame(wx.Frame):
         self.usernamePanel=wx.Panel(self.loginFieldsPanel,name='usernamePanel')
         self.usernamePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.usernameLabel = wx.StaticText(self.usernamePanel, wx.ID_ANY, 'Username',name='label_username')
-        self.usernamePanel.GetSizer().Add(self.usernameLabel, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.usernamePanel.GetSizer().Add(self.usernameLabel, proportion=1,flag=wx.ALIGN_CENTER|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=5)
         self.usernameTextField = wx.TextCtrl(self.usernamePanel, wx.ID_ANY, size=(widgetWidth2, -1),name='jobParams_username')
         self.usernamePanel.GetSizer().Add(self.usernameTextField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.usernamePanel,proportion=0,flag=wx.EXPAND)
@@ -457,28 +457,28 @@ class LauncherMainFrame(wx.Frame):
         self.projectPanel = wx.Panel(self.loginFieldsPanel,wx.ID_ANY,name="projectPanel")
         self.projectPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.projectLabel = wx.StaticText(self.projectPanel, wx.ID_ANY, 'Project')
-        self.projectPanel.GetSizer().Add(self.projectLabel, proportion=1, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, border=5)
+        self.projectPanel.GetSizer().Add(self.projectLabel, proportion=1, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
         self.projectField = wx.TextCtrl(self.projectPanel, wx.ID_ANY, size=(widgetWidth2, -1), name='jobParams_project')
         #self.projectComboBox.Bind(wx.EVT_TEXT, self.onProjectTextChanged)
         self.projectPanel.GetSizer().Add(self.projectField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.loginFieldsPanel.GetSizer().Add(self.projectPanel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL)
+        self.loginFieldsPanel.GetSizer().Add(self.projectPanel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
 
         self.resourcePanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY,name="resourcePanel")
         self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
 
         self.hoursLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Hours requested')
-        self.resourcePanel.GetSizer().Add(self.hoursLabel, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.hoursLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         # Maximum of 336 hours is 2 weeks:
         #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
         self.hoursField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=336,name='jobParams_hours')
         self.resourcePanel.GetSizer().Add(self.hoursField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes')
-        self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.nodesField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="1", size=(widgetWidth3,-1), min=1,max=10,name='jobParams_nodes')
         self.resourcePanel.GetSizer().Add(self.nodesField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.ppnLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'PPN',name='ppnLabel')
-        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.ppnField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="12", size=(widgetWidth3,-1), min=1,max=12,name='jobParams_ppn')
         self.resourcePanel.GetSizer().Add(self.ppnField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.resourcePanel, proportion=0,border=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL)
@@ -487,7 +487,7 @@ class LauncherMainFrame(wx.Frame):
         self.resolutionPanel = wx.Panel(self.loginFieldsPanel,name="resolutionPanel")
         self.resolutionPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.resolutionLabel = wx.StaticText(self.resolutionPanel, wx.ID_ANY, 'Resolution',name='label_resolution')
-        self.resolutionPanel.GetSizer().Add(self.resolutionLabel, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.resolutionPanel.GetSizer().Add(self.resolutionLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
 
         defaultResolution = "Default resolution"
@@ -502,7 +502,7 @@ class LauncherMainFrame(wx.Frame):
         self.cipherPanel = wx.Panel(self.loginFieldsPanel,name="cipherPanel")
         self.cipherPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.sshTunnelCipherLabel = wx.StaticText(self.cipherPanel, wx.ID_ANY, 'SSH tunnel cipher',name='label_cipher')
-        self.cipherPanel.GetSizer().Add(self.sshTunnelCipherLabel, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.cipherPanel.GetSizer().Add(self.sshTunnelCipherLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
         if sys.platform.startswith("win"):
             defaultCipher = "arcfour"
@@ -523,8 +523,8 @@ class LauncherMainFrame(wx.Frame):
         l = wx.StaticText(p, wx.ID_ANY, 'Show debug window')
         c = wx.CheckBox(p, wx.ID_ANY, "",name='debugCheckBox')
         c.Bind(wx.EVT_CHECKBOX, self.onDebugWindowCheckBoxStateChanged)
-        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
-        p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
+        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
         self.checkBoxPanel.GetSizer().Add(p,flag=wx.ALIGN_LEFT)
     
         t=wx.StaticText(self.checkBoxPanel,label="")
@@ -535,8 +535,8 @@ class LauncherMainFrame(wx.Frame):
         l = wx.StaticText(p, wx.ID_ANY, 'Show Advanced Options')
         c = wx.CheckBox(p, wx.ID_ANY, "",name='advancedCheckBox')
         c.Bind(wx.EVT_CHECKBOX, self.onAdvancedVisibilityStateChanged)
-        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
-        p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
+        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
         self.checkBoxPanel.GetSizer().Add(p,flag=wx.ALIGN_RIGHT)
 
         self.loginFieldsPanel.GetSizer().Add(self.checkBoxPanel,flag=wx.ALIGN_BOTTOM|wx.EXPAND,proportion=1)
@@ -889,6 +889,12 @@ class LauncherMainFrame(wx.Frame):
         self.updateVisibility()
 
 
+
+    def createAndShowModalDialog(self,q,dlgclass,*args,**kwargs):
+        dlg=dlgclass(*args,**kwargs)
+        r=dlg.ShowModal()
+        q.put(r)
+
     def createMultiButtonDialog(self,q,*args,**kwargs):
         dlg=LauncherOptionsDialog.multiButtonDialog(*args,**kwargs)
         q.put(dlg)
@@ -1035,8 +1041,9 @@ class LauncherMainFrame(wx.Frame):
 
         if latestVersionNumber > launcher_version_number.version_number:
             import new_version_alert_dialog
-            newVersionAlertDialog = new_version_alert_dialog.NewVersionAlertDialog(self, wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
-            wx.CallAfter(newVersionAlertDialog.ShowModal)
+            q=Queue.Queue()
+            wx.CallAfter(self.createAndShowModalDialog,q,new_version_alert_dialog.NewVersionAlertDialog,self,wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
+            q.get()
             logger.debug('Old launcher version !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             logger.debug('launcher version: ' + str(launcher_version_number.version_number))
 
@@ -1071,7 +1078,6 @@ class LauncherMainFrame(wx.Frame):
         self.loadPrefs(site=event.GetEventObject().GetValue())
         self.updateVisibility()
         self.Thaw()
-        self.configName=self.FindWindowByName('jobParams_configName').GetValue()
 
 
     def onAdvancedVisibilityStateChanged(self, event):
@@ -1113,13 +1119,10 @@ class LauncherMainFrame(wx.Frame):
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
         globalOptions = self.getPrefsSection("Global Preferences")
-        if globalOptions.has_key('copyid_mode'):
-            if sc==None:
-                sc=self.FindWindowByName('jobParams_configName').GetValue()
-            if self.sites[sc].authURL!=None and int(globalOptions['copyid_mode'])==1:
-                self.FindWindowByName('usernamePanel').Hide()
-            else:
-                print "authurl is %s"%self.sites[sc].authURL
+        if sc==None:
+            sc=self.FindWindowByName('jobParams_configName').GetValue()
+        if self.sites[sc].authURL!=None:
+            self.FindWindowByName('usernamePanel').Hide()
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
 
@@ -1188,7 +1191,12 @@ class LauncherMainFrame(wx.Frame):
             self.setPrefsSection("Global Preferences",options)
             self.savePrefs(section="Global Preferences")
         dlg.Destroy()
-        self.updateVisibility()
+        options=self.getPrefsSection('Global Preferences')
+        #auth_mode won't be set if, for example, this is the first use and the user displayed options then canceled
+        if options.has_key('auth_mode'): 
+            auth_mode = int(options['auth_mode'])
+            self.identity_menu.setRadio(auth_mode)
+            self.identity_menu.disableItems(auth_mode)
 
     def onCut(self, event):
         textCtrl = self.FindFocus()
@@ -1342,17 +1350,17 @@ class LauncherMainFrame(wx.Frame):
 
         options=self.getPrefsSection('Global Preferences')
         print options
-        while not options.has_key('copyid_mode'):
-            print "querying auth mode"
+        while not options.has_key('auth_mode'):
             self.queryAuthMode()
             options=self.getPrefsSection('Global Preferences')
 
 
+        configName=self.FindWindowByName('jobParams_configName').GetValue()
         jobParams = self.buildJobParams(self)
-        if jobParams['username'] == "" and int(options['copyid_mode'])!=1:
+
+        if jobParams['username'] == "" and self.sites[configName].authURL!=None:
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
-                    #"MASSIVE/CVL Launcher", style=wx.OK | wx.ICON_INFORMATION)
                     self.programName)
             dlg.ShowModal()
             self.loginButton.Enable()
@@ -1395,10 +1403,9 @@ class LauncherMainFrame(wx.Frame):
         jobParams=self.buildJobParams(self)
         jobParams['strudel_platform']=platformstr
         jobParams['wallseconds']=int(jobParams['hours'])*60*60
-        self.configName=self.FindWindowByName('jobParams_configName').GetValue()
         autoExit=False
         globalOptions = self.getPrefsSection("Global Preferences")
-        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[self.configName],displayStrings=self.sites[self.configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo,removeKeyOnExit=removeKeyOnExit)
+        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[configName],displayStrings=self.sites[configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo,removeKeyOnExit=removeKeyOnExit)
         oldParams  = jobParams.copy()
         lp.setCallback(lambda jobParams: self.loginComplete(lp,oldParams,jobParams))
         lp.setCancelCallback(lambda jobParams: self.loginCancel(lp,oldParams,jobParams))
