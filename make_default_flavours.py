@@ -617,7 +617,7 @@ defaultSites['CVL 16 core node']=multicpu
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('cvl_flavours_20140410.json','w') as f:
+with open('cvl_aaf_flavours_20140419.json','w') as f:
     f.write(jsons)
 
 defaultSites=collections.OrderedDict()
