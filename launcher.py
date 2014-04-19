@@ -576,6 +576,12 @@ class LauncherMainFrame(wx.Frame):
         #self.Centre()
 
         self.hiddenWindow=wx.Frame(self)
+        self.hiddenWindow.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        t=wx.TextCtrl(self.hiddenWindow,wx.ID_ANY,name='jobParams_aaf_idp')
+        self.hiddenWindow.GetSizer().Add(t)
+        t=wx.TextCtrl(self.hiddenWindow,wx.ID_ANY,name='jobParams_aaf_username')
+        self.hiddenWindow.GetSizer().Add(t)
+
         # any controls created on this frame will be inaccessible to the user, but if we set them it will cause them to be saved to the config file
 
         self.logWindow = wx.Frame(self, title="%s Debug Log"%self.programName, name="%s Debug Log"%self.programName,pos=(200,150),size=(700,450))
@@ -1053,7 +1059,7 @@ class LauncherMainFrame(wx.Frame):
         for item in window.GetChildren():
             name = item.GetName()
             if ('jobParam' in name):
-                (prefix,keyname) = name.split('_') 
+                (prefix,keyname) = name.split('_',1) 
                 if isinstance(item,wx.RadioBox):
                     jobParams[keyname]=item.GetSelection()
                 else:
