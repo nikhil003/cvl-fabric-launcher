@@ -1659,6 +1659,8 @@ class LoginProcess():
 
         #self.keyModel.useAAF(True)
         self.threads=[]
+        self._eventLock=threading.Lock()
+        self._shownNetworkFault=threading.Event()
         self._canceled=threading.Event()
         self._shutdown=threading.Event()
         self.autoExit = autoExit
@@ -1923,17 +1925,28 @@ class LoginProcess():
         r=dlg.ShowModal()
         q.put(r)
     
+    def createAndShowModalDialog(self,q,dlgclass,*args,**kwargs):
+        dlg=dlgclass(*args,**kwargs)
+        r=dlg.ShowModal()
+        q.put(r)
 
     def networkFaultShutdown(self):
         import requests
         from utilityFunctions import LAUNCHER_URL
         logger.debug("Processing networkFaultShutdown")
-        if not self._canceled.isSet() and not self._shutdown.isSet():
+        self._eventLock.acquire()
+        showDialog=False
+        if not self._shownNetworkFault.isSet():
+            if not self._canceled.isSet() and not self._shutdown.isSet():
+                self._shownNetworkFault.set()
+                showDialog=True
+        self._eventLock.release()
+
+        if showDialog:
             msg=self.displayStrings.networkError
-            dlg = LauncherMessageDialog(self.notify_window,title=self.parentWindow.programName,message=msg,helpEmailAddress=self.displayStrings.helpEmailAddress)
             import Queue
             q=Queue.Queue()
-            wx.CallAfter(self.showModalFromThread(dlg,q))
+            wx.CallAfter(self.createAndShowModalDialog,q,LauncherMessageDialog,self.notify_window,title=self.parentWindow.programName,message=msg,helpEmailAddress=self.displayStrings.helpEmailAddress)
             q.get()
             try:
                 r=requests.get(LAUNCHER_URL,timeout=10)
