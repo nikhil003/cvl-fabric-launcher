@@ -885,28 +885,13 @@ class GlobalOptionsDialog(wx.Dialog):
 
         # Privacy tab
 
-        explanation1 = """
-Remember me stores an access token on your computers. You will need to enter a passphrase to unlock this token each time your computer boots. This is not recomended if many people share this computer (as in a lab environment)
-
-Don't remember me does not store this token permantly. You will need to enter a password (or some other authentication) each time you access a remote computer.
-"""
-
-
-
-
         self.authPanel = wx.Panel(self.tabbedView,wx.ID_ANY)
         self.authPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
-
-        self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation1)
-        self.authModeExplanation.SetFont(self.smallFont)
-        # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
-        # The Static text will expand and wrap anyway
-        self.authModeExplanation.SetMinSize(wx.Size(1,-1))
-
-
-        choices=["Remember me on this computer","Don't remember me"]
+        self.authPanel.Fit()
+        choices=["Use an SSH key pair","Use my password"]
         if sys.platform.startswith("darwin"):
             self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
+        #rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Authentication Mode",choices=choices)
         p=wx.Panel(self.authPanel)
         p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         t=wx.StaticText(p,wx.ID_ANY,"Authentication Mode")
@@ -916,15 +901,39 @@ Don't remember me does not store this token permantly. You will need to enter a 
         cb.SetFont(self.smallFont)
         p.GetSizer().Add(cb,flag=wx.ALIGN_CENTER|wx.LEFT,border=15,proportion=0)
         self.authPanel.GetSizer().Add(p,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
+#        explanation = "The Launcher's preferred mode of operating (\"private mode\") involves creating a \"~/.ssh/MassiveLauncherKey\" private key file within your home directory, " + \
+#                        "and using an SSH Agent (e.g. PuTTY's Pageant) to load the private key into memory, so that you don't need to enter your password " + \
+#                        "every time you run the Launcher.\n\n" + \
+#                        "If you are running the Launcher on a shared computer (e.g. if you are using a \"Guest\") account, then you should use \"public mode\". " + \
+#                        "When running in \"public mode\", you will need to enter your password every time you run the Launcher.\n\n"
+        explanation = """
+When we communicate with the desktop, we use a cryptographic token called an RSA Key Pair. You can either generate a permanent key pair, and store it on your computer, or use your password to generate a temporary keypair each time you use the launcher.
+
+If you use a permanent SSH key pair, you will be asked to unlock your keys the first time you use the Launcher after a reboot. Thereafter you won't be asked for a password. This method is advisable if you are the only person who uses this account to log into your computer.
+
+If you use a password to authenticate, a new keypair will be generated each time you use the launcher, and you will need to re-enter your password each time you connect. This method is advisable if multiple people share this computer (as in a computer lab).
+"""
+
+
+ #       explanation = "The Launcher's preferred mode of operating (\"private mode\") involves creating a \"~/.ssh/MassiveLauncherKey\" private key file within your home directory, and using an SSH Agent (e.g. PuTTY's Pageant) to load the private key into memory, so that you don't need to enter your password every time you run the Launcher.\nIf you are running the Launcher on a shared computer (e.g. if you are using a \"Guest\") account, then you should use \"public mode\". When running in \"public mode\", you will need to enter your password every time you run the Launcher."
+                        #"Future versions of the Launcher may have the ability to manage multiple private key files from within a single " + \
+                        #"\"Guest\" account, so it may then be possible to run the Launcher in \"private mode\" from within a \"Guest\" " + \
+                        #"account."
+        self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation)
+        self.authModeExplanation.SetFont(self.smallFont)
+        # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
+        # The Static text will expand and wrap anyway
+        self.authModeExplanation.SetMinSize(wx.Size(1,1))
         self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
-
-
-
         self.authPanel.Layout()
         var='auth_mode'
         if var in globalOptions:
             auth_mode = self.FindWindowByName(var)
             auth_mode.SetSelection(int(globalOptions[var]))
+            # Fire the event manually, as this will control enabled/disabled of some menu items
+            nextevent = wx.CommandEvent(wx.wxEVT_COMMAND_RADIOBOX_SELECTED, auth_mode.GetId())
+            nextevent.SetEventObject(auth_mode)
+            wx.PostEvent(auth_mode.GetEventHandler(),nextevent)
         var='uuid'
         uuidtc = self.FindWindowByName(var)
         if var in globalOptions:
