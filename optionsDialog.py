@@ -891,13 +891,6 @@ Remember me stores an access token on your computers. You will need to enter a p
 Don't remember me does not store this token permantly. You will need to enter a password (or some other authentication) each time you access a remote computer.
 """
 
-        explanation2 = """
-Regardless of whether you choose "Remember me" "Don't Remember Me" you will at some point be required to authenticate yourself.
-
-Many computer systems are setup to authenticate you by comparing your password to a local database. 
-
-Other systems are setup to query the Australian Access Federation. To save time when logging into these systems (since most people have only one academic institution and username) you may prefill that information here.
-"""
 
 
 
@@ -909,13 +902,6 @@ Other systems are setup to query the Australian Access Federation. To save time 
         # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
         # The Static text will expand and wrap anyway
         self.authModeExplanation.SetMinSize(wx.Size(1,-1))
-        self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
-
-        self.copyIDModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation2)
-        self.copyIDModeExplanation.SetFont(self.smallFont)
-        # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
-        # The Static text will expand and wrap anyway
-        self.copyIDModeExplanation.SetMinSize(wx.Size(1,-1))
 
 
         choices=["Remember me on this computer","Don't remember me"]
@@ -930,24 +916,7 @@ Other systems are setup to query the Australian Access Federation. To save time 
         cb.SetFont(self.smallFont)
         p.GetSizer().Add(cb,flag=wx.ALIGN_CENTER|wx.LEFT,border=15,proportion=0)
         self.authPanel.GetSizer().Add(p,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
-
-        import cvlsshutils.AAF_Auth
-        import cvlsshutils.RequestsSessionSingleton
-        p=wx.Panel(self.authPanel)
-        p.SetSizer(wx.FlexGridSizer(rows=1, cols=4))
-        t=wx.StaticText(p,wx.ID_ANY,label='AAF Username')
-        p.GetSizer().Add(t,flag=wx.ALL,border=15)
-        tc=wx.TextCtrl(p,wx.ID_ANY,value='',name='aaf_username')
-        p.GetSizer().Add(tc,flag=wx.ALL|wx.EXPAND,border=15,proportion=0)
-        session=cvlsshutils.RequestsSessionSingleton.RequestsSessionSingleton().GetSession()
-        choices=cvlsshutils.AAF_Auth.AAF_Auth(None,None,None).getIdPChoices(session)
-        self.idpchoices=[list(t) for t in zip(*choices)]
-        IdPComboBox = wx.ComboBox(p, wx.ID_ANY, choices=self.idpchoices[1], style=wx.CB_READONLY,name='aaf_idp')
-        t = wx.StaticText(p,wx.ID_ANY,label='AAF IdP')
-        p.GetSizer().Add(t,flag=wx.ALL,border=15)
-        p.GetSizer().Add(IdPComboBox,flag=wx.ALIGN_RIGHT|wx.ALL,proportion=1,border=15)
-        self.authPanel.GetSizer().Add(self.copyIDModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
-        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND)
+        self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
 
 
 
@@ -956,14 +925,6 @@ Other systems are setup to query the Australian Access Federation. To save time 
         if var in globalOptions:
             auth_mode = self.FindWindowByName(var)
             auth_mode.SetSelection(int(globalOptions[var]))
-        var='aaf_username'
-        if var in globalOptions:
-            username = self.FindWindowByName(var)
-            username.SetValue(globalOptions[var])
-        var='aaf_idp'
-        if var in globalOptions:
-            idp = self.FindWindowByName(var)
-            idp.SetValue(globalOptions[var])
         var='uuid'
         uuidtc = self.FindWindowByName(var)
         if var in globalOptions:
@@ -1170,8 +1131,6 @@ Other systems are setup to query the Australian Access Federation. To save time 
             self.globalOptions['logfile'] = self.vncViewerLogFilenameTextField.GetValue()
         self.globalOptions['share_local_home_directory_on_remote_desktop'] = self.shareLocalHomeDirectoryOnRemoteDesktopCheckBox.GetValue()
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
-        self.globalOptions['aaf_username']=self.FindWindowByName('aaf_username').GetValue()
-        self.globalOptions['aaf_idp']=self.FindWindowByName('aaf_idp').GetValue()
         self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
         self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
 
