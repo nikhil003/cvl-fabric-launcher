@@ -859,13 +859,17 @@ class GlobalOptionsDialog(wx.Dialog):
         self.statsPanel.SetSizer(wx.FlexGridSizer(rows=2,cols=2,vgap=5,hgap=5))
         self.globalsBottomPanelSizer.Add(self.statsPanel)
         t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="Send anonymous usage statistics to help make Strudel better")
-        self.statsPanel.GetSizer().Add(t,flag=wx.CENTER|wx.ALL,border=5)
+        t.SetFont(self.smallFont)
+        self.statsPanel.GetSizer().Add(t,flag=wx.ALIGN_CENTER|wx.ALL,border=5)
         log=wx.ComboBox(self.statsPanel,wx.ID_ANY,name='logstats',choices=["Yes please","No thanks"])
-        self.statsPanel.GetSizer().Add(log,flag=wx.ALL,border=5)
+        log.SetFont(self.smallFont)
+        self.statsPanel.GetSizer().Add(log,flag=wx.CENTER|wx.ALL,border=5)
         t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="UUID")
+        t.SetFont(self.smallFont)
         t.Hide()
         self.statsPanel.GetSizer().Add(t)
         uuid=wx.TextCtrl(self.statsPanel,wx.ID_ANY,name='uuid')
+        uuid.SetFont(self.smallFont)
         self.statsPanel.GetSizer().Add(uuid)
         uuid.Hide()
 
@@ -887,57 +891,32 @@ Remember me stores an access token on your computers. You will need to enter a p
 Don't remember me does not store this token permantly. You will need to enter a password (or some other authentication) each time you access a remote computer.
 """
 
-        explanation2 = """
-Usually the first time you access a remote computer you will enter your passwordeven if Strudel is set to subsequently remember you. For some remote computers it is possible to use the Australian Access Federation, which links your account on a remote computer such as the Characterisation VL to your username and password at your University.
-"""
 
 
 
         self.authPanel = wx.Panel(self.tabbedView,wx.ID_ANY)
         self.authPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
-        self.authPanel.Fit()
 
         self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation1)
         self.authModeExplanation.SetFont(self.smallFont)
         # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
         # The Static text will expand and wrap anyway
-        #self.authModeExplanation.SetMinSize(wx.Size(1,200))
         self.authModeExplanation.SetMinSize(wx.Size(1,-1))
-
-        self.copyIDModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation2)
-        self.copyIDModeExplanation.SetFont(self.smallFont)
-        # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
-        # The Static text will expand and wrap anyway
-        self.copyIDModeExplanation.SetMinSize(wx.Size(1,-1))
 
 
         choices=["Remember me on this computer","Don't remember me"]
         if sys.platform.startswith("darwin"):
             self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
-        rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Remember me on this computer",choices=choices)
-        self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
-        self.authPanel.GetSizer().Add(rb,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
-
-        choices=['Use my password on this site','Use my AAF password']
-        l=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="copyid_mode",label="Authentication Provider",choices=choices)
-        import cvlsshutils.AAF_Auth
-        import cvlsshutils.RequestsSessionSingleton
         p=wx.Panel(self.authPanel)
-        p.SetSizer(wx.FlexGridSizer(rows=1, cols=4))
-        t=wx.StaticText(p,wx.ID_ANY,label='AAF Username')
-        p.GetSizer().Add(t,flag=wx.ALL,border=15)
-        tc=wx.TextCtrl(p,wx.ID_ANY,value='',name='aaf_username')
-        p.GetSizer().Add(tc,flag=wx.ALL|wx.EXPAND,border=15,proportion=0)
-        session=cvlsshutils.RequestsSessionSingleton.RequestsSessionSingleton().GetSession()
-        choices=cvlsshutils.AAF_Auth.AAF_Auth(None,None,None).getIdPChoices(session)
-        self.idpchoices=[list(t) for t in zip(*choices)]
-        IdPComboBox = wx.ComboBox(p, wx.ID_ANY, choices=self.idpchoices[1], style=wx.CB_READONLY,name='aaf_idp')
-        t = wx.StaticText(p,wx.ID_ANY,label='AAF IdP')
-        p.GetSizer().Add(t,flag=wx.ALL,border=15)
-        p.GetSizer().Add(IdPComboBox,flag=wx.ALIGN_RIGHT|wx.ALL,proportion=1,border=15)
-        self.authPanel.GetSizer().Add(self.copyIDModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
-        self.authPanel.GetSizer().Add(l,border=15,flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND)
-        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND)
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        t=wx.StaticText(p,wx.ID_ANY,"Authentication Mode")
+        t.SetFont(self.smallFont)
+        p.GetSizer().Add(t,flag=wx.ALIGN_CENTER)
+        cb=wx.ComboBox(p,wx.ID_ANY,name="auth_mode",choices=choices,style=wx.CB_READONLY)
+        cb.SetFont(self.smallFont)
+        p.GetSizer().Add(cb,flag=wx.ALIGN_CENTER|wx.LEFT,border=15,proportion=0)
+        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
+        self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
 
 
 
@@ -946,18 +925,6 @@ Usually the first time you access a remote computer you will enter your password
         if var in globalOptions:
             auth_mode = self.FindWindowByName(var)
             auth_mode.SetSelection(int(globalOptions[var]))
-        var='copyid_mode'
-        if var in globalOptions:
-            copyid_mode = self.FindWindowByName(var)
-            copyid_mode.SetSelection(int(globalOptions[var]))
-        var='aaf_username'
-        if var in globalOptions:
-            username = self.FindWindowByName(var)
-            username.SetValue(globalOptions[var])
-        var='aaf_idp'
-        if var in globalOptions:
-            idp = self.FindWindowByName(var)
-            idp.SetValue(globalOptions[var])
         var='uuid'
         uuidtc = self.FindWindowByName(var)
         if var in globalOptions:
@@ -1164,9 +1131,6 @@ Usually the first time you access a remote computer you will enter your password
             self.globalOptions['logfile'] = self.vncViewerLogFilenameTextField.GetValue()
         self.globalOptions['share_local_home_directory_on_remote_desktop'] = self.shareLocalHomeDirectoryOnRemoteDesktopCheckBox.GetValue()
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
-        self.globalOptions['copyid_mode']=self.FindWindowByName('copyid_mode').GetSelection()
-        self.globalOptions['aaf_username']=self.FindWindowByName('aaf_username').GetValue()
-        self.globalOptions['aaf_idp']=self.FindWindowByName('aaf_idp').GetValue()
         self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
         self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
 
