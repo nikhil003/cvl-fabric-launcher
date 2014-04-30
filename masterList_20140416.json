@@ -1,0 +1,16 @@
+[
+    {
+        "name": "NeCTAR - Characterisation VL",
+        "url": "https://cvl.massive.org.au/cvl_flavours_20140416.json",
+        "replaces": ["https://cvl.massive.org.au/cvl_flavours.json","https://cvl.massive.org.au/cvl_flavours_20140410.json"]
+    },
+    {
+        "name": "MASSIVE",
+        "url": "http://cvl.massive.org.au/massive_flavours_20140408.json",
+        "replaces": ["https://cvl.massive.org.au/massive_flavours.json", "http://cvl.massive.org.au/massive_flavours.json"]
+    },
+    {
+        "name": "CQUniversity - HPC Systesm",
+        "url": "http://hpc-stats.cqu.edu.au/cqu.json"
+    }
+]
