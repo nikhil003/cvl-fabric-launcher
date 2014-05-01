@@ -1404,13 +1404,12 @@ class LauncherMainFrame(wx.Frame):
         else:
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
-            removeKeyOnExit=False
         jobParams=self.buildJobParams(self)
         jobParams['strudel_platform']=platformstr
         jobParams['wallseconds']=int(jobParams['hours'])*60*60
         autoExit=False
         globalOptions = self.getPrefsSection("Global Preferences")
-        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[configName],displayStrings=self.sites[configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo,removeKeyOnExit=removeKeyOnExit)
+        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[configName],displayStrings=self.sites[configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo)
         oldParams  = jobParams.copy()
         lp.setCallback(lambda jobParams: self.loginComplete(lp,oldParams,jobParams))
         lp.setCancelCallback(lambda jobParams: self.loginCancel(lp,oldParams,jobParams))
