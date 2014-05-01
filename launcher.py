@@ -1396,7 +1396,6 @@ class LauncherMainFrame(wx.Frame):
                 logger.debug("launcherMainFrame.onLogin: spawning an ssh-agent (no existing agent found)")
                 pass
             self.keyModel=KeyModel(temporaryKey=True,startupinfo=self.startupinfo)
-            removeKeyOnExit = True
         else:
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)

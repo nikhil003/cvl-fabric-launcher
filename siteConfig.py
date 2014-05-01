@@ -351,5 +351,6 @@ class siteConfig():
         self.tunnel=cmdRegEx()
         self.visibility={}
         self.displayStrings=sshKeyDistDisplayStrings()
+        self.authorizedKeysFile=None
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value
