@@ -26,6 +26,19 @@ class default(object):
         self.confirmQuit=dialog()
         self.confirmQuit.message="Are you sure you want to quit?"
         self.confirmQuit.ButtonLabels=["Yes","No"]
+        self.authModeFirstUseInfo = dialog()
+        self.authModeFirstUseInfo.message="""
+This program logs you into other computers. As such it deals with such scary issues as Authentication.
+
+The default behaviour may not be suitable if your laptop or workstation is shared by multiple people.
+
+You can read more by selecting "Identity->Authentication options" from the menu.
+
+I'll now show you what happens when you select "Identity->Authentication options" so you can confirm your choices.
+"""
+        self.authModeFirstUseInfo.ButtonLabels=["OK"]
+
+
         self.queryAuthMode=dialog()
         self.queryAuthMode.message = """
 Would you like to use an SSH key pair or your password to authenticate yourself?
