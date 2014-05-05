@@ -202,6 +202,11 @@ class LauncherMainFrame(wx.Frame):
             self.FindWindowByName("jobParams_hours").SetValue(int(site.defaultHours))
         except:
             logger.debug("unable to set the default wall time hours")
+        try:
+            site=self.sites[configName]
+            self.FindWindowByName("jobParams_mem").SetValue(int(site.defaultMem))
+        except:
+            logger.debug("unable to set the default memory request")
 
 # Use this method to a) Figure out if we have a default site b) load the parameters for that site.
     def loadPrefs(self,window=None,site=None):
@@ -465,23 +470,32 @@ class LauncherMainFrame(wx.Frame):
         self.loginFieldsPanel.GetSizer().Add(self.projectPanel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
 
         self.resourcePanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY,name="resourcePanel")
-        self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        #self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.resourcePanel.SetSizer(wx.FlexGridSizer(rows=4,cols=4))
 
         self.hoursLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Hours requested')
         self.resourcePanel.GetSizer().Add(self.hoursLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         # Maximum of 336 hours is 2 weeks:
         #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
         self.hoursField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=336,name='jobParams_hours')
-        self.resourcePanel.GetSizer().Add(self.hoursField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.hoursField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+
+        self.memLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Memory (GB)',name='memLabel')
+        self.resourcePanel.GetSizer().Add(self.memLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        # Maximum of 336 mem is 2 weeks:
+        #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
+        self.memField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=1024,name='jobParams_mem')
+        self.resourcePanel.GetSizer().Add(self.memField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        
         self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes')
-        self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.nodesField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="1", size=(widgetWidth3,-1), min=1,max=10,name='jobParams_nodes')
-        self.resourcePanel.GetSizer().Add(self.nodesField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.resourcePanel.GetSizer().Add(self.nodesField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.ppnLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'PPN',name='ppnLabel')
-        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.ppnField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="12", size=(widgetWidth3,-1), min=1,max=12,name='jobParams_ppn')
-        self.resourcePanel.GetSizer().Add(self.ppnField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.loginFieldsPanel.GetSizer().Add(self.resourcePanel, proportion=0,border=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL)
+        self.resourcePanel.GetSizer().Add(self.ppnField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.resourcePanel, proportion=0,border=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
 
 
         self.resolutionPanel = wx.Panel(self.loginFieldsPanel,name="resolutionPanel")
@@ -1096,10 +1110,37 @@ class LauncherMainFrame(wx.Frame):
         for p in window.GetChildren():
             self.showAll(p)
 
+    def hideUIElements(self):
+        visible={}
+        visible['loginHostPanel']=False
+        visible['usernamePanel']=True
+        visible['projectPanel']=False
+        visible['resourcePanel']=False
+        visible['ppnLabel']=False
+        visible['jobParams_ppn']=False
+        visible['resolutionPanel']=False
+        visible['cipherPanel']=False
+        visible['debugCheckBoxPanel']=False
+        visible['advancedCheckBoxPanel']=True
+        visible['optionsDialog']=False
+        visible['ppnLabel']=False
+        visible['jobParams_ppn']=False
+        visible['memLabel']=False
+        visible['jobParams_mem']=False
+        for k in visible.keys():
+            try: 
+                window=self.FindWindowByName(k)
+                window.Hide()
+            except:
+                pass
+
+        
+
     def updateVisibility(self,visible=None):
         #self.showAll()
         #self.Fit()
         #self.Layout()
+        self.hideUIElements()
         advanced=self.FindWindowByName('advancedCheckBox').GetValue()
         if visible==None:
             try:
@@ -1127,8 +1168,9 @@ class LauncherMainFrame(wx.Frame):
         globalOptions = self.getPrefsSection("Global Preferences")
         if sc==None:
             sc=self.FindWindowByName('jobParams_configName').GetValue()
-        if self.sites[sc].authURL!=None:
-            self.FindWindowByName('usernamePanel').Hide()
+        if sc!=None and sc != "":
+            if self.sites[sc].authURL!=None:
+                self.FindWindowByName('usernamePanel').Hide()
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
 
