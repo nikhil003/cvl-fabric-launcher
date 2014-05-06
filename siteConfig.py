@@ -352,6 +352,7 @@ class siteConfig():
         self.agent=cmdRegEx()
         self.tunnel=cmdRegEx()
         self.visibility={}
+        self.relabel={}
         self.displayStrings=sshKeyDistDisplayStrings()
         self.authorizedKeysFile=None
         for key,value in kwargs.iteritems():
