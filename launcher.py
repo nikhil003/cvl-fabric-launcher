@@ -199,7 +199,7 @@ class LauncherMainFrame(wx.Frame):
     def loadSiteDefaults(self,configName):
         try:
             site=self.sites[configName]
-            for key in self.sites.defaults:
+            for key in site.defaults:
                 self.FindWindowByName(key).SetValue(int(site.defaults[key]))
         except:
             logger.debug("unable to set the default values for the site")
@@ -902,6 +902,8 @@ class LauncherMainFrame(wx.Frame):
         cb.SetSelection(0)
         if path!=None:
             f.close()
+        self.loadSiteDefaults(configName=self.FindWindowByName('jobParams_configName').GetValue())
+        self.loadPrefs()
         self.updateVisibility()
 
 
