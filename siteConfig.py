@@ -327,8 +327,6 @@ class siteConfig():
         self.loginHost=None
         self.username=None
         self.authURL=None
-        self.defaultHours=48
-        self.defaultMem=48
         self.listAll=cmdRegEx(failFatal=False)
         self.running=cmdRegEx()
         self.stop=cmdRegEx(failFatal=False)
@@ -353,6 +351,7 @@ class siteConfig():
         self.tunnel=cmdRegEx()
         self.visibility={}
         self.relabel={}
+        self.defaults={}
         self.displayStrings=sshKeyDistDisplayStrings()
         self.authorizedKeysFile=None
         for key,value in kwargs.iteritems():
