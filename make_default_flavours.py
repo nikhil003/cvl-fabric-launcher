@@ -104,18 +104,17 @@ def getMassiveSiteConfig(loginHost):
     massivevisible={}
     massivevisible['usernamePanel']=True
     massivevisible['projectPanel']=True
-    massivevisible['loginHostPanel']=False
     massivevisible['resourcePanel']=True
     massivevisible['resolutionPanel']='Advanced'
     massivevisible['cipherPanel']='Advanced'
     massivevisible['debugCheckBoxPanel']='Advanced'
     massivevisible['advancedCheckBoxPanel']=True
-    massivevisible['optionsDialog']=False
-    massivevisible['ppnLabel']=False
-    massivevisible['jobParams_ppn']=False
-    massivevisible['ssh_key_mode_panel']='Advanced'
-    massivevisible['copyid_mode_panel']=False
+    massivevisible['label_hours']=True
+    massivevisible['jobParams_hours']=True
+    massivevisible['label_nodes']=True
+    massivevisible['jobParams_nodes']=True
     c = siteConfig.siteConfig()
+    c.defaultHours=4
     c.visibility=massivevisible
     displayStrings=sshKeyDistDisplayStringsMASSIVE()
     c.displayStrings.__dict__.update(displayStrings.__dict__)
@@ -266,21 +265,18 @@ def getRaijinLoginSiteConfig(loginnode):
 
 def getCVLSiteConfigXML(queue):
     cvlvisible={}
-    cvlvisible['loginHostPanel']=False
     cvlvisible['usernamePanel']=True
-    cvlvisible['projectPanel']=False
     cvlvisible['resourcePanel']='Advanced'
-    cvlvisible['ppnLabel']=False
-    cvlvisible['jobParams_ppn']=False
     cvlvisible['resolutionPanel']='Advanced'
     cvlvisible['cipherPanel']='Advanced'
     cvlvisible['debugCheckBoxPanel']='Advanced'
     cvlvisible['advancedCheckBoxPanel']=True
-    cvlvisible['optionsDialog']=False
-    cvlvisible['ppnLabel']=False
-    cvlvisible['jobParams_ppn']=False
-    cvlvisible['ssh_key_mode_panel']='Advanced'
-    cvlvisible['copyid_mode_panel']='Advanced'
+    cvlvisible['label_hours']=True
+    cvlvisible['jobParams_hours']=True
+    cvlvisible['label_ppn']=True
+    cvlvisible['jobParams_ppn']=True
+    cvlvisible['label_nodes']=True
+    cvlvisible['jobParams_nodes']=True
     c = siteConfig.siteConfig()
     cvlstrings = sshKeyDistDisplayStringsCVL()
     c.displayStrings.__dict__.update(cvlstrings.__dict__)
@@ -372,19 +368,18 @@ def getCVLSiteConfigXML(queue):
 
 def getCVLSiteConfig(queue):
     cvlvisible={}
-    cvlvisible['loginHostPanel']=False
     cvlvisible['usernamePanel']=True
-    cvlvisible['projectPanel']=False
     cvlvisible['resourcePanel']='Advanced'
-    cvlvisible['ppnLabel']=False
-    cvlvisible['jobParams_ppn']=False
     cvlvisible['resolutionPanel']='Advanced'
     cvlvisible['cipherPanel']='Advanced'
     cvlvisible['debugCheckBoxPanel']='Advanced'
     cvlvisible['advancedCheckBoxPanel']=True
-    cvlvisible['optionsDialog']=False
-    cvlvisible['ppnLabel']=False
-    cvlvisible['jobParams_ppn']=False
+    cvlvisible['label_hours']=True
+    cvlvisible['jobParams_hours']=True
+    cvlvisible['label_ppn']=True
+    cvlvisible['jobParams_ppn']=True
+    cvlvisible['label_nodes']=True
+    cvlvisible['jobParams_nodes']=True
     c = siteConfig.siteConfig()
     cvlstrings = sshKeyDistDisplayStringsCVL()
     c.displayStrings.__dict__.update(cvlstrings.__dict__)
@@ -618,6 +613,25 @@ defaultSites['CVL 16 core node']=multicpu
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_aaf_flavours_20140419.json','w') as f:
+    f.write(jsons)
+
+defaultSites=collections.OrderedDict()
+defaultSites['CVL Desktop']=  getCVLSiteConfig("batch")
+defaultSites['Huygens on the CVL']= getCVLSiteConfig("huygens")
+defaultSites['CVL GPU node']= getCVLSiteConfig("vis")
+defaultSites['CVL Desktop'].authURL=None
+defaultSites['Huygens on the CVL'].authURL=None
+defaultSites['CVL GPU node'].authURL=None
+
+multicpu=getCVLSiteConfig("multicpu")
+cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=16 -l walltime={hours}:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
+regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+multicpu.startServer=siteConfig.cmdRegEx(cmd,regex)
+defaultSites['CVL 16 core node']=multicpu
+
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('cvl_flavours_20140419.json','w') as f:
     f.write(jsons)
 
 defaultSites=collections.OrderedDict()
