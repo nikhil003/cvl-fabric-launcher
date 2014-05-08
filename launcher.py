@@ -202,6 +202,11 @@ class LauncherMainFrame(wx.Frame):
             self.FindWindowByName("jobParams_hours").SetValue(int(site.defaultHours))
         except:
             logger.debug("unable to set the default wall time hours")
+        try:
+            site=self.sites[configName]
+            self.FindWindowByName("jobParams_mem").SetValue(int(site.defaultMem))
+        except:
+            logger.debug("unable to set the default memory request")
 
 # Use this method to a) Figure out if we have a default site b) load the parameters for that site.
     def loadPrefs(self,window=None,site=None):
@@ -430,7 +435,7 @@ class LauncherMainFrame(wx.Frame):
         self.sites={}
         self.siteConfigPanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY)
         self.siteConfigPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        self.configLabel = wx.StaticText(self.siteConfigPanel, wx.ID_ANY, 'Site')
+        self.configLabel = wx.StaticText(self.siteConfigPanel, wx.ID_ANY, 'Site',name='label_config')
         self.siteConfigPanel.GetSizer().Add(self.configLabel, proportion=0, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, border=5)
         self.siteConfigComboBox = wx.ComboBox(self.siteConfigPanel, wx.ID_ANY, choices=self.sites.keys(), style=wx.CB_READONLY,name='jobParams_configName')
         self.siteConfigComboBox.Bind(wx.EVT_COMBOBOX, self.onSiteConfigChanged)
@@ -456,7 +461,7 @@ class LauncherMainFrame(wx.Frame):
 
         self.projectPanel = wx.Panel(self.loginFieldsPanel,wx.ID_ANY,name="projectPanel")
         self.projectPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        self.projectLabel = wx.StaticText(self.projectPanel, wx.ID_ANY, 'Project')
+        self.projectLabel = wx.StaticText(self.projectPanel, wx.ID_ANY, 'Project',name='label_project')
         self.projectPanel.GetSizer().Add(self.projectLabel, proportion=1, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
         self.projectField = wx.TextCtrl(self.projectPanel, wx.ID_ANY, size=(widgetWidth2, -1), name='jobParams_project')
@@ -465,23 +470,32 @@ class LauncherMainFrame(wx.Frame):
         self.loginFieldsPanel.GetSizer().Add(self.projectPanel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
 
         self.resourcePanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY,name="resourcePanel")
-        self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        #self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.resourcePanel.SetSizer(wx.FlexGridSizer(rows=4,cols=4))
 
-        self.hoursLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Hours requested')
+        self.hoursLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Hours requested',name='label_hours')
         self.resourcePanel.GetSizer().Add(self.hoursLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         # Maximum of 336 hours is 2 weeks:
         #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
         self.hoursField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=336,name='jobParams_hours')
-        self.resourcePanel.GetSizer().Add(self.hoursField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
-        self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes')
-        self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.hoursField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+
+        self.memLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Memory (GB)',name='label_mem')
+        self.resourcePanel.GetSizer().Add(self.memLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        # Maximum of 336 mem is 2 weeks:
+        #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
+        self.memField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=1024,name='jobParams_mem')
+        self.resourcePanel.GetSizer().Add(self.memField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        
+        self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes',name='label_nodes')
+        self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.nodesField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="1", size=(widgetWidth3,-1), min=1,max=10,name='jobParams_nodes')
-        self.resourcePanel.GetSizer().Add(self.nodesField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.ppnLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'PPN',name='ppnLabel')
-        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.resourcePanel.GetSizer().Add(self.nodesField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.ppnLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'PPN',name='label_ppn')
+        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.ppnField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="12", size=(widgetWidth3,-1), min=1,max=12,name='jobParams_ppn')
-        self.resourcePanel.GetSizer().Add(self.ppnField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.loginFieldsPanel.GetSizer().Add(self.resourcePanel, proportion=0,border=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL)
+        self.resourcePanel.GetSizer().Add(self.ppnField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.resourcePanel, proportion=0,border=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
 
 
         self.resolutionPanel = wx.Panel(self.loginFieldsPanel,name="resolutionPanel")
@@ -520,7 +534,7 @@ class LauncherMainFrame(wx.Frame):
         
         p = wx.Panel(self.checkBoxPanel,name="debugCheckBoxPanel")
         p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        l = wx.StaticText(p, wx.ID_ANY, 'Show debug window')
+        l = wx.StaticText(p, wx.ID_ANY, 'Show debug window',name='label_debug')
         c = wx.CheckBox(p, wx.ID_ANY, "",name='debugCheckBox')
         c.Bind(wx.EVT_CHECKBOX, self.onDebugWindowCheckBoxStateChanged)
         p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -532,7 +546,7 @@ class LauncherMainFrame(wx.Frame):
   
         p = wx.Panel(self.checkBoxPanel,name="advancedCheckBoxPanel")
         p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        l = wx.StaticText(p, wx.ID_ANY, 'Show Advanced Options')
+        l = wx.StaticText(p, wx.ID_ANY, 'Show Advanced Options',name='label_advanced')
         c = wx.CheckBox(p, wx.ID_ANY, "",name='advancedCheckBox')
         c.Bind(wx.EVT_CHECKBOX, self.onAdvancedVisibilityStateChanged)
         p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -1096,21 +1110,85 @@ class LauncherMainFrame(wx.Frame):
         for p in window.GetChildren():
             self.showAll(p)
 
-    def updateVisibility(self,visible=None):
+    def resetLabels(self):
+        relabel={}
+        relabel['label_loginHost']='Server name or IP'
+        relabel['label_username']='Username'
+        relabel['label_hours']='Hours'
+        relabel['label_mem']='Memory (GB)'
+        relabel['label_nodes']='Nodes'
+        relabel['label_ppn']='PPN'
+        relabel['label_resolution']='resolution'
+        relabel['label_cipher']='SSH tunnel cipher'
+        relabel['label_config']='Site'
+        relabel['label_project']='Project'
+        relabel['label_debug']='Show debug window'
+        relabel['label_advanced']='Show Advanced Options'
+        for key in relabel.keys():
+            try:
+                window=self.FindWindowByName(key)
+                window.SetLabel(relabel[key])
+            except:
+                pass
+
+    def hideUIElements(self):
+        visible={}
+        visible['loginHostPanel']=False
+        visible['usernamePanel']=False
+        visible['projectPanel']=False
+        visible['resourcePanel']=False
+        visible['resolutionPanel']=False
+        visible['cipherPanel']=False
+        visible['debugCheckBoxPanel']=False
+        visible['advancedCheckBoxPanel']=False
+        visible['optionsDialog']=False
+        visible['label_ppn']=False
+        visible['jobParams_ppn']=False
+        visible['label_mem']=False
+        visible['jobParams_mem']=False
+        visible['label_nodes']=False
+        visible['jobParams_nodes']=False
+        visible['label_hours']=False
+        visible['jobParams_hours']=False
+        for k in visible.keys():
+            try: 
+                window=self.FindWindowByName(k)
+                window.Hide()
+            except:
+                pass
+
+        
+
+    def updateVisibility(self):
         #self.showAll()
         #self.Fit()
         #self.Layout()
+        self.hideUIElements()
+        self.resetLabels()
         advanced=self.FindWindowByName('advancedCheckBox').GetValue()
-        if visible==None:
-            try:
-                sc=None
-                sc=self.FindWindowByName('jobParams_configName').GetValue()
+        try:
+            sc=None
+            sc=self.FindWindowByName('jobParams_configName').GetValue()
+            if self.sites.has_key(sc):
                 visible = self.sites[sc].visibility
-            except Exception as e:
-                logger.debug('updateVisibility: looking for site %s'%sc)
-                logger.debug('updateVisibility: no visibility information associated with the siteConfig configName: %s'%sc)
-                logger.debug("sc: %s exception:%s"%(sc,e))
+                relabel=self.sites[sc].relabel
+                authURL=self.sites[sc].authURL
+            else:
+                sc=""
                 visible={}
+                relabel={}
+                authURL=None
+        except Exception as e:
+            logger.debug('updateVisibility: looking for site %s'%sc)
+            logger.debug('updateVisibility: no visibility information associated with the siteConfig configName: %s'%sc)
+            logger.debug("sc: %s exception:%s"%(sc,e))
+            visible={}
+        for key in relabel.keys():
+            try:
+                window=self.FindWindowByName(key)
+                window.SetLabel(relabel[key])
+            except:
+                pass
         for key in visible.keys():
             try:
                 window=self.FindWindowByName(key) #Panels and controls are all subclasses of windows
@@ -1125,9 +1203,7 @@ class LauncherMainFrame(wx.Frame):
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
         globalOptions = self.getPrefsSection("Global Preferences")
-        if sc==None:
-            sc=self.FindWindowByName('jobParams_configName').GetValue()
-        if self.sites[sc].authURL!=None:
+        if authURL!=None:
             self.FindWindowByName('usernamePanel').Hide()
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
@@ -1285,19 +1361,22 @@ class LauncherMainFrame(wx.Frame):
             if oldParams.has_key(k): 
                 # This is a bit messy, but some of our parameters get converted from ints to strings
                 # Specifically nodes is requsted as an int from a SpinCtrl but is updated to a string from the output of qstat.
-                if not oldParams[k] == jobParams[k] and isinstance(oldParams[k],type(jobParams[k])):
-                    winName='jobParams_%s'%k
-                    try:
-                        self.FindWindowByName(winName).SetValue(jobParams[k])
-                        shouldSave=True
-                    except Exception as e:
-                        logger.debug("launcher: Couldn't update the parameter %s %s %s"%(k,e,e.__class__))
-                elif isinstance(oldParams[k],int) and int(jobParams[k])!= oldParams[k]:
-                    try:
-                        self.FindWindowByName(winName).SetValue(int(jobParams[k]))
-                        shouldSave=True
-                    except Exception as e:
-                        logger.debug("launcher: Couldn't update the parameter %s %s %s"%(k,e,e.__class__))
+                try:
+                    if not oldParams[k] == jobParams[k] and isinstance(oldParams[k],type(jobParams[k])):
+                        winName='jobParams_%s'%k
+                        try:
+                            self.FindWindowByName(winName).SetValue(jobParams[k])
+                            shouldSave=True
+                        except Exception as e:
+                            logger.debug("launcher: Couldn't update the parameter %s %s %s"%(k,e,e.__class__))
+                    elif isinstance(oldParams[k],int) and int(jobParams[k])!= oldParams[k]:
+                        try:
+                            self.FindWindowByName(winName).SetValue(int(jobParams[k]))
+                            shouldSave=True
+                        except Exception as e:
+                            logger.debug("launcher: Couldn't update the parameter %s %s %s"%(k,e,e.__class__))
+                except:
+                    logger.debug('loginComlete: unable to update jobParameter %s to value %s'%(k,jobParams[k]))
         try:
             self.loginProcess.remove(lp)
         except:
@@ -1355,7 +1434,6 @@ class LauncherMainFrame(wx.Frame):
         platformstr=platformstr+"\""
 
         options=self.getPrefsSection('Global Preferences')
-        print options
         while not options.has_key('auth_mode'):
             self.queryAuthMode()
             options=self.getPrefsSection('Global Preferences')
@@ -1364,7 +1442,7 @@ class LauncherMainFrame(wx.Frame):
         configName=self.FindWindowByName('jobParams_configName').GetValue()
         jobParams = self.buildJobParams(self)
 
-        if jobParams['username'] == "" and self.sites[configName].authURL!=None:
+        if jobParams['username'] == "" and self.sites[configName].authURL==None:
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
                     self.programName)
