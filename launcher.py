@@ -1442,7 +1442,7 @@ class LauncherMainFrame(wx.Frame):
         configName=self.FindWindowByName('jobParams_configName').GetValue()
         jobParams = self.buildJobParams(self)
 
-        if jobParams['username'] == "" and self.sites[configName].authURL!=None:
+        if jobParams['username'] == "" and self.sites[configName].authURL==None:
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
                     self.programName)
