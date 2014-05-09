@@ -199,14 +199,10 @@ class LauncherMainFrame(wx.Frame):
     def loadSiteDefaults(self,configName):
         try:
             site=self.sites[configName]
-            self.FindWindowByName("jobParams_hours").SetValue(int(site.defaultHours))
+            for key in site.defaults:
+                self.FindWindowByName(key).SetValue(int(site.defaults[key]))
         except:
-            logger.debug("unable to set the default wall time hours")
-        try:
-            site=self.sites[configName]
-            self.FindWindowByName("jobParams_mem").SetValue(int(site.defaultMem))
-        except:
-            logger.debug("unable to set the default memory request")
+            logger.debug("unable to set the default values for the site")
 
 # Use this method to a) Figure out if we have a default site b) load the parameters for that site.
     def loadPrefs(self,window=None,site=None):
@@ -906,6 +902,8 @@ class LauncherMainFrame(wx.Frame):
         cb.SetSelection(0)
         if path!=None:
             f.close()
+        self.loadSiteDefaults(configName=self.FindWindowByName('jobParams_configName').GetValue())
+        self.loadPrefs()
         self.updateVisibility()
 
 
