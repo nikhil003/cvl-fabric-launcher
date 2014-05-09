@@ -114,7 +114,10 @@ def getMassiveSiteConfig(loginHost):
     massivevisible['label_nodes']=True
     massivevisible['jobParams_nodes']=True
     c = siteConfig.siteConfig()
-    c.defaultHours=4
+    c.defaults['jobParams_ppn']=12
+    c.defaults['jobParams_nodes']=1
+    c.defaults['jobParams_hours']=4
+    c.defaults['jobParams_mem']=48
     c.visibility=massivevisible
     displayStrings=sshKeyDistDisplayStringsMASSIVE()
     c.displayStrings.__dict__.update(displayStrings.__dict__)
@@ -189,6 +192,9 @@ def getCQUGPUConfig(queue):
     c.visibility['resourcePanel']=False
     c.visibility['ppnLabel']=False
     c.visibility['jobParams_ppn']=False
+    c.defaults['jobParams_ppn']=1
+    c.defaults['jobParams_hours']=48
+    c.defaults['jobParams_mem']=4
     c.loginHost='isaac.cqu.edu.au'
     c.directConnect=False
     cmd='\"qstat -f {jobidNumber} \"'
@@ -283,6 +289,11 @@ def getCVLSiteConfigXML(queue):
     c.visibility=cvlvisible
     c.loginHost='login.cvl.massive.org.au'
     c.directConnect=True
+    c.authURL="https://autht.massive.org.au/cvl/"
+    c.loginHost='login.cvl.massive.org.au'
+    c.defaults['jobParams_ppn']=1
+    c.defaults['jobParams_hours']=48
+    c.defaults['jobParams_mem']=4
 
 
     cmd = '\"module load pbs ; qstat -x | xmlstarlet sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n -\"'
@@ -383,9 +394,12 @@ def getCVLSiteConfig(queue):
     c = siteConfig.siteConfig()
     cvlstrings = sshKeyDistDisplayStringsCVL()
     c.displayStrings.__dict__.update(cvlstrings.__dict__)
-    c.authURL="https://autht.massive.org.au/cvl/"
     c.visibility=cvlvisible
+    c.authURL="https://autht.massive.org.au/cvl/"
     c.loginHost='login.cvl.massive.org.au'
+    c.defaults['jobParams_ppn']=1
+    c.defaults['jobParams_hours']=48
+    c.defaults['jobParams_mem']=4
     c.directConnect=True
     c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
     cmd='\"module load pbs ; qstat -f {jobidNumber} | grep exec_host | sed \'s/\ \ */\ /g\' | cut -f 4 -d \' \' | cut -f 1 -d \'/\' | xargs -iname hostn name | grep address | sed \'s/\ \ */\ /g\' | cut -f 3 -d \' \' | xargs -iip echo execHost ip; qstat -f {jobidNumber}\"'
@@ -589,6 +603,11 @@ def getGenericVNCSession():
 
 import utilityFunctions
 import json
+
+########################################################################################
+# MASSIVE
+########################################################################################
+
 defaultSites=collections.OrderedDict()
 defaultSites['Desktop on m1-login2.massive.org.au']  = getMassiveSiteConfig("m1-login2.massive.org.au") 
 defaultSites['Desktop on m2-login2.massive.org.au'] = getMassiveSiteConfig("m2-login2.massive.org.au") 
@@ -599,41 +618,46 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('massive_flavours_20140408.json','w') as f:
     f.write(jsons)
 
+########################################################################################
+# CVL with AAF 
+########################################################################################
 defaultSites=collections.OrderedDict()
-defaultSites['CVL Desktop']=  getCVLSiteConfig("batch")
-defaultSites['Huygens on the CVL']= getCVLSiteConfig("huygens")
-defaultSites['CVL GPU node']= getCVLSiteConfig("vis")
-
-multicpu=getCVLSiteConfig("multicpu")
+defaultSites['CVL Desktop']=  getCVLSiteConfigXML("batch")
+defaultSites['Huygens on the CVL']= getCVLSiteConfigXML("huygens")
+defaultSites['CVL GPU node']= getCVLSiteConfigXML("vis")
+multicpu=getCVLSiteConfigXML("multicpu")
 cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=16 -l walltime={hours}:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
 regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
 multicpu.startServer=siteConfig.cmdRegEx(cmd,regex)
 defaultSites['CVL 16 core node']=multicpu
-
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_aaf_flavours_20140419.json','w') as f:
     f.write(jsons)
 
+########################################################################################
+# CVL with password
+########################################################################################
 defaultSites=collections.OrderedDict()
-defaultSites['CVL Desktop']=  getCVLSiteConfig("batch")
-defaultSites['Huygens on the CVL']= getCVLSiteConfig("huygens")
-defaultSites['CVL GPU node']= getCVLSiteConfig("vis")
+defaultSites['CVL Desktop']=  getCVLSiteConfigXML("batch")
+defaultSites['Huygens on the CVL']= getCVLSiteConfigXML("huygens")
+defaultSites['CVL GPU node']= getCVLSiteConfigXML("vis")
 defaultSites['CVL Desktop'].authURL=None
 defaultSites['Huygens on the CVL'].authURL=None
 defaultSites['CVL GPU node'].authURL=None
-
-multicpu=getCVLSiteConfig("multicpu")
+multicpu=getCVLSiteConfigXML("multicpu")
 cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=16 -l walltime={hours}:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
 regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
 multicpu.startServer=siteConfig.cmdRegEx(cmd,regex)
 defaultSites['CVL 16 core node']=multicpu
-
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_flavours_20140419.json','w') as f:
     f.write(jsons)
 
+########################################################################################
+# Other
+########################################################################################
 defaultSites=collections.OrderedDict()
 defaultSites['Other']=getGenericVNCSession()
 defaultSites['Other TurboVNC']=getOtherTurboVNCConfig("")
@@ -642,6 +666,9 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('other_flavour.json','w') as f:
     f.write(jsons)
 
+########################################################################################
+# CQU
+########################################################################################
 defaultSites=collections.OrderedDict()
 newton=getGenericVNCSession()
 gpu=getCQUGPUConfig("")
@@ -658,6 +685,9 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('cqu.json','w') as f:
     f.write(jsons)
 
+########################################################################################
+# NCI
+########################################################################################
 defaultSites=collections.OrderedDict()
 raijinExpress=getRaijinSiteConfig('express')
 defaultSites['Raijin (Express Queue)'] = raijinExpress
@@ -668,6 +698,9 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('nci_flavours.json','w') as f:
     f.write(jsons)
 
+########################################################################################
+# CVL Desktopdev
+########################################################################################
 defaultSites=collections.OrderedDict()
 defaultSites['CVL DesktopDev']=  getCVLSiteConfigXML("desktopdev")
 keys=defaultSites.keys()
