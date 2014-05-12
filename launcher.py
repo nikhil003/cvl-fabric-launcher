@@ -1050,9 +1050,9 @@ class LauncherMainFrame(wx.Frame):
         except:
             logger.debug(traceback.format_exc())
             self.contacted_massive_website = False
-            dlg = wx.MessageDialog(self, "Warning: Could not contact the MASSIVE website to check version number.\n\n",
-                                "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
-            wx.CallAfter(dlg.ShowModal)
+            q=Queue.Queue()
+            wx.CallAfter(self.createAndShowModalDialog,q,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
+            q.get()
 
             latestVersionNumber = launcher_version_number.version_number
             latestVersionChanges = ''
