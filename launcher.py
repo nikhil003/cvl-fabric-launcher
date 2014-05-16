@@ -122,60 +122,180 @@ import launcher_progress_dialog
 from menus.IdentityMenu import IdentityMenu
 import tempfile
 from cvlsshutils.KeyModel import KeyModel
+import siteConfig
+import Queue
 
+if sys.platform.startswith("darwin"):
+    from MacMessageDialog import LauncherMessageDialog
+elif sys.platform.startswith("win"):
+    from WindowsMessageDialog import LauncherMessageDialog
+elif sys.platform.startswith("linux"):
+    from LinuxMessageDialog import LauncherMessageDialog
 from logger.Logger import logger
+import collections
+import optionsDialog
+import LauncherOptionsDialog
 
 from utilityFunctions import LAUNCHER_URL
+import dialogtext
+dialogs=dialogtext.default()
 
-launcherMainFrame = None
-massiveLauncherConfig = None
-cvlLauncherConfig = None
-globalLauncherConfig = None
-massiveLauncherPreferencesFilePath = None
-cvlLauncherPreferencesFilePath = None
-globalLauncherPreferencesFilePath = None
+class FileDrop(wx.FileDropTarget):
+    def __init__(self, window):
+        super(FileDrop,self).__init__()
+        self.window = window
+
+    def OnDropFiles(self, x, y, filenames):
+        if len(filenames)!=1:
+            pass
+        else:
+            self.window.loadSession(None,filenames[0])
+
 
 class LauncherMainFrame(wx.Frame):
     PERM_SSH_KEY=0
     TEMP_SSH_KEY=1
 
-    def __init__(self, parent, id, title):
 
-        sys.modules[__name__].launcherMainFrame = self
+    def shouldSave(self,item):
+        # I should be able to use a python iterator here
+        shouldSave=False
+        for ctrl in self.savedControls:
+            if isinstance(item,ctrl) and 'jobParams' in item.GetName():
+                shouldSave=True
+        return shouldSave
 
-        launcherMainFrame = sys.modules[__name__].launcherMainFrame
+# Use this method to read a specifig section of the preferences file
+    def loadConfig(self):
+        assert self.prefs == None
+        self.prefs=ConfigParser.SafeConfigParser(allow_no_value=True)
+        if (os.path.exists(launcherPreferencesFilePath)):
+            with open(launcherPreferencesFilePath,'r') as o:
+                self.prefs.readfp(o)
 
-        massiveLauncherConfig = sys.modules[__name__].massiveLauncherConfig
-        massiveLauncherPreferencesFilePath = sys.modules[__name__].massiveLauncherPreferencesFilePath
-
-        cvlLauncherConfig = sys.modules[__name__].cvlLauncherConfig
-        cvlLauncherPreferencesFilePath = sys.modules[__name__].cvlLauncherPreferencesFilePath
-
-        globalLauncherConfig = sys.modules[__name__].globalLauncherConfig
-        globalLauncherPreferencesFilePath = sys.modules[__name__].globalLauncherPreferencesFilePath
-
-        self.logWindow = None
-        self.progressDialog = None
-
-        if sys.platform.startswith("darwin"):
-            wx.Frame.__init__(self, parent, id, title, style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
-        else:
-            wx.Frame.__init__(self, parent, id, title, style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
-
-        self.globalOptions = {}
-
-        if globalLauncherConfig.has_section("Global Preferences"):
-            savedGlobalLauncherOptions =  globalLauncherConfig.items("Global Preferences")
-            for option in savedGlobalLauncherOptions:
+    def getPrefsSection(self,section):
+        assert self.prefs != None
+        options = {}
+        if self.prefs.has_section(section):
+            optionsList =  self.prefs.items(section)
+            for option in optionsList:
                 key = option[0]
                 value = option[1]
                 if value=='True':
                     value = True
                 if value=='False':
                     value = False
-                self.globalOptions[key] = value
-        import optionsDialog
-        self.globalOptionsDialog = optionsDialog.GlobalOptionsDialog(launcherMainFrame, wx.ID_ANY, "Preferences", self.globalOptions, 0)
+                options[key] = value
+        return options
+
+    def setPrefsSection(self,section,options):
+        assert self.prefs != None
+        if not self.prefs.has_section(section):
+            self.prefs.add_section(section)
+        for key in options.keys():
+            self.prefs.set(section,key,"%s"%options[key])
+        pass
+    
+    def loadSiteDefaults(self,configName):
+        try:
+            site=self.sites[configName]
+            for key in site.defaults:
+                self.FindWindowByName(key).SetValue(int(site.defaults[key]))
+        except:
+            logger.debug("unable to set the default values for the site")
+
+# Use this method to a) Figure out if we have a default site b) load the parameters for that site.
+    def loadPrefs(self,window=None,site=None):
+        assert self.prefs != None
+        if window==None:
+            window=self
+        if (site==None):
+            siteConfigComboBox=self.FindWindowByName('jobParams_configName')
+            try:
+                site=siteConfigComboBox.GetValue()
+            except:
+                pass
+        if (site != None):
+            if self.prefs.has_section(site):
+                for item in window.GetChildren():
+                    if self.shouldSave(item):
+                        name=item.GetName()
+                        if self.prefs.has_option(site,name):
+                            val=self.prefs.get(site,name)
+                            try: # Most wx Controls expect a string in SetValue, but at least SpinCtrl expects an int.
+                                item.SetValue(val)
+                            except TypeError:
+                                item.SetValue(int(val))
+                            except AttributeError:
+                                item.SetSelection(int(val))
+                    else:
+                        self.loadPrefs(window=item,site=site)
+
+    def savePrefsEventHandler(self,event):
+        threading.Thread(target=self.savePrefs).start()
+        event.Skip()
+        
+    def savePrefs(self,window=None,section=None):
+        assert self.prefs!=None
+        specialSections=['Global Preferences','configured_sites']
+        write=False
+        # If we called savePrefs without a window specified, its the root of recussion
+        if (window==None and not section in specialSections):
+            write=True
+            window=self
+        if (section in specialSections):
+            write=True
+            window=None
+        if (section==None):
+            try:
+                configName=self.FindWindowByName('jobParams_configName').GetValue()
+                if (configName!=None):
+                    if (not self.prefs.has_section("Launcher Config")):
+                        self.prefs.add_section("Launcher Config")
+                    self.prefs.set("Launcher Config","siteConfigDefault",'%s'%configName)
+                    self.savePrefs(section=configName)
+            except:
+                pass
+        elif (section!=None):
+            if (not self.prefs.has_section(section)):
+                self.prefs.add_section(section)
+            try:
+                for item in window.GetChildren():
+                    if self.shouldSave(item):
+                        try:
+                            self.prefs.set(section,item.GetName(),'%s'%item.GetValue())
+                        except AttributeError:
+                            self.prefs.set(section,item.GetName(),'%s'%item.GetSelection())
+                    else:
+                        self.savePrefs(section=section,window=item)
+            except:
+                pass
+        if (write):
+            with open(launcherPreferencesFilePath,'w') as o:
+                self.prefs.write(o)
+
+
+
+    def __init__(self, parent, id, title):
+
+        super(LauncherMainFrame,self).__init__(parent, id, title, style=wx.DEFAULT_FRAME_STYLE^wx.RESIZE_BORDER )
+        dt=FileDrop(self)
+        self.SetDropTarget(dt)
+        self.programName=title
+        self.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        self.SetAutoLayout(0)
+
+        self.savedControls=[]
+        self.savedControls.append(wx.TextCtrl)
+        self.savedControls.append(wx.ComboBox)
+        self.savedControls.append(wx.SpinCtrl)
+        self.savedControls.append(wx.RadioBox)
+
+        self.prefs=None
+        self.loginProcess=[]
+        self.logWindow = None
+        self.hiddenWindow = None
+        self.progressDialog = None
 
         if sys.platform.startswith("win"):
             _icon = wx.Icon('MASSIVE.ico', wx.BITMAP_TYPE_ICO)
@@ -185,21 +305,30 @@ class LauncherMainFrame(wx.Frame):
             import MASSIVE_icon
             self.SetIcon(MASSIVE_icon.getMASSIVElogoTransparent128x128Icon())
 
+        self.loadConfig()
+
         self.menu_bar  = wx.MenuBar()
 
-        self.Bind(wx.EVT_CLOSE, self.onExit, id=self.GetId())
-
-        # Do this for all platforms, even Mac OS X.
-        # Even though we don't have a File menu with
-        # an Exit menu item on Mac OS X, the wx.ID_EXIT
-        # ID automatically gets mapped to the Quit menu
-        # item (command q) in the "MASSIVE Launcher" menu.
-        self.Bind(wx.EVT_MENU, self.onExit, id=wx.ID_EXIT)
-
+        self.file_menu = wx.Menu()
+        self.menu_bar.Append(self.file_menu, "&File")
+        shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Save a shared session")
+        self.file_menu.AppendItem(shareDesktop)
+        self.Bind(wx.EVT_MENU, self.saveSessionEvent, id=shareDesktop.GetId())
+        loadSession=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load a shared session")
+        self.file_menu.AppendItem(loadSession)
+        self.Bind(wx.EVT_MENU, self.loadSessionEvent, id=loadSession.GetId())
+        loadDefaultSessions=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load defaults")
+        self.file_menu.AppendItem(loadDefaultSessions)
+        self.loadDefaultSessionsId=loadDefaultSessions.GetId()
+        self.Bind(wx.EVT_MENU, self.loadDefaultSessionsEvent, id=loadDefaultSessions.GetId())
+        manageSites=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Manage sites")
+        self.file_menu.AppendItem(manageSites)
+        self.Bind(wx.EVT_MENU,self.manageSitesEventHandler,id=manageSites.GetId())
         if sys.platform.startswith("win") or sys.platform.startswith("linux"):
-            self.file_menu = wx.Menu()
             self.file_menu.Append(wx.ID_EXIT, "E&xit", "Close window and exit program.")
-            self.menu_bar.Append(self.file_menu, "&File")
+            self.Bind(wx.EVT_MENU, self.onExit, id=wx.ID_EXIT)
+           
+            
 
         #if sys.platform.startswith("darwin"):
             ## Only do this for Mac OS X, because other platforms have
@@ -228,20 +357,26 @@ class LauncherMainFrame(wx.Frame):
         self.edit_menu.Append(wx.ID_SELECTALL, "Select &All")
         self.Bind(wx.EVT_MENU, self.onSelectAll, id=wx.ID_SELECTALL)
         self.edit_menu.AppendSeparator()
+        id_preferences=wx.NewId()
         if sys.platform.startswith("win") or sys.platform.startswith("linux"):
-            self.edit_menu.Append(wx.ID_PREFERENCES, "P&references\tCtrl-P")
+            self.edit_menu.Append(id_preferences, "P&references\tCtrl-P")
         else:
-            self.edit_menu.Append(wx.ID_PREFERENCES, "&Preferences")
-        self.Bind(wx.EVT_MENU, self.onOptions, id=wx.ID_PREFERENCES)
+            self.edit_menu.Append(id_preferences, "&Preferences")
+        self.Bind(wx.EVT_MENU, self.onOptions, id=id_preferences)
         self.menu_bar.Append(self.edit_menu, "&Edit")
 
         self.identity_menu = IdentityMenu()
-        self.identity_menu.initialize(self, globalLauncherConfig, globalLauncherPreferencesFilePath)
+        options=self.getPrefsSection('Global Preferences')
+        if options.has_key('auth_mode'):
+            auth_mode = int(options['auth_mode'])
+        else:
+            auth_mode = 0
+        self.identity_menu.initialize(self,auth_mode=auth_mode)
         self.menu_bar.Append(self.identity_menu, "&Identity")
 
         self.help_menu = wx.Menu()
         helpContentsMenuItemID = wx.NewId()
-        self.help_menu.Append(helpContentsMenuItemID, "&MASSIVE/CVL Launcher Help")
+        self.help_menu.Append(helpContentsMenuItemID, "&%s Help"%self.programName)
         self.Bind(wx.EVT_MENU, self.onHelpContents, id=helpContentsMenuItemID)
         self.help_menu.AppendSeparator()
         emailHelpAtMassiveMenuItemID = wx.NewId()
@@ -258,29 +393,20 @@ class LauncherMainFrame(wx.Frame):
         # need a separator.
         if not sys.platform.startswith("darwin"):
             self.help_menu.AppendSeparator()
-        self.help_menu.Append(wx.ID_ABOUT,   "&About MASSIVE/CVL Launcher")
+        self.help_menu.Append(wx.ID_ABOUT,   "&About %s"%self.programName)
         self.Bind(wx.EVT_MENU, self.onAbout, id=wx.ID_ABOUT)
         self.menu_bar.Append(self.help_menu, "&Help")
 
-        self.SetTitle("MASSIVE / CVL Launcher")
+        self.SetTitle(self.programName)
 
-        self.SetMenuBar(self.menu_bar)
 
         self.loginDialogPanel = wx.Panel(self, wx.ID_ANY)
-        self.loginDialogPanelSizer = wx.FlexGridSizer(rows=2, cols=1, vgap=15, hgap=5)
+        self.loginDialogPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        self.GetSizer().Add(self.loginDialogPanel)
 
-        self.tabbedView = wx.Notebook(self.loginDialogPanel, wx.ID_ANY, style=(wx.NB_TOP))
-
-        self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED,  self.onTabbedViewChanged, id=self.tabbedView.GetId())
-
-        # MASSIVE tab
-
-        self.massiveLoginDialogPanel = wx.Panel(self.tabbedView, wx.ID_ANY)
-        self.massiveLoginDialogPanelSizer = wx.FlexGridSizer(rows=2, cols=1, vgap=5, hgap=5)
-
-        self.massiveLoginFieldsPanel = wx.Panel(self.massiveLoginDialogPanel, wx.ID_ANY)
-        self.massiveLoginFieldsPanelSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=3, hgap=5)
-        self.massiveLoginFieldsPanel.SetSizer(self.massiveLoginFieldsPanelSizer)
+        self.loginFieldsPanel = wx.Panel(self.loginDialogPanel, wx.ID_ANY)
+        self.loginFieldsPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        self.loginDialogPanel.GetSizer().Add(self.loginFieldsPanel, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=10)
 
         widgetWidth1 = 180
         widgetWidth2 = 180
@@ -288,725 +414,187 @@ class LauncherMainFrame(wx.Frame):
             widgetWidth2 = widgetWidth2 + 25
         widgetWidth3 = 75
 
-        self.massiveLoginHostLabel = wx.StaticText(self.massiveLoginFieldsPanel, wx.ID_ANY, 'Host')
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveLoginHostLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
-        self.massiveLoginHost = ""
-        massiveLoginHosts = ["m1-login1.massive.org.au", "m1-login2.massive.org.au",
-            "m2-login1.massive.org.au", "m2-login2.massive.org.au"]
-        defaultMassiveHost = "m2-login2.massive.org.au"
-        self.massiveLoginHostComboBox = wx.ComboBox(self.massiveLoginFieldsPanel, wx.ID_ANY, value=defaultMassiveHost, choices=massiveLoginHosts, size=(widgetWidth2, -1), style=wx.CB_READONLY)
-        self.massiveLoginHostComboBox.Bind(wx.EVT_TEXT, self.onMassiveLoginHostNameChanged)
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveLoginHostComboBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_login_host"):
-                self.massiveLoginHost = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_login_host")
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_login_host","")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        self.massiveLoginHost = self.massiveLoginHost.strip()
-        if self.massiveLoginHost!="":
-            if self.massiveLoginHost in massiveLoginHosts:
-                self.massiveLoginHostComboBox.SetSelection(massiveLoginHosts.index(self.massiveLoginHost))
-            else:
-                # Hostname was not found in combo-box.
-                self.massiveLoginHostComboBox.SetSelection(-1)
-            self.massiveLoginHostComboBox.SetValue(self.massiveLoginHost)
+        
+        self.noneVisible={}
+        self.noneVisible['usernamePanel']=False
+        self.noneVisible['projectPanel']=False
+        self.noneVisible['execHostPanel']=False
+        self.noneVisible['resourcePanel']=False
+        self.noneVisible['resolutionPanel']=False
+        self.noneVisible['cipherPanel']=False
+        self.noneVisible['debugCheckBoxPanel']=False
+        self.noneVisible['advancedCheckBoxPanel']=False
+        self.noneVisible['optionsDialog']=False
 
-        self.massiveProjectLabel = wx.StaticText(self.massiveLoginFieldsPanel, wx.ID_ANY, 'MASSIVE project')
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveProjectLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
-        # The pre-populated list of projects in the combo-box is
-        # hard-coded for now, because
-        # Karaage (http://code.vpac.org/trac/karaage/)
-        # doesn't appear to provide a way to list all projects on MASSIVE
-        # without authenticating.
-        # The user can type in the project name themself, or use the
-        # [Use my default project] option.
-        self.defaultProjectPlaceholder = '[Use my default project]'
-        self.massiveProjects = [
-            self.defaultProjectPlaceholder,
-            'ASync001',
-            'ASync002',
-            'ASync003',
-            'ASync004',
-            'ASync005',
-            'ASync006',
-            'ASync008',
-            'ASync009',
-            'ASync010',
-            'ASync011',
-            'ASync012',
-            'ASync013',
-            'ASync_IMBL',
-            'CSIRO001',
-            'CSIRO002',
-            'CSIRO003',
-            'CSIRO004',
-            'CSIRO005',
-            'CSIRO006',
-            'CSIRO007',
-            'Desc001',
-            'Desc002',
-            'Desc003',
-            'Desc004',
-            'Desc005',
-            'Desc006',
-            'Desc007',
-            'Monash001',
-            'Monash002',
-            'Monash003',
-            'Monash004',
-            'Monash005',
-            'Monash006',
-            'Monash007',
-            'Monash008',
-            'Monash009',
-            'Monash010',
-            'Monash012',
-            'Monash013',
-            'Monash014',
-            'Monash015',
-            'Monash016',
-            'Monash017',
-            'Monash018',
-            'Monash019',
-            'Monash020',
-            'Monash021',
-            'Monash022',
-            'Monash023',
-            'Monash024',
-            'Monash025',
-            'Monash026',
-            'Monash027',
-            'Monash028',
-            'Monash029',
-            'Monash030',
-            'Monash031',
-            'Monash032',
-            'Monash033',
-            'Monash034',
-            'Monash035',
-            'Monash036',
-            'Monash037',
-            'Monash038',
-            'Monash039',
-            'Monash040',
-            'Monash041',
-            'Monash042',
-            'Monash043',
-            'Monash044',
-            'Monash045',
-            'NCId75',
-            'NCIdb5',
-            'NCIdc0',
-            'NCIdd2',
-            'NCIdv0',
-            'NCIdw3',
-            'NCIdy4',
-            'NCIdy7',
-            'NCIdz3',
-            'NCIea0',
-            'NCIg61',
-            'NCIg75',
-            'NCIh77',
-            'NCIq97',
-            'NCIr14',
-            'NCIv43',
-            'NCIw25',
-            'NCIw27',
-            'NCIw67',
-            'NCIw81',
-            'NCIw91',
-            'NCIy40',
-            'NCIy95',
-            'NCIy96',
-            'pDeak0023',
-            'pDeak0026',
-            'pLaTr0011',
-            'pMelb0095',
-            'pMelb0100',
-            'pMelb0103',
-            'pMelb0104',
-            'pMelb0106',
-            'pMelb0107',
-            'pMOSP',
-            'pRMIT0074',
-            'pRMIT0078',
-            'pRMIT0083',
-            'pVPAC0008',
-            'Training',]
-        self.massiveProjectComboBox = wx.ComboBox(self.massiveLoginFieldsPanel, wx.ID_ANY, value='', choices=self.massiveProjects, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN)
-        self.massiveProjectComboBox.Bind(wx.EVT_TEXT, self.onMassiveProjectTextChanged)
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveProjectComboBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.massiveProject = ""
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_project"):
-                self.massiveProject = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_project")
-            elif massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "project"):
-                self.massiveProject = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "project")
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_project","")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
+        self.sites={}
+        self.siteConfigPanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY)
+        self.siteConfigPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.configLabel = wx.StaticText(self.siteConfigPanel, wx.ID_ANY, 'Site',name='label_config')
+        self.siteConfigPanel.GetSizer().Add(self.configLabel, proportion=0, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER, border=5)
+        self.siteConfigComboBox = wx.ComboBox(self.siteConfigPanel, wx.ID_ANY, choices=self.sites.keys(), style=wx.CB_READONLY,name='jobParams_configName')
+        self.siteConfigComboBox.Bind(wx.EVT_COMBOBOX, self.onSiteConfigChanged)
+        self.siteConfigPanel.GetSizer().Add(self.siteConfigComboBox, proportion=1,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.siteConfigPanel,proportion=0,flag=wx.EXPAND)
 
-        self.massiveProject = self.massiveProject.strip()
-        if self.massiveProject!="":
-            if self.massiveProject in self.massiveProjects:
-                self.massiveProjectComboBox.SetSelection(self.massiveProjects.index(self.massiveProject))
-            else:
-                # Project was not found in combo-box.
-                self.massiveProjectComboBox.SetSelection(-1)
-            self.massiveProjectComboBox.SetValue(self.massiveProject)
-        else:
-            self.massiveProjectComboBox.SetValue(self.defaultProjectPlaceholder)
+        self.loginHostPanel=wx.Panel(self.loginFieldsPanel,name='loginHostPanel')
+        self.loginHostPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.loginHostLabel = wx.StaticText(self.loginHostPanel, wx.ID_ANY, 'Server name or IP',name='label_loginHost')
+        self.loginHostPanel.GetSizer().Add(self.loginHostLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginHostTextField = wx.TextCtrl(self.loginHostPanel, wx.ID_ANY, size=(widgetWidth2, -1),name='jobParams_loginHost')
+        self.loginHostPanel.GetSizer().Add(self.loginHostTextField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.loginHostPanel,proportion=0,flag=wx.EXPAND)
 
-        self.massiveHoursLabel = wx.StaticText(self.massiveLoginFieldsPanel, wx.ID_ANY, 'Hours requested')
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveHoursLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
-        self.massiveHoursAndVisNodesPanel = wx.Panel(self.massiveLoginFieldsPanel, wx.ID_ANY)
-        self.massiveHoursAndVisNodesPanelSizer = wx.FlexGridSizer(rows=2, cols=3, vgap=3, hgap=5)
-        self.massiveHoursAndVisNodesPanel.SetSizer(self.massiveHoursAndVisNodesPanelSizer)
+        self.usernamePanel=wx.Panel(self.loginFieldsPanel,name='usernamePanel')
+        self.usernamePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.usernameLabel = wx.StaticText(self.usernamePanel, wx.ID_ANY, 'Username',name='label_username')
+        self.usernamePanel.GetSizer().Add(self.usernameLabel, proportion=1,flag=wx.ALIGN_CENTER|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=5)
+        self.usernameTextField = wx.TextCtrl(self.usernamePanel, wx.ID_ANY, size=(widgetWidth2, -1),name='jobParams_username')
+        self.usernamePanel.GetSizer().Add(self.usernameTextField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.usernamePanel,proportion=0,flag=wx.EXPAND)
 
-        self.massiveHoursRequested = "4"
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_hours_requested"):
-                self.massiveHoursRequested = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_hours_requested")
-                if self.massiveHoursRequested.strip() == "":
-                    self.massiveHoursRequested = "4"
-            elif massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "hours"):
-                self.massiveHoursRequested = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "hours")
-                if self.massiveHoursRequested.strip() == "":
-                    self.massiveHoursRequested = "4"
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_hours_requested","")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
+        self.projectPanel = wx.Panel(self.loginFieldsPanel,wx.ID_ANY,name="projectPanel")
+        self.projectPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.projectLabel = wx.StaticText(self.projectPanel, wx.ID_ANY, 'Project',name='label_project')
+        self.projectPanel.GetSizer().Add(self.projectLabel, proportion=1, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+
+        self.projectField = wx.TextCtrl(self.projectPanel, wx.ID_ANY, size=(widgetWidth2, -1), name='jobParams_project')
+        #self.projectComboBox.Bind(wx.EVT_TEXT, self.onProjectTextChanged)
+        self.projectPanel.GetSizer().Add(self.projectField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.projectPanel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
+
+        self.resourcePanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY,name="resourcePanel")
+        #self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.resourcePanel.SetSizer(wx.FlexGridSizer(rows=4,cols=4))
+
+        self.hoursLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Hours requested',name='label_hours')
+        self.resourcePanel.GetSizer().Add(self.hoursLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         # Maximum of 336 hours is 2 weeks:
         #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
-        self.massiveHoursField = wx.SpinCtrl(self.massiveHoursAndVisNodesPanel, wx.ID_ANY, value=self.massiveHoursRequested, size=(widgetWidth3,-1), min=1,max=336)
-        self.massiveHoursField.Bind(wx.EVT_TEXT, self.onTextEnteredInIntegerField)
+        self.hoursField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=336,name='jobParams_hours')
+        self.resourcePanel.GetSizer().Add(self.hoursField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
 
-        # Spin controls are tricky to configure event-handling for,
-        # because they contain both a TextCtrl object and a
-        # spinner button, but they don't provide a direct interface
-        # for accessing their TextCtrl object.  So we will
-        # determine the TextCtrl object of each SpinCtrl the
-        # first time it is focused, and then bind wx.EVT_KILL_FOCUS
-        # to it, so we can ensure that the field has been
-        # filled in.
-        self.Bind(wx.EVT_CHILD_FOCUS, self.onChildFocus)
-
-        #self.massiveLoginFieldsPanelSizer.Add(self.massiveHoursField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.massiveHoursAndVisNodesPanelSizer.Add(self.massiveHoursField, flag=wx.TOP|wx.BOTTOM|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.massiveVisNodesLabel = wx.StaticText(self.massiveHoursAndVisNodesPanel, wx.ID_ANY, 'Vis nodes')
-        self.massiveHoursAndVisNodesPanelSizer.Add(self.massiveVisNodesLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.massiveVisNodesRequested = "1"
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_visnodes_requested"):
-                self.massiveVisNodesRequested = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_visnodes_requested")
-                if self.massiveVisNodesRequested.strip() == "":
-                    self.massiveVisNodesRequested = "1"
-            elif massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "visnodes"):
-                self.massiveVisNodesRequested = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "visnodes")
-                if self.massiveVisNodesRequested.strip() == "":
-                    self.massiveVisNodesRequested = "1"
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_visnodes_requested","")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        self.massiveVisNodesField = wx.SpinCtrl(self.massiveHoursAndVisNodesPanel, wx.ID_ANY, value=self.massiveVisNodesRequested, size=(widgetWidth3,-1), min=1,max=10)
-        self.massiveVisNodesField.Bind(wx.EVT_TEXT, self.onTextEnteredInIntegerField)
-        self.massiveHoursAndVisNodesPanelSizer.Add(self.massiveVisNodesField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.massiveHoursAndVisNodesPanel.SetSizerAndFit(self.massiveHoursAndVisNodesPanelSizer)
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveHoursAndVisNodesPanel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
+        self.memLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Memory (GB)',name='label_mem')
+        self.resourcePanel.GetSizer().Add(self.memLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        # Maximum of 336 mem is 2 weeks:
+        #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
+        self.memField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=1024,name='jobParams_mem')
+        self.resourcePanel.GetSizer().Add(self.memField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        
+        self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes',name='label_nodes')
+        self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.nodesField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="1", size=(widgetWidth3,-1), min=1,max=10,name='jobParams_nodes')
+        self.resourcePanel.GetSizer().Add(self.nodesField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.ppnLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'PPN',name='label_ppn')
+        self.resourcePanel.GetSizer().Add(self.ppnLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
+        self.ppnField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="12", size=(widgetWidth3,-1), min=1,max=12,name='jobParams_ppn')
+        self.resourcePanel.GetSizer().Add(self.ppnField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.resourcePanel, proportion=0,border=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
 
 
-        self.massiveVncDisplayResolutionLabel = wx.StaticText(self.massiveLoginFieldsPanel, wx.ID_ANY, 'Resolution')
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveVncDisplayResolutionLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.resolutionPanel = wx.Panel(self.loginFieldsPanel,name="resolutionPanel")
+        self.resolutionPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.resolutionLabel = wx.StaticText(self.resolutionPanel, wx.ID_ANY, 'Resolution',name='label_resolution')
+        self.resolutionPanel.GetSizer().Add(self.resolutionLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
-        displaySize = wx.DisplaySize()
-        desiredWidth = displaySize[0] * 0.99
-        desiredHeight = displaySize[1] * 0.85
-        defaultResolution = str(int(desiredWidth)) + "x" + str(int(desiredHeight))
-        self.massiveVncDisplayResolution = defaultResolution
-        massiveVncDisplayResolutions = [
+
+        defaultResolution = "Default resolution"
+        vncDisplayResolutions = [
             defaultResolution, "1024x768", "1152x864", "1280x800", "1280x1024", "1360x768", "1366x768", "1440x900", "1600x900", "1680x1050", "1920x1080", "1920x1200", "7680x3200",
             ]
-        self.massiveVncDisplayResolutionComboBox = wx.ComboBox(self.massiveLoginFieldsPanel, wx.ID_ANY, value='', choices=massiveVncDisplayResolutions, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN)
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveVncDisplayResolutionComboBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_vnc_display_resolution"):
-                self.massiveVncDisplayResolution = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_vnc_display_resolution")
-            elif massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "resolution"):
-                self.massiveVncDisplayResolution = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "resolution")
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_vnc_display_resolution","")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        self.massiveVncDisplayResolution = self.massiveVncDisplayResolution.strip()
-        if self.massiveVncDisplayResolution!="":
-            if self.massiveVncDisplayResolution in massiveVncDisplayResolutions:
-                self.massiveVncDisplayResolutionComboBox.SetSelection(massiveVncDisplayResolutions.index(self.massiveVncDisplayResolution))
-            else:
-                # Resolution was not found in combo-box.
-                self.massiveVncDisplayResolutionComboBox.SetSelection(-1)
-            self.massiveVncDisplayResolutionComboBox.SetValue(self.massiveVncDisplayResolution)
-        else:
-            self.massiveVncDisplayResolutionComboBox.SetValue(defaultResolution)
+        self.resolutionField = wx.ComboBox(self.resolutionPanel, wx.ID_ANY, value=defaultResolution, choices=vncDisplayResolutions, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_resolution')
+        self.resolutionPanel.GetSizer().Add(self.resolutionField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.resolutionPanel,proportion=0,flag=wx.EXPAND)
 
-        self.massiveSshTunnelCipherLabel = wx.StaticText(self.massiveLoginFieldsPanel, wx.ID_ANY, 'SSH tunnel cipher')
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveSshTunnelCipherLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        
+        self.cipherPanel = wx.Panel(self.loginFieldsPanel,name="cipherPanel")
+        self.cipherPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.sshTunnelCipherLabel = wx.StaticText(self.cipherPanel, wx.ID_ANY, 'SSH tunnel cipher',name='label_cipher')
+        self.cipherPanel.GetSizer().Add(self.sshTunnelCipherLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
 
-        self.massiveSshTunnelCipher = ""
         if sys.platform.startswith("win"):
             defaultCipher = "arcfour"
-            massiveSshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour"]
+            sshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour"]
         else:
             defaultCipher = "arcfour128"
-            massiveSshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour128"]
-        self.massiveSshTunnelCipher = defaultCipher
-        self.massiveSshTunnelCipherComboBox = wx.ComboBox(self.massiveLoginFieldsPanel, wx.ID_ANY, value='', choices=massiveSshTunnelCiphers, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN)
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveSshTunnelCipherComboBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_ssh_tunnel_cipher"):
-                self.massiveSshTunnelCipher = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_ssh_tunnel_cipher")
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "cipher"):
-                self.massiveSshTunnelCipher = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "cipher")
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_ssh_tunnel_cipher","")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        self.massiveSshTunnelCipher = self.massiveSshTunnelCipher.strip()
-        if self.massiveSshTunnelCipher=="":
-            self.massiveSshTunnelCipher = defaultCipher
-        if self.massiveSshTunnelCipher!="":
-            if self.massiveSshTunnelCipher in massiveSshTunnelCiphers:
-                self.massiveSshTunnelCipherComboBox.SetSelection(massiveSshTunnelCiphers.index(self.massiveSshTunnelCipher))
-            else:
-                # Cipher was not found in combo-box.
-                self.massiveSshTunnelCipherComboBox.SetSelection(-1)
-            self.massiveSshTunnelCipherComboBox.SetValue(self.massiveSshTunnelCipher)
-        else:
-            self.massiveSshTunnelCipherComboBox.SetValue(defaultCipher)
-
-        self.massiveUsernameLabel = wx.StaticText(self.massiveLoginFieldsPanel, wx.ID_ANY, 'Username')
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveUsernameLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.massiveUsername = ""
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_username"):
-                self.massiveUsername = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_username")
-            elif massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "username"):
-                self.massiveUsername = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "username")
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_username","")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        self.massiveUsernameTextField = wx.TextCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, self.massiveUsername, size=(widgetWidth1, -1))
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveUsernameTextField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=8)
-        if self.massiveUsername.strip()!="":
-            self.massiveUsernameTextField.SelectAll()
-
-
-        self.massiveUsernameTextField.SetFocus()
-
-        self.massiveProjectComboBox.MoveAfterInTabOrder(self.massiveLoginHostComboBox)
-        #self.massiveHoursField.MoveAfterInTabOrder(self.massiveProjectComboBox)
-        self.massiveHoursAndVisNodesPanel.MoveAfterInTabOrder(self.massiveProjectComboBox)
-        #self.massiveVncDisplayResolutionComboBox.MoveAfterInTabOrder(self.massiveHoursField)
-        self.massiveVncDisplayResolutionComboBox.MoveAfterInTabOrder(self.massiveHoursAndVisNodesPanel)
-        self.massiveSshTunnelCipherComboBox.MoveAfterInTabOrder(self.massiveVncDisplayResolutionComboBox)
-        self.massiveUsernameTextField.MoveAfterInTabOrder(self.massiveSshTunnelCipherComboBox)
-
-        self.massiveShowDebugWindowLabel = wx.StaticText(self.massiveLoginFieldsPanel, wx.ID_ANY, 'Show debug window')
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveShowDebugWindowLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.massiveDebugAndAutoExitPanel = wx.Panel(self.massiveLoginFieldsPanel, wx.ID_ANY)
-        self.massiveDebugAndAutoExitPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=3, hgap=5)
-        self.massiveDebugAndAutoExitPanel.SetSizer(self.massiveDebugAndAutoExitPanelSizer)
-
-        self.massiveShowDebugWindowCheckBox = wx.CheckBox(self.massiveDebugAndAutoExitPanel, wx.ID_ANY, "")
-        self.massiveShowDebugWindowCheckBox.SetValue(False)
-        self.massiveShowDebugWindowCheckBox.Bind(wx.EVT_CHECKBOX, self.onDebugWindowCheckBoxStateChanged)
-        self.massiveDebugAndAutoExitPanelSizer.Add(self.massiveShowDebugWindowCheckBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.massiveAutomaticallyExitLabel = wx.StaticText(self.massiveDebugAndAutoExitPanel, wx.ID_ANY, "          Automatically exit")
-        self.massiveDebugAndAutoExitPanelSizer.Add(self.massiveAutomaticallyExitLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=5)
-
-        self.massiveAutomaticallyExit = True
-        if massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            if massiveLauncherConfig.has_option("MASSIVE Launcher Preferences", "massive_automatically_exit"):
-                self.massiveAutomaticallyExit = massiveLauncherConfig.get("MASSIVE Launcher Preferences", "massive_automatically_exit")
-                if self.massiveAutomaticallyExit.strip() == "":
-                    self.massiveAutomaticallyExit = True
-                else:
-                    if self.massiveAutomaticallyExit==True or self.massiveAutomaticallyExit=='True':
-                        self.massiveAutomaticallyExit = True
-                    else:
-                        self.massiveAutomaticallyExit = False
-            else:
-                massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_automatically_exit","False")
-                with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                    massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-        else:
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-            with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-                massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-
-        self.massiveAutomaticallyExitCheckBox = wx.CheckBox(self.massiveDebugAndAutoExitPanel, wx.ID_ANY, "")
-        self.massiveAutomaticallyExitCheckBox.SetValue(self.massiveAutomaticallyExit)
-        self.massiveDebugAndAutoExitPanelSizer.Add(self.massiveAutomaticallyExitCheckBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=5)
-
-        self.massiveDebugAndAutoExitPanel.Fit()
-        self.massiveLoginFieldsPanelSizer.Add(self.massiveDebugAndAutoExitPanel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+            sshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour128"]
+        self.sshTunnelCipherComboBox = wx.ComboBox(self.cipherPanel, wx.ID_ANY, value=defaultCipher, choices=sshTunnelCiphers, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_cipher')
+        self.cipherPanel.GetSizer().Add(self.sshTunnelCipherComboBox, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.cipherPanel,proportion=0,flag=wx.EXPAND)
         
-        self.massiveLoginFieldsPanel.SetSizerAndFit(self.massiveLoginFieldsPanelSizer)
 
-        self.massiveLoginDialogPanelSizer.Add(self.massiveLoginFieldsPanel, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=15)
-
-        self.massiveLoginDialogPanel.SetSizerAndFit(self.massiveLoginDialogPanelSizer)
-        self.massiveLoginDialogPanel.Layout()
-
-        self.tabbedView.AddPage(self.massiveLoginDialogPanel, "MASSIVE")
-
-        # CVL tab
-
-        # Overall CVL login panel:
-        self.cvlLoginDialogPanel = wx.Panel(self.tabbedView, wx.ID_ANY)
-        self.tabbedView.AddPage(self.cvlLoginDialogPanel, "CVL")
-
-        self.cvlLoginDialogPanelSizer = wx.FlexGridSizer(rows=2, cols=1, vgap=5, hgap=5)
-
-        # Simple login fields: connection profile, username, advanced settings checkbox
-        self.cvlSimpleLoginFieldsPanel = wx.Panel(self.cvlLoginDialogPanel, wx.ID_ANY)
-        self.cvlSimpleLoginFieldsPanelSizer = wx.FlexGridSizer(rows=5, cols=2, vgap=3, hgap=5)
-        self.cvlSimpleLoginFieldsPanel.SetSizer(self.cvlSimpleLoginFieldsPanelSizer)
-
-        self.cvlConnectionProfileLabel = wx.StaticText(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, 'Connection')
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlConnectionProfileLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.cvlConnectionProfile = ""
-        cvlConnectionProfiles = ["login.cvl.massive.org.au","Huygens on the CVL","Other..."]
-        defaultCvlConnectionProfile = "login.cvl.massive.org.au"
-        self.cvlConnectionProfileComboBox = wx.ComboBox(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, value=defaultCvlConnectionProfile, choices=cvlConnectionProfiles, size=(widgetWidth2, -1), style=wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.onCvlConnectionProfileChanged, self.cvlConnectionProfileComboBox) 
-
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlConnectionProfileComboBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        if cvlLauncherConfig.has_section("CVL Launcher Preferences"):
-            if cvlLauncherConfig.has_option("CVL Launcher Preferences", "cvl_connection_profile"):
-                self.cvlConnectionProfile = cvlLauncherConfig.get("CVL Launcher Preferences", "cvl_connection_profile")
-
-                # If the user has a setting for cvl_connection_profile that is not in our approved list, just take
-                # the first known CVL connection profile.
-                if self.cvlConnectionProfile not in cvlConnectionProfiles:
-                    self.cvlConnectionProfile = cvlConnectionProfiles[0]
-
-                    cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_connection_profile", self.cvlConnectionProfile)
-                    with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                        cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-            else:
-                cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_connection_profile","")
-                with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                    cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        else:
-            cvlLauncherConfig.add_section("CVL Launcher Preferences")
-            with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        self.cvlConnectionProfile = self.cvlConnectionProfile.strip()
-        if self.cvlConnectionProfile!="":
-            if self.cvlConnectionProfile in cvlConnectionProfiles:
-                self.cvlConnectionProfileComboBox.SetSelection(cvlConnectionProfiles.index(self.cvlConnectionProfile))
-            else:
-                # Connection profile was not found in combo-box.
-                self.cvlConnectionProfileComboBox.SetSelection(0)
-
-        self.cvlLoginHostLabel = wx.StaticText(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, 'Host')
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlLoginHostLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.cvlLoginHost = ""
-        if cvlLauncherConfig.has_section("CVL Launcher Preferences"):
-            if cvlLauncherConfig.has_option("CVL Launcher Preferences", "cvl_login_host"):
-                self.cvlLoginHost = cvlLauncherConfig.get("CVL Launcher Preferences", "cvl_login_host")
-            else:
-                cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_login_host","")
-                with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                    cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        else:
-            cvlLauncherConfig.add_section("CVL Launcher Preferences")
-            with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        self.cvlLoginHost = self.cvlLoginHost.strip()
-        self.cvlLoginHostTextFieldPanel = wx.Panel(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, size=wx.Size(widgetWidth1, -1))
-        self.cvlLoginHostTextFieldPanelSizer = wx.FlexGridSizer(rows=1, cols=1)
-        self.cvlLoginHostTextField = wx.TextCtrl(self.cvlLoginHostTextFieldPanel, wx.ID_ANY, self.cvlLoginHost, size=wx.Size(widgetWidth1, -1))
-        self.cvlLoginHostTextFieldPanelSizer.Add(self.cvlLoginHostTextField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.cvlLoginHostTextFieldPanel.SetSizerAndFit(self.cvlLoginHostTextFieldPanelSizer)
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlLoginHostTextFieldPanel, flag=wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=3)
-        if self.cvlConnectionProfileComboBox.GetValue()!="Other...":
-            self.cvlSimpleLoginFieldsPanelSizer.Show(self.cvlLoginHostTextFieldPanel,False)
-
-        self.cvlUsernameLabel = wx.StaticText(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, 'Username')
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlUsernameLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.cvlUsername = ""
-        if cvlLauncherConfig.has_section("CVL Launcher Preferences"):
-            if cvlLauncherConfig.has_option("CVL Launcher Preferences", "cvl_username"):
-                self.cvlUsername = cvlLauncherConfig.get("CVL Launcher Preferences", "cvl_username")
-            else:
-                cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_username","")
-                with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                    cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        else:
-            cvlLauncherConfig.add_section("CVL Launcher Preferences")
-            with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        self.cvlUsernameTextField = wx.TextCtrl(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, self.cvlUsername, size=(widgetWidth1, -1))
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlUsernameTextField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=8)
-        if self.cvlUsername.strip()!="":
-            self.cvlUsernameTextField.SelectAll()
-
-        self.cvlShowAdvancedLoginLabel = wx.StaticText(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, 'Show advanced options')
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlShowAdvancedLoginLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-        self.cvlAdvancedLoginCheckBox = wx.CheckBox(self.cvlSimpleLoginFieldsPanel, wx.ID_ANY, "")
-        self.cvlAdvancedLoginCheckBox.SetMinSize(self.cvlAdvancedLoginCheckBox.GetSize())
-        self.cvlAdvancedLoginCheckBox.SetValue(False)
-        self.cvlAdvancedLoginCheckBox.Bind(wx.EVT_CHECKBOX, self.onCvlAdvancedLoginCheckBox)
-        self.cvlSimpleLoginFieldsPanelSizer.Add(self.cvlAdvancedLoginCheckBox, flag=wx.LEFT|wx.EXPAND, border=10)
-
-        self.cvlAdvancedLoginFieldsPanel = wx.Panel(self.cvlLoginDialogPanel, wx.ID_ANY)
-        self.cvlAdvancedLoginFieldsPanelSizer = wx.FlexGridSizer(rows=4, cols=2, vgap=3, hgap=5)
-        self.cvlAdvancedLoginFieldsPanel.SetSizer(self.cvlAdvancedLoginFieldsPanelSizer)
-
-        self.cvlVncDisplayResolutionLabel = wx.StaticText(self.cvlAdvancedLoginFieldsPanel, wx.ID_ANY, 'Resolution')
-        self.cvlAdvancedLoginFieldsPanelSizer.Add(self.cvlVncDisplayResolutionLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        displaySize = wx.DisplaySize()
-        desiredWidth = displaySize[0] * 0.99
-        desiredHeight = displaySize[1] * 0.85
-        defaultResolution = str(int(desiredWidth)) + "x" + str(int(desiredHeight))
-        self.cvlVncDisplayResolution = defaultResolution
-        cvlVncDisplayResolutions = [
-            defaultResolution, "1024x768", "1152x864", "1280x800", "1280x1024", "1360x768", "1366x768", "1440x900", "1600x900", "1680x1050", "1920x1080", "1920x1200", "7680x3200",
-            ]
-        self.cvlVncDisplayResolutionComboBox = wx.ComboBox(self.cvlAdvancedLoginFieldsPanel, wx.ID_ANY, value='', choices=cvlVncDisplayResolutions, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN)
-        self.cvlAdvancedLoginFieldsPanelSizer.Add(self.cvlVncDisplayResolutionComboBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        if cvlLauncherConfig.has_section("CVL Launcher Preferences"):
-            if cvlLauncherConfig.has_option("CVL Launcher Preferences", "cvl_vnc_display_resolution"):
-                self.cvlVncDisplayResolution = cvlLauncherConfig.get("CVL Launcher Preferences", "cvl_vnc_display_resolution")
-            elif cvlLauncherConfig.has_option("CVL Launcher Preferences", "resolution"):
-                self.cvlVncDisplayResolution = cvlLauncherConfig.get("CVL Launcher Preferences", "resolution")
-            else:
-                cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_vnc_display_resolution","")
-                with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                    cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        else:
-            cvlLauncherConfig.add_section("CVL Launcher Preferences")
-            with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        self.cvlVncDisplayResolution = self.cvlVncDisplayResolution.strip()
-        if self.cvlVncDisplayResolution!="":
-            if self.cvlVncDisplayResolution in cvlVncDisplayResolutions:
-                self.cvlVncDisplayResolutionComboBox.SetSelection(cvlVncDisplayResolutions.index(self.cvlVncDisplayResolution))
-            else:
-                # Resolution was not found in combo-box.
-                self.cvlVncDisplayResolutionComboBox.SetSelection(-1)
-            self.cvlVncDisplayResolutionComboBox.SetValue(self.cvlVncDisplayResolution)
-        else:
-            self.cvlVncDisplayResolutionComboBox.SetValue(defaultResolution)
-
-
-        self.cvlSshTunnelCipherLabel = wx.StaticText(self.cvlAdvancedLoginFieldsPanel, wx.ID_ANY, 'SSH tunnel cipher')
-        self.cvlAdvancedLoginFieldsPanelSizer.Add(self.cvlSshTunnelCipherLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        defaultCipher = ""
-        self.cvlSshTunnelCipher = ""
-        cvlSshTunnelCiphers = [""]
-        if sys.platform.startswith("win"):
-            defaultCipher = "arcfour"
-            cvlSshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour"]
-        else:
-            defaultCipher = "arcfour128"
-            cvlSshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour128"]
-        self.cvlSshTunnelCipherComboBox = wx.ComboBox(self.cvlAdvancedLoginFieldsPanel, wx.ID_ANY, value='', choices=cvlSshTunnelCiphers, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN)
-        self.cvlAdvancedLoginFieldsPanelSizer.Add(self.cvlSshTunnelCipherComboBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-        if cvlLauncherConfig.has_section("CVL Launcher Preferences"):
-            if cvlLauncherConfig.has_option("CVL Launcher Preferences", "cvl_ssh_tunnel_cipher"):
-                self.cvlSshTunnelCipher = cvlLauncherConfig.get("CVL Launcher Preferences", "cvl_ssh_tunnel_cipher")
-            if cvlLauncherConfig.has_option("CVL Launcher Preferences", "cipher"):
-                self.cvlSshTunnelCipher = cvlLauncherConfig.get("CVL Launcher Preferences", "cipher")
-            else:
-                cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_ssh_tunnel_cipher","")
-                with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                    cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        else:
-            cvlLauncherConfig.add_section("CVL Launcher Preferences")
-            with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        self.cvlSshTunnelCipher = self.cvlSshTunnelCipher.strip()
-        if self.cvlSshTunnelCipher=="":
-            self.cvlSshTunnelCipher = defaultCipher
-        if self.cvlSshTunnelCipher!="":
-            if self.cvlSshTunnelCipher in cvlSshTunnelCiphers:
-                self.cvlSshTunnelCipherComboBox.SetSelection(cvlSshTunnelCiphers.index(self.cvlSshTunnelCipher))
-            else:
-                # Cipher was not found in combo-box.
-                self.cvlSshTunnelCipherComboBox.SetSelection(-1)
-            self.cvlSshTunnelCipherComboBox.SetValue(self.cvlSshTunnelCipher)
-        else:
-            self.cvlSshTunnelCipherComboBox.SetValue(defaultCipher)
-
-        self.cvlShowDebugWindowLabel = wx.StaticText(self.cvlAdvancedLoginFieldsPanel, wx.ID_ANY, 'Show debug window')
-        self.cvlAdvancedLoginFieldsPanelSizer.Add(self.cvlShowDebugWindowLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.cvlDebugAndAutoExitPanel = wx.Panel(self.cvlAdvancedLoginFieldsPanel, wx.ID_ANY)
-        self.cvlDebugAndAutoExitPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=3, hgap=5)
-        self.cvlDebugAndAutoExitPanel.SetSizer(self.cvlDebugAndAutoExitPanelSizer)
-
-        self.cvlShowDebugWindowCheckBox = wx.CheckBox(self.cvlDebugAndAutoExitPanel, wx.ID_ANY, "")
-        self.cvlShowDebugWindowCheckBox.SetValue(False)
-        self.cvlShowDebugWindowCheckBox.Bind(wx.EVT_CHECKBOX, self.onDebugWindowCheckBoxStateChanged)
-        self.cvlDebugAndAutoExitPanelSizer.Add(self.cvlShowDebugWindowCheckBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
-
-        self.cvlAutomaticallyExitLabel = wx.StaticText(self.cvlDebugAndAutoExitPanel, wx.ID_ANY, "          Automatically exit")
-        self.cvlDebugAndAutoExitPanelSizer.Add(self.cvlAutomaticallyExitLabel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=5)
-
-        self.cvlAutomaticallyExit = False
-        if cvlLauncherConfig.has_section("CVL Launcher Preferences"):
-            if cvlLauncherConfig.has_option("CVL Launcher Preferences", "cvl_automatically_exit"):
-                self.cvlAutomaticallyExit = cvlLauncherConfig.get("CVL Launcher Preferences", "cvl_automatically_exit")
-                if self.cvlAutomaticallyExit.strip() == "":
-                    self.cvlAutomaticallyExit = False
-                else:
-                    if self.cvlAutomaticallyExit==True or self.cvlAutomaticallyExit=='True':
-                        self.cvlAutomaticallyExit = True
-                    else:
-                        self.cvlAutomaticallyExit = False
-            else:
-                cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_automatically_exit","False")
-                with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                    cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-        else:
-            cvlLauncherConfig.add_section("CVL Launcher Preferences")
-            with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-                cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-
-        self.cvlAutomaticallyExitCheckBox = wx.CheckBox(self.cvlDebugAndAutoExitPanel, wx.ID_ANY, "")
-        self.cvlAutomaticallyExitCheckBox.SetValue(self.cvlAutomaticallyExit)
-        self.cvlDebugAndAutoExitPanelSizer.Add(self.cvlAutomaticallyExitCheckBox, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=5)
-
-        self.cvlDebugAndAutoExitPanel.Fit()
-        self.cvlAdvancedLoginFieldsPanelSizer.Add(self.cvlDebugAndAutoExitPanel, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.checkBoxPanel = wx.Panel(self.loginFieldsPanel,name="checkBoxPanel")
+        self.checkBoxPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         
-        self.cvlSimpleLoginFieldsPanel.SetSizerAndFit(self.cvlSimpleLoginFieldsPanelSizer)
-        if self.cvlConnectionProfileComboBox.GetValue()!="Other...":
-            self.cvlSimpleLoginFieldsPanelSizer.Show(self.cvlLoginHostLabel,False)
-            self.cvlSimpleLoginFieldsPanelSizer.Layout()
-        self.cvlAdvancedLoginFieldsPanel.SetSizerAndFit(self.cvlAdvancedLoginFieldsPanelSizer)
+        p = wx.Panel(self.checkBoxPanel,name="debugCheckBoxPanel")
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        l = wx.StaticText(p, wx.ID_ANY, 'Show debug window',name='label_debug')
+        c = wx.CheckBox(p, wx.ID_ANY, "",name='debugCheckBox')
+        c.Bind(wx.EVT_CHECKBOX, self.onDebugWindowCheckBoxStateChanged)
+        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        self.checkBoxPanel.GetSizer().Add(p,flag=wx.ALIGN_LEFT)
+    
+        t=wx.StaticText(self.checkBoxPanel,label="")
+        self.checkBoxPanel.GetSizer().Add(t,proportion=1,flag=wx.EXPAND)
+  
+        p = wx.Panel(self.checkBoxPanel,name="advancedCheckBoxPanel")
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        l = wx.StaticText(p, wx.ID_ANY, 'Show Advanced Options',name='label_advanced')
+        c = wx.CheckBox(p, wx.ID_ANY, "",name='advancedCheckBox')
+        c.Bind(wx.EVT_CHECKBOX, self.onAdvancedVisibilityStateChanged)
+        p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        self.checkBoxPanel.GetSizer().Add(p,flag=wx.ALIGN_RIGHT)
 
-        self.cvlAdvancedLoginFieldsPanel.Show(False)
+        self.loginFieldsPanel.GetSizer().Add(self.checkBoxPanel,flag=wx.ALIGN_BOTTOM|wx.EXPAND,proportion=1)
 
-        self.cvlLoginDialogPanelSizer.Add(self.cvlSimpleLoginFieldsPanel, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=15)
-        self.cvlLoginDialogPanelSizer.Add(self.cvlAdvancedLoginFieldsPanel, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=15)
+        #self.tabbedView.AddPage(self.loginFieldsPanel, "Login")
 
-        self.cvlLoginDialogPanel.SetSizerAndFit(self.cvlLoginDialogPanelSizer)
-        self.cvlLoginDialogPanel.Layout()
-
-        # End CVL tab
-
-        self.loginDialogPanelSizer.Add(self.tabbedView, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=10)
-
-        lastUsedTabIndexAsString = "0"
-        if globalLauncherConfig.has_section("Global Preferences"):
-            if globalLauncherConfig.has_option("Global Preferences", "last_used_tab_index"):
-                lastUsedTabIndexAsString = globalLauncherConfig.get("Global Preferences", "last_used_tab_index")
-                if lastUsedTabIndexAsString.strip() == "":
-                    lastUsedTabIndexAsString = "0"
-        lastUsedTabIndex = int(lastUsedTabIndexAsString)
-        MASSIVE_TAB_INDEX = 0
-        CVL_TAB_INDEX = 1
-        self.tabbedView.ChangeSelection(lastUsedTabIndex)
-        self.massiveTabSelected = (lastUsedTabIndex==MASSIVE_TAB_INDEX)
-        self.cvlTabSelected = (lastUsedTabIndex==CVL_TAB_INDEX)
+        #self.loginDialogPanelSizer.Add(self.tabbedView, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=10)
 
         # Buttons Panel
 
         self.buttonsPanel = wx.Panel(self.loginDialogPanel, wx.ID_ANY)
-
-        self.buttonsPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=5, hgap=10)
-        self.buttonsPanel.SetSizer(self.buttonsPanelSizer)
-
-        self.preferencesButton = wx.Button(self.buttonsPanel, wx.ID_ANY, 'Preferences')
-        self.buttonsPanelSizer.Add(self.preferencesButton, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=10)
-        self.Bind(wx.EVT_BUTTON, self.onOptions, id=self.preferencesButton.GetId())
+        #self.buttonsPanel.SetSizer(wx.FlexGridSizer(rows=1, cols=4, vgap=5, hgap=10))
+        self.buttonsPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
 
         self.exitButton = wx.Button(self.buttonsPanel, wx.ID_ANY, 'Exit')
-        self.buttonsPanelSizer.Add(self.exitButton, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=10)
+        self.buttonsPanel.GetSizer().Add(self.exitButton, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=10)
         self.Bind(wx.EVT_BUTTON, self.onExit,  id=self.exitButton.GetId())
 
         self.loginButton = wx.Button(self.buttonsPanel, wx.ID_ANY, 'Login')
-        self.buttonsPanelSizer.Add(self.loginButton, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=10)
-        self.Bind(wx.EVT_BUTTON, self.onLogin,   id=self.loginButton.GetId())
-
-        self.buttonsPanel.SetSizerAndFit(self.buttonsPanelSizer)
-
-        self.preferencesButton.Show(False)
-
-        self.loginDialogPanelSizer.Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=15)
-
+        self.buttonsPanel.GetSizer().Add(self.loginButton, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=10)
+        self.loginButton.Bind(wx.EVT_BUTTON, self.savePrefsEventHandler)
+        self.loginButton.Bind(wx.EVT_BUTTON, self.onLogin)
         self.loginButton.SetDefault()
 
+
+        #self.preferencesButton.Show(False)
+
+        self.loginDialogPanel.GetSizer().Add(self.buttonsPanel, flag=wx.ALIGN_RIGHT|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=15)
+
         self.loginDialogStatusBar = LauncherStatusBar(self)
-        self.SetStatusBar(self.loginDialogStatusBar)
 
-        self.loginDialogPanel.SetSizerAndFit(self.loginDialogPanelSizer)
-        self.loginDialogPanel.Layout()
 
-        self.Fit()
-        self.Layout()
+        #self.Fit()
+        #self.Layout()
+        #self.menu_bar.Show(False)
 
-        self.Centre()
+        #self.Centre()
 
-        self.logWindow = wx.Frame(self, title="MASSIVE/CVL Launcher Debug Log", name="MASSIVE/CVL Launcher Debug Log",pos=(200,150),size=(700,450))
+        self.hiddenWindow=wx.Frame(self)
+        self.hiddenWindow.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        t=wx.TextCtrl(self.hiddenWindow,wx.ID_ANY,name='jobParams_aaf_idp')
+        self.hiddenWindow.GetSizer().Add(t)
+        t=wx.TextCtrl(self.hiddenWindow,wx.ID_ANY,name='jobParams_aaf_username')
+        self.hiddenWindow.GetSizer().Add(t)
+
+        # any controls created on this frame will be inaccessible to the user, but if we set them it will cause them to be saved to the config file
+
+        self.logWindow = wx.Frame(self, title="%s Debug Log"%self.programName, name="%s Debug Log"%self.programName,pos=(200,150),size=(700,450))
         self.logWindow.Bind(wx.EVT_CLOSE, self.onCloseDebugWindow)
         self.logWindowPanel = wx.Panel(self.logWindow)
         self.logTextCtrl = wx.TextCtrl(self.logWindowPanel, style=wx.TE_MULTILINE|wx.TE_READONLY)
@@ -1065,46 +653,9 @@ class LauncherMainFrame(wx.Frame):
         import commit_def
         logger.debug('launcher commit hash: ' + commit_def.LATEST_COMMIT)
         logger.debug('cvlsshutils commit hash: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS)
-        MASSIVE_TAB_INDEX = 0
-        CVL_TAB_INDEX =1
-        if self.tabbedView.GetSelection()==MASSIVE_TAB_INDEX:
-            logger.debug("Using MASSIVE display strings.")
-            self.displayStrings = sshKeyDistDisplayStringsMASSIVE()
-        if self.tabbedView.GetSelection()==CVL_TAB_INDEX:
-            logger.debug("Using CVL display strings.")
-            self.displayStrings = sshKeyDistDisplayStringsCVL()
+        self.contacted_massive_website = False
 
-        # Check for the latest version of the launcher:
-        try:
-            myHtmlParser = MyHtmlParser('MassiveLauncherLatestVersionNumber')
-            feed = urllib2.urlopen(LAUNCHER_URL, timeout=10)
-            html = feed.read()
-            myHtmlParser.feed(html)
-            myHtmlParser.close()
-
-            latestVersionNumber = myHtmlParser.latestVersionNumber
-            htmlComments = myHtmlParser.htmlComments
-            htmlCommentsSplit1 = htmlComments.split("<pre id=\"CHANGES\">")
-            htmlCommentsSplit2 = htmlCommentsSplit1[1].split("</pre>")
-            latestVersionChanges = htmlCommentsSplit2[0].strip()
-            self.contacted_massive_website = True
-        except:
-            logger.debug(traceback.format_exc())
-            self.contacted_massive_website = False
-            dlg = wx.MessageDialog(self, "Warning: Could not contact the MASSIVE website to check version number.\n\n",
-                                "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
-            dlg.ShowModal()
-
-            latestVersionNumber = launcher_version_number.version_number
-            latestVersionChanges = ''
-
-        if latestVersionNumber != launcher_version_number.version_number:
-            import new_version_alert_dialog
-            newVersionAlertDialog = new_version_alert_dialog.NewVersionAlertDialog(launcherMainFrame, wx.ID_ANY, "MASSIVE/CVL Launcher", latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
-            newVersionAlertDialog.ShowModal()
-            logger.debug('Old launcher version !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            logger.debug('launcher version: ' + str(launcher_version_number.version_number))
-
+        self.Bind(wx.EVT_CLOSE,self.onExit)
         self.startupinfo = None
         try:
             self.startupinfo = subprocess.STARTUPINFO()
@@ -1131,62 +682,536 @@ class LauncherMainFrame(wx.Frame):
         # pressing the Login button.
         self.keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=False)
 
+        #self.loadPrefs()
 
-    def onTabbedViewChanged(self, event):
-        event.Skip()
-        if hasattr(self, 'cvlAdvancedLoginCheckBox'):
-            if self.cvlAdvancedLoginCheckBox.GetValue():
-                launcherMainFrame.cvlAdvancedLoginFieldsPanel.Show()
+    def manageSitesEventHandler(self,event):
+        t=threading.Thread(target=self.manageSites)
+        t.start()
+
+    def getSitePrefs(self,queue):
+        options = self.getPrefsSection('configured_sites')
+        siteList=[]
+        for s in options.keys():
+            if 'siteurl' in s:
+                site=options[s]
+                number=int(s[7:])
+                enabled=options['siteenabled%i'%number]
+                if enabled=='True':
+                    enabled=True
+                elif enabled=='False':
+                    enabled=False
+                name=options['sitename%i'%number]
+                siteList.append({'url':site,'enabled':enabled,'name':name,'number':number})
+                siteList.sort(key=lambda x:x['number'])
+        queue.put(siteList)
+
+    def getNewSites(self,queue):
+        newlist=[]
+        try:
+            if sys.platform.startswith("linux"):
+                f=open(os.path.join(sys.path[0],"masterList.url"),'r')
             else:
-                launcherMainFrame.cvlAdvancedLoginFieldsPanel.Hide()
-        MASSIVE_TAB_INDEX = 0
-        CVL_TAB_INDEX =1
-        if self.tabbedView.GetSelection()==MASSIVE_TAB_INDEX:
-            launcherMainFrame.massiveTabSelected = True
-            launcherMainFrame.cvlTabSelected = False
-            logger.debug( "Using MASSIVE display strings.")
-            self.displayStrings = sshKeyDistDisplayStringsMASSIVE()
-        if self.tabbedView.GetSelection()==CVL_TAB_INDEX:
-            launcherMainFrame.cvlTabSelected = True
-            launcherMainFrame.massiveTabSelected = False
-            logger.debug("Using CVL display strings.")
-            self.displayStrings = sshKeyDistDisplayStringsCVL()
+                f=open("masterList.url",'r')
+            url=f.read().rstrip()
+            logger.debug("master list of sites is available at %s"%url)
+            newlist=siteConfig.getMasterSites(url)
+            queue.put(newlist)
+        except requests.exceptions.RequestException as e:
+            logger.debug("getNewSites: Exception %s"%e)
+            logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
+            queue.put(None)
+        except Exception as e:
+            logger.debug("getNewSites: Exception %s"%e)
+            logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
+            queue.put(None)
+        finally:
+            f.close()
 
-    def onMassiveLoginHostNameChanged(self, event):
-        event.Skip()
-        selectedMassiveLoginHost = self.massiveLoginHostComboBox.GetValue()
+    def showSiteListDialog(self,siteList,newlist,q):
+        import siteListDialog
+        dlg=siteListDialog.siteListDialog(parent=self,siteList=siteList,newSites=newlist,style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
+        r=dlg.ShowModal()
+        q.put([r,dlg.getList()])
 
-    def onMassiveProjectTextChanged(self, event):
-        massiveProjectTextFieldValue = launcherMainFrame.massiveProjectComboBox.GetValue().strip()
-        if massiveProjectTextFieldValue=="" or massiveProjectTextFieldValue.startswith("[Use"):
-            launcherMainFrame.massiveProjectComboBox.SetValue(launcherMainFrame.defaultProjectPlaceholder)
-            launcherMainFrame.massiveProjectComboBox.SelectAll()
-            launcherMainFrame.massiveProjectComboBox.SetFocus()
-        if massiveProjectTextFieldValue in launcherMainFrame.massiveProjects:
-            launcherMainFrame.massiveProjectComboBox.SetSelection(launcherMainFrame.massiveProjects.index(massiveProjectTextFieldValue))
+    def loadNewSitesNonBlocking(self,time=None):
+        r=Queue.Queue()
+        timeoutObject=object()
+        threading.Thread(target=self.getNewSites,args=[r]).start()
+        if time!=None:
+            timer=threading.Timer(time,r.put,args=[timeoutObject])
+            timer.start()
+        dq=Queue.Queue()
+        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingSiteList.message,ButtonLabels=dialogs.loadingSiteList.ButtonLabels,q=dq)
+        progressdlg=dq.get()
+        wx.CallAfter(self.showModalFromThread,progressdlg,r)
+        wx.CallAfter(wx.BeginBusyCursor)
+        newlist=r.get()
+        wx.CallAfter(wx.EndBusyCursor)
+        try:
+            wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
+        except:
+            pass
+        if isinstance(newlist,type([])):
+            pass
+        elif newlist == timeoutObject:
+            raise siteConfig.TimeoutException("Timeout loading new sites")
+        elif newlist == None:
+            raise siteConfig.TimeoutException("Timeout loading new sites")
+        elif isinstance(newlist,type("")):
+            raise siteConfig.StatusCode(newlist)
+        else:
+            raise siteConfig.CancelException("Canceled load new sites")
+        return newlist
+
+    def manageSites(self):
+        siteList=[]
+        tlist=[]
+
+        retry=True
+        try:
+            newlist=self.loadNewSitesNonBlocking(time=10)
+        except siteConfig.CancelException:
+            newlist=[]
+            retry=False
+        except siteConfig.TimeoutException:
+            newlist=[]
+            retry=True
+        except siteConfig.StatusCode as e:
+            newlist=[]
+            retry=False
+            dq=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
+            dlg=dq.get()
+            q=Queue.Queue()
+            wx.CallAfter(self.showModalFromThread,dlg,q)
+            button=q.get()
+
+
+        q=Queue.Queue()
+        threading.Thread(target=self.getSitePrefs,args=[q]).start()
+        wx.CallAfter(wx.BeginBusyCursor)
+        origSiteList=q.get()
+        wx.CallAfter(wx.EndBusyCursor)
+
+        if origSiteList==[] and newlist==[] and retry==True:
+
+
+            q=Queue.Queue()
+            dq=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels,q=dq)
+            dlg=dq.get()
+            wx.CallAfter(self.showModalFromThread,dlg,q)
+            button=q.get()
+            if button==0:
+                retry=False
+            while retry:
+                try:
+                    newlist=self.loadNewSitesNonBlocking(time=None)
+                    if isinstance(newlist,type([])) and newlist!=[]:
+                        retry=False
+                    if newlist==None:
+                        retry=True
+                except Exception as e:
+                    logger.debug("getNewSites: Exception %s"%e)
+                    logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
+                    q=Queue.Queue()
+                    dq=Queue.Queue()
+                    wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
+                    dlg=dq.get()
+                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    button=q.get()
+                    retry=False
+                if retry:
+                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    button=q.get()
+                    if button==0:
+                        retry=False
+                
+
+        q=Queue.Queue()
+
+        import copy
+        for newsite in newlist:
+            if newsite.has_key('replaces'):
+                replaced=False
+                urls=newsite['replaces']
+                siteListCopy=copy.copy(origSiteList)
+                for site in siteListCopy:
+                    if site['url'] in urls:
+                        if not newsite.has_key('enabled'):
+                            newsite['enabled']=site['enabled']
+                        origSiteList.remove(site)
+
+        wx.CallAfter(self.showSiteListDialog,origSiteList,newlist,q)
+        r=q.get()
+        if (r[0] == wx.ID_OK):
+            newSiteList=r[1]
+            changed=False
+            if len(newSiteList) == len(origSiteList):
+                for i in range(0,len(newSiteList)):
+                    if newSiteList[i]['url']!=origSiteList[i]['url'] or newSiteList[i]['enabled']!=origSiteList[i]['enabled'] or newSiteList[i]['name']!=origSiteList[i]['name']:
+                        changed=True
+            else:
+                changed=True
+            if changed:
+                options={}
+                i=0
+                for s in newSiteList:
+                    options['siteurl%i'%i]='%s'%s['url']
+                    options['siteenabled%i'%i]='%s'%s['enabled']
+                    options['sitename%i'%i]='%s'%s['name']
+                    i=i+1
+
+                self.prefs.remove_section('configured_sites')
+                self.setPrefsSection('configured_sites',options)
+                self.savePrefs(section='configured_sites')
+
+                launcherMainFrame.loadDefaultSessions(True)
+
+    def loadSessionEvent(self,event):
+        dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)
+        status=dlg.ShowModal()
+        if status==wx.ID_CANCEL:
+            logger.debug('loadSession cancled')
+        f=open(dlg.GetPath(),'r')
+        self.loadSession(f)
+        f.close()
+
+    def loadSession(self,f,path=None):
+        import json
+        if path!=None:
+            f=open(path,'r')
+        saved=siteConfig.GenericJSONDecoder().decode(f.read())
+        if isinstance(saved,list):
+            self.sites={}
+            keyorder=saved[0]
+            for key in keyorder:
+                    nk = key
+                    i=1
+                    while nk in self.sites.keys():
+                        i=i+1
+                        nk = key+" %s"%i
+                    self.sites[nk]=saved[1][key]
+        else:
+            self.sites=saved
+        cb=self.FindWindowByName('jobParams_configName')
+        for i in range(0,cb.GetCount()):
+            cb.Delete(0)
+        for s in self.sites.keys():
+            cb.Append(s)
+        cb.SetSelection(0)
+        if path!=None:
+            f.close()
+        self.loadSiteDefaults(configName=self.FindWindowByName('jobParams_configName').GetValue())
+        self.loadPrefs()
+        self.updateVisibility()
+
+
+
+    def createAndShowModalDialog(self,q,dlgclass,*args,**kwargs):
+        dlg=dlgclass(*args,**kwargs)
+        r=dlg.ShowModal()
+        q.put(r)
+
+    def createMultiButtonDialog(self,q,*args,**kwargs):
+        dlg=LauncherOptionsDialog.multiButtonDialog(*args,**kwargs)
+        q.put(dlg)
+
+    def showModalFromThread(self,dlg,q):
+        r=dlg.ShowModal()
+        q.put(r)
+
+    def loadDefaultSessions(self,redraw=True):
+        sites=self.getPrefsSection(section='configured_sites')
+        retry=True
+        while sites.keys() == [] and retry:
+            q=Queue.Queue()
+            dq=Queue.Queue()
+            wx.CallAfter(self.createMultiButtonDialog,parent=self,message=dialogs.siteListFirstUseInfo.message,ButtonLabels=dialogs.siteListFirstUseInfo.ButtonLabels,title="",q=dq)
+            dlg=dq.get()
+            wx.CallAfter(self.showModalFromThread,dlg,q)
+            button=q.get()
+            if button==0:
+                retry=False
+            else:
+                self.manageSites()
+                sites=self.getPrefsSection(section='configured_sites')
+            
+        wx.CallAfter(wx.BeginBusyCursor)
+        q=Queue.Queue()
+        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingFlavours.message,ButtonLabels=dialogs.loadingFlavours.ButtonLabels,q=q)
+        dlg=q.get()
+        wx.CallAfter(dlg.ShowModal)
+        self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
+        wx.CallAfter(dlg.EndModal,0)
+        wx.CallAfter(wx.EndBusyCursor)
+        wx.CallAfter(self.loadDefaultSessionsGUI,redraw)
+
+    def loadDefaultSessionsGUI(self,redraw):
+        cb=self.FindWindowByName('jobParams_configName')
+        # attempt to preserve the selection on the combo box if the site remains in the list. If not, set the selection to 0
+        try:
+            sn=cb.GetValue()
+        except:
+            sn=''
+                    
+        
+        if (sn==None or sn==""):
+            if self.prefs.has_option("Launcher Config","siteConfigDefault"):
+                sn = self.prefs.get("Launcher Config","siteConfigDefault")
+
+
+        for i in range(0,cb.GetCount()):
+            cb.Delete(0)
+        for s in self.sites.keys():
+            cb.Append(s)
+        if sn!=None and sn in self.sites.keys():
+            cb.SetValue(sn)
+        else:
+            try:
+                if len(self.sites.keys())>0:
+                    cb.SetSelection(0)
+                else:
+                    logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
+            except:
+                logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
+            
+        #cb.SetSelection(0)
+        if (redraw):
+            self.loadSiteDefaults(configName=self.FindWindowByName('jobParams_configName').GetValue())
+            self.loadPrefs()
+            self.updateVisibility()
+        #    self.updateVisibility(self.noneVisible)
+
+    def loadDefaultSessionsEvent(self,event):
+        t=threading.Thread(target=self.loadDefaultSessions,args=[True])
+        t.start()
+
+    def saveSessionEvent(self,event):
+        self.saveSession()
+
+
+    def saveSessionThreadTarget(self,q):
+        filename = q.get(block=True)
+        sc = q.get(block=True)
+        if sc!=None and filename!=None:
+            try:
+                f=open(filename,'w')
+                logger.debug('opened file %s to save the session to'%filename)
+            except Exception as e:
+                logger.debug('error opening file for saving')
+                raise e
+            logger.debug('retrieved the session configuration from the loginProcess')
+        if sc==None:
+            sc=q.get()
+        if sc==None:
+            return
+        mydict={}
+        mydict['Saved Session']=sc
+        import json
+        s=json.dumps(mydict,f,cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',',': '))
+        f.write(s)
+        f.close()
+
+        
+
+
+    def saveSession(self):
+        import Queue
+        q=Queue.Queue()
+        dlg=wx.FileDialog(self,"Save your desktop session",style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
+        status=dlg.ShowModal()
+        if status==wx.ID_CANCEL:
+            logger.debug('saveSession canceled')
+            return
+        filename=dlg.GetPath()
+        q.put(filename)
+        # Abuse of queue.get as a flow control mechanism.
+        t=threading.Thread(target=self.loginProcess[0].getSharedSession,args=[q])
+        t.start()
+        t=threading.Thread(target=self.saveSessionThreadTarget,args=[q])
+        t.start()
+
+    def checkVersionNumber(self):
+        # Check for the latest version of the launcher:
+        try:
+            myHtmlParser = MyHtmlParser('MassiveLauncherLatestVersionNumber')
+            feed = urllib2.urlopen(LAUNCHER_URL, timeout=10)
+            html = feed.read()
+            myHtmlParser.feed(html)
+            myHtmlParser.close()
+
+            latestVersionNumber = myHtmlParser.latestVersionNumber
+            htmlComments = myHtmlParser.htmlComments
+            htmlCommentsSplit1 = htmlComments.split("<pre id=\"CHANGES\">")
+            htmlCommentsSplit2 = htmlCommentsSplit1[1].split("</pre>")
+            latestVersionChanges = htmlCommentsSplit2[0].strip()
+            self.contacted_massive_website = True
+        except:
+            logger.debug(traceback.format_exc())
+            self.contacted_massive_website = False
+            q=Queue.Queue()
+            wx.CallAfter(self.createAndShowModalDialog,q,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
+            q.get()
+
+            latestVersionNumber = launcher_version_number.version_number
+            latestVersionChanges = ''
+
+        if latestVersionNumber > launcher_version_number.version_number:
+            import new_version_alert_dialog
+            q=Queue.Queue()
+            wx.CallAfter(self.createAndShowModalDialog,q,new_version_alert_dialog.NewVersionAlertDialog,self,wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
+            q.get()
+            logger.debug('Old launcher version !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            logger.debug('launcher version: ' + str(launcher_version_number.version_number))
+
+
+    def buildJobParams(self,window):
+        jobParams={}
+        for item in window.GetChildren():
+            name = item.GetName()
+            if ('jobParam' in name):
+                (prefix,keyname) = name.split('_',1) 
+                if isinstance(item,wx.RadioBox):
+                    jobParams[keyname]=item.GetSelection()
+                else:
+                    jobParams[keyname]=item.GetValue()
+            r = self.buildJobParams(item)
+            jobParams.update(r)
+        if jobParams.has_key('resolution'):
+            try:
+                a=int(jobParams['resolution'][0])
+            except:
+                displaySize = wx.DisplaySize()
+                desiredWidth = displaySize[0] * 0.99
+                desiredHeight = displaySize[1] * 0.85
+                jobParams['resolution'] = str(int(desiredWidth)) + "x" + str(int(desiredHeight))
+
+        return jobParams
+
+
+    def onSiteConfigChanged(self,event):
+        self.Freeze()
+        self.loadSiteDefaults(configName=event.GetEventObject().GetValue())
+        self.loadPrefs(site=event.GetEventObject().GetValue())
+        self.updateVisibility()
+        self.Thaw()
+
+
+    def onAdvancedVisibilityStateChanged(self, event):
+        self.updateVisibility()
+
+    def showAll(self,window=None):
+        if window==None:
+            window=self
+        window.Show(True)
+        for p in window.GetChildren():
+            self.showAll(p)
+
+    def resetLabels(self):
+        relabel={}
+        relabel['label_loginHost']='Server name or IP'
+        relabel['label_username']='Username'
+        relabel['label_hours']='Hours'
+        relabel['label_mem']='Memory (GB)'
+        relabel['label_nodes']='Nodes'
+        relabel['label_ppn']='PPN'
+        relabel['label_resolution']='resolution'
+        relabel['label_cipher']='SSH tunnel cipher'
+        relabel['label_config']='Site'
+        relabel['label_project']='Project'
+        relabel['label_debug']='Show debug window'
+        relabel['label_advanced']='Show Advanced Options'
+        for key in relabel.keys():
+            try:
+                window=self.FindWindowByName(key)
+                window.SetLabel(relabel[key])
+            except:
+                pass
+
+    def hideUIElements(self):
+        visible={}
+        visible['loginHostPanel']=False
+        visible['usernamePanel']=False
+        visible['projectPanel']=False
+        visible['resourcePanel']=False
+        visible['resolutionPanel']=False
+        visible['cipherPanel']=False
+        visible['debugCheckBoxPanel']=False
+        visible['advancedCheckBoxPanel']=False
+        visible['optionsDialog']=False
+        visible['label_ppn']=False
+        visible['jobParams_ppn']=False
+        visible['label_mem']=False
+        visible['jobParams_mem']=False
+        visible['label_nodes']=False
+        visible['jobParams_nodes']=False
+        visible['label_hours']=False
+        visible['jobParams_hours']=False
+        for k in visible.keys():
+            try: 
+                window=self.FindWindowByName(k)
+                window.Hide()
+            except:
+                pass
+
+        
+
+    def updateVisibility(self):
+        #self.showAll()
+        #self.Fit()
+        #self.Layout()
+        self.hideUIElements()
+        self.resetLabels()
+        advanced=self.FindWindowByName('advancedCheckBox').GetValue()
+        try:
+            sc=None
+            sc=self.FindWindowByName('jobParams_configName').GetValue()
+            if self.sites.has_key(sc):
+                visible = self.sites[sc].visibility
+                relabel=self.sites[sc].relabel
+                authURL=self.sites[sc].authURL
+            else:
+                sc=""
+                visible={}
+                relabel={}
+                authURL=None
+        except Exception as e:
+            logger.debug('updateVisibility: looking for site %s'%sc)
+            logger.debug('updateVisibility: no visibility information associated with the siteConfig configName: %s'%sc)
+            logger.debug("sc: %s exception:%s"%(sc,e))
+            visible={}
+        for key in relabel.keys():
+            try:
+                window=self.FindWindowByName(key)
+                window.SetLabel(relabel[key])
+            except:
+                pass
+        for key in visible.keys():
+            try:
+                window=self.FindWindowByName(key) #Panels and controls are all subclasses of windows
+                if visible[key]==False:
+                    window.Hide()
+                if visible[key]==True:
+                    window.Show()
+                if visible[key]=='Advanced' and advanced==True:
+                    window.Show()
+                if visible[key]=='Advanced' and advanced==False:
+                    window.Hide()
+            except:
+                pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
+        globalOptions = self.getPrefsSection("Global Preferences")
+        if authURL!=None:
+            self.FindWindowByName('usernamePanel').Hide()
+        self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
+        self.hiddenWindow.Hide()
 
     def onDebugWindowCheckBoxStateChanged(self, event):
-        if launcherMainFrame.logWindow!=None:
-            if launcherMainFrame.cvlTabSelected:
-                self.massiveShowDebugWindowCheckBox.SetValue(self.cvlShowDebugWindowCheckBox.GetValue())
-                launcherMainFrame.logWindow.Show(self.cvlShowDebugWindowCheckBox.GetValue())
-            if launcherMainFrame.massiveTabSelected:
-                self.cvlShowDebugWindowCheckBox.SetValue(self.massiveShowDebugWindowCheckBox.GetValue())
-                launcherMainFrame.logWindow.Show(self.massiveShowDebugWindowCheckBox.GetValue())
-
-    def onCvlAdvancedLoginCheckBox(self, event):
-        if self.cvlAdvancedLoginCheckBox.GetValue():
-            launcherMainFrame.cvlLoginDialogPanelSizer.Show(launcherMainFrame.cvlAdvancedLoginFieldsPanel)
-            launcherMainFrame.cvlLoginDialogPanelSizer.Layout()
-        else:
-            launcherMainFrame.cvlLoginDialogPanelSizer.Show(launcherMainFrame.cvlAdvancedLoginFieldsPanel,False)
-            launcherMainFrame.cvlLoginDialogPanelSizer.Layout()
+        self.logWindow.Show(event.GetEventObject().GetValue())
 
     def onCloseDebugWindow(self, event):
-        self.massiveShowDebugWindowCheckBox.SetValue(False)
-        self.cvlShowDebugWindowCheckBox.SetValue(False)
-        if launcherMainFrame.logWindow!=None:
-            launcherMainFrame.logWindow.Show(False)
+        self.FindWindowByName('debugCheckBox').SetValue(False)
+        self.logWindow.Show(False)
 
     def onHelpContents(self, event):
         from help.HelpController import helpController
@@ -1208,11 +1233,7 @@ class LauncherMainFrame(wx.Frame):
         logger.dump_log(launcherMainFrame,submit_log=True,showFailedToOpenRemoteDesktopMessage=False)
 
     def onAbout(self, event):
-        import commit_def
-        dlg = wx.MessageDialog(self, "Version " + launcher_version_number.version_number + "\n"
-                                   + 'launcher Commit: ' + commit_def.LATEST_COMMIT + '\n'
-                                   + 'cvlsshutils Commit: ' + commit_def.LATEST_COMMIT_CVLSSHUTILS + '\n',
-                                "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -1220,6 +1241,13 @@ class LauncherMainFrame(wx.Frame):
         # Clean-up (including qdel if necessary) is now done in LoginTasks.py
         # No longer using temporary private key file, 
         # so there's no need to delete it as part of clean-up.
+        if len(self.loginProcess)>0:
+            dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,message=dialogs.confirmQuit.message,ButtonLabels=dialogs.confirmQuit.ButtonLabels,title="")
+            if dlg.ShowModal()==1:
+                return
+        for lp in self.loginProcess:
+            logger.debug("LauncherMainFrame.onExit: calling shutdown on a loginprocess")
+            lp.shutdown()
 
         try:
             if hasattr(self, 'loginProcess') and self.loginProcess is not None:
@@ -1235,21 +1263,20 @@ class LauncherMainFrame(wx.Frame):
 
     def onOptions(self, event, tabIndex=0):
 
-        self.globalOptionsDialog.tabbedView.SetSelection(tabIndex)
-        rv = self.globalOptionsDialog.ShowModal()
-
+        options = self.getPrefsSection("Global Preferences")
+        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,tabIndex)
+        rv = dlg.ShowModal()
         if rv == wx.OK:
-            self.globalOptions = self.globalOptionsDialog.getVncOptions()
-            self.saveGlobalOptions()
-    
-    def saveGlobalOptions(self):
-
-        for key in self.globalOptions:
-            globalLauncherConfig.set("Global Preferences", key, self.globalOptions[key])
-
-        with open(globalLauncherPreferencesFilePath, 'wb') as globalPreferencesFileObject:
-            globalLauncherConfig.write(globalPreferencesFileObject)
-
+            options = dlg.getOptions()
+            self.setPrefsSection("Global Preferences",options)
+            self.savePrefs(section="Global Preferences")
+        dlg.Destroy()
+        options=self.getPrefsSection('Global Preferences')
+        #auth_mode won't be set if, for example, this is the first use and the user displayed options then canceled
+        if options.has_key('auth_mode'): 
+            auth_mode = int(options['auth_mode'])
+            self.identity_menu.setRadio(auth_mode)
+            self.identity_menu.disableItems(auth_mode)
 
     def onCut(self, event):
         textCtrl = self.FindFocus()
@@ -1310,28 +1337,67 @@ class LauncherMainFrame(wx.Frame):
         super(LauncherMainFrame, self).SetCursor(cursor)
 
     def queryAuthMode(self):
-        import LauncherOptionsDialog
         var='auth_mode'
-        auth_mode=self.globalOptionsDialog.FindWindowByName(var)
-        choices=[]
-        for i in range(auth_mode.GetCount()):
-            choices.append(auth_mode.GetString(i))
-        message = """
-Would you like to use an SSH key pair or your password to authenticate yourself?
+        options=self.getPrefsSection('Global Preferences')
+        # Create a dialog that will never be shown just so we get an authorative list of options
+        import Queue
+        dq=Queue.Queue()
+        dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,message=dialogs.authModeFirstUseInfo.message,ButtonLabels=dialogs.authModeFirstUseInfo.ButtonLabels,title="")
+        dlg.ShowModal()
+        dlg = optionsDialog.GlobalOptionsDialog(self,wx.ID_ANY,"Global Options",options,0)
+        dlg.tabbedView.SetSelection(2)
+        dlg.ShowModal()
+        dlg.saveOptions()
+        options=dlg.getOptions()
+        self.setPrefsSection('Global Preferences',options)
+        self.savePrefs(section="Global Preferences")
 
-If this computer is shared by a number of people then passwords are preferable.
 
-If this computer is not shared, then an SSH key pair will give you advanced features for managing your access.
-"""
-        dlg = LauncherOptionsDialog.LauncherOptionsDialog(launcherMainFrame,message.strip(),title="MASSIVE/CVL Launcher",ButtonLabels=choices,helpEmailAddress=self.displayStrings.helpEmailAddress)
-        rv=dlg.ShowModal()
-        if rv in range(auth_mode.GetCount()):
-            authModeRadioBox = self.globalOptionsDialog.FindWindowByName('auth_mode')
-            authModeRadioBox.SetSelection(int(rv))
-            self.identity_menu.setRadio()
-            return int(rv)
-        else:
-            return wx.ID_CANCEL
+    def loginComplete(self,lp,oldParams,jobParams):
+        shouldSave=False
+        for k in jobParams:
+            if oldParams.has_key(k): 
+                # This is a bit messy, but some of our parameters get converted from ints to strings
+                # Specifically nodes is requsted as an int from a SpinCtrl but is updated to a string from the output of qstat.
+                try:
+                    if not oldParams[k] == jobParams[k] and isinstance(oldParams[k],type(jobParams[k])):
+                        winName='jobParams_%s'%k
+                        try:
+                            self.FindWindowByName(winName).SetValue(jobParams[k])
+                            shouldSave=True
+                        except Exception as e:
+                            logger.debug("launcher: Couldn't update the parameter %s %s %s"%(k,e,e.__class__))
+                    elif isinstance(oldParams[k],int) and int(jobParams[k])!= oldParams[k]:
+                        try:
+                            self.FindWindowByName(winName).SetValue(int(jobParams[k]))
+                            shouldSave=True
+                        except Exception as e:
+                            logger.debug("launcher: Couldn't update the parameter %s %s %s"%(k,e,e.__class__))
+                except:
+                    logger.debug('loginComlete: unable to update jobParameter %s to value %s'%(k,jobParams[k]))
+        try:
+            self.loginProcess.remove(lp)
+        except:
+            logger.debug("launcher: Couldn't remove the loginprocess")
+        if shouldSave:
+            wx.CallAfter(self.Refresh)
+            threading.Thread(target=self.savePrefs).start()
+        self.loginButton.Enable()
+        options = self.getPrefsSection("Global Preferences")
+        if int(options['logstats'])==0:
+            import StatsLogger
+            statslogger=StatsLogger.StatsLogger(options['uuid'],success=True,jobParams=jobParams)
+            threading.Thread(target=statslogger.post,args=["https://cvl.massive.org.au/logstats"]).start()
+
+    def loginCancel(self,lp,oldParams,jobParams):
+        self.loginProcess.remove(lp)
+        self.loginButton.Enable()
+        options = self.getPrefsSection("Global Preferences")
+        if int(options['logstats'])==0:
+            import StatsLogger
+            statslogger=StatsLogger.StatsLogger(options['uuid'],success=False,jobParams=jobParams)
+            threading.Thread(target=statslogger.post,args=["https://cvl.massive.org.au/logstats"]).start()
+
 
     def onLoginProcessComplete(self, jobParams):
         self.loginProcess = None
@@ -1348,151 +1414,44 @@ If this computer is not shared, then an SSH key pair will give you advanced feat
         logger.debug("launcher.py: onLogin: Disabling login button.")
         self.loginButton.Disable()
 
-        MASSIVE_TAB_INDEX = 0
-        CVL_TAB_INDEX =1
+        configName=self.FindWindowByName('jobParams_configName').GetValue()
+        if configName=="" or configName==None:
+            dlg=LauncherMessageDialog(self,"Please select a site to log into first","Please select a site")
+            dlg.ShowModal()
+            return
+        jobParams={}
+        import platform
+        platformstr="\""
+        platformstr=platformstr+'platform.machine: '       + str(platform.machine())
+        platformstr=platformstr+' platform.node: '          + str(platform.node())
+        platformstr=platformstr+' platform.platform: '      + str(platform.platform())
+        platformstr=platformstr+' platform.processor: '     + str(platform.processor())
+        platformstr=platformstr+' platform.release: '       + str(platform.release())
+        platformstr=platformstr+' platform.system: '        + str(platform.system())
+        platformstr=platformstr+' platform.version: '       + str(platform.version())
+        platformstr=platformstr+"\""
 
-        if launcherMainFrame.tabbedView.GetSelection()==MASSIVE_TAB_INDEX:
-            launcherMainFrame.massiveTabSelected = True
-            launcherMainFrame.cvlTabSelected = False
-
-        if launcherMainFrame.tabbedView.GetSelection()==CVL_TAB_INDEX:
-            launcherMainFrame.massiveTabSelected = False
-            launcherMainFrame.cvlTabSelected = True
-
-        if launcherMainFrame.massiveTabSelected:
-            self.massiveLoginHost = self.massiveLoginHostComboBox.GetValue()
-            self.massiveUsername = self.massiveUsernameTextField.GetValue()
-            self.massiveVncDisplayResolution = self.massiveVncDisplayResolutionComboBox.GetValue()
-            self.massiveSshTunnelCipher = self.massiveSshTunnelCipherComboBox.GetValue()
-            self.massiveAutomaticallyExit = self.massiveAutomaticallyExitCheckBox.GetValue()
-
-            if self.massiveUsername.strip()=="":
-                dlg = wx.MessageDialog(launcherMainFrame,
-                        "Please enter your MASSIVE username.",
-                        "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                self.loginButton.Enable()
-                self.massiveUsernameTextField.SetFocus()
-                return
-        else:
-            self.cvlConnectionProfile = self.cvlConnectionProfileComboBox.GetValue()
-            if self.cvlConnectionProfile=="Other...":
-                self.cvlLoginHost = self.cvlLoginHostTextField.GetValue()
-            self.cvlUsername = self.cvlUsernameTextField.GetValue()
-            self.cvlVncDisplayResolution = self.cvlVncDisplayResolutionComboBox.GetValue()
-            self.cvlSshTunnelCipher = self.cvlSshTunnelCipherComboBox.GetValue()
-            self.cvlAutomaticallyExit = self.cvlAutomaticallyExitCheckBox.GetValue()
-
-            if self.cvlUsername.strip()=="":
-                dlg = wx.MessageDialog(launcherMainFrame,
-                        "Please enter your CVL username.",
-                        "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                self.loginButton.Enable()
-                self.cvlUsernameTextField.SetFocus()
-                return
-
-        if launcherMainFrame.massiveTabSelected:
-            self.massiveHoursRequested = str(self.massiveHoursField.GetValue())
-            self.massiveVisNodesRequested = str(self.massiveVisNodesField.GetValue())
-            self.massiveProject = self.massiveProjectComboBox.GetValue()
-            if self.massiveProject == self.defaultProjectPlaceholder:
-                try:
-                    xmlrpcServer = xmlrpclib.Server("https://m2-web.massive.org.au/kgadmin/xmlrpc/")
-                    # Get list of user's massiveProjects from Karaage:
-                    # users_massiveProjects = xmlrpcServer.get_users_massiveProjects(self.massiveUsername, self.massivePassword)
-                    # self.massiveProjects = users_massiveProjects[1]
-                    # Get user's default massiveProject from Karaage:
-                    defaultProjectFromKaraage = xmlrpcServer.get_project(self.massiveUsername)
-                    if "not found" in defaultProjectFromKaraage:
-                        raise Exception("Karaage error: " + defaultProjectFromKaraage)
-                    self.massiveProject = defaultProjectFromKaraage
-                except Exception as exception:
-                    logger.debug(traceback.format_exc())
-                    if "Karaage error" in str(exception):
-                        error_string = str(exception)
-                    else:
-                        error_string = "Failed to contact MASSIVE's Karaage to retrieve your default project."
-                    dlg = wx.MessageDialog(launcherMainFrame,
-                            error_string,
-                            "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    logger.error(error_string)
-                    self.loginButton.Enable()
-                    if "Karaage error" in str(exception) and "not found" in str(exception):
-                        self.massiveUsernameTextField.SetFocus()
-                    return
-
-                if self.massiveProject in self.massiveProjects:
-                    self.massiveProjectComboBox.SetSelection(self.massiveProjects.index(self.massiveProject))
-                else:
-                    # Project was not found in combo-box.
-                    self.massiveProjectComboBox.SetSelection(-1)
-                self.massiveProjectComboBox.SetValue(self.massiveProject)
+        options=self.getPrefsSection('Global Preferences')
+        while not options.has_key('auth_mode'):
+            self.queryAuthMode()
+            options=self.getPrefsSection('Global Preferences')
 
 
-        if launcherMainFrame.massiveTabSelected:
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_login_host", self.massiveLoginHost)
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_username", self.massiveUsername)
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_vnc_display_resolution", self.massiveVncDisplayResolution)
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_ssh_tunnel_cipher", self.massiveSshTunnelCipher)
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_automatically_exit", self.massiveAutomaticallyExit)
-        else:
-            cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_connection_profile", self.cvlConnectionProfile)
-            if self.cvlConnectionProfile=="Other...":
-                cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_login_host", self.cvlLoginHost)
-            cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_username", self.cvlUsername)
-            cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_vnc_display_resolution", self.cvlVncDisplayResolution)
-            cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_ssh_tunnel_cipher", self.cvlSshTunnelCipher)
-            cvlLauncherConfig.set("CVL Launcher Preferences", "cvl_automatically_exit", self.cvlAutomaticallyExit)
+        configName=self.FindWindowByName('jobParams_configName').GetValue()
+        jobParams = self.buildJobParams(self)
 
-        if launcherMainFrame.massiveTabSelected:
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_project", self.massiveProject)
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_hours_requested", self.massiveHoursRequested)
-            massiveLauncherConfig.set("MASSIVE Launcher Preferences", "massive_visnodes_requested", self.massiveVisNodesRequested)
-
-        globalLauncherConfig.set("Global Preferences", "last_used_tab_index", str(launcherMainFrame.tabbedView.GetSelection()))
-
-        with open(massiveLauncherPreferencesFilePath, 'wb') as massiveLauncherPreferencesFileObject:
-            massiveLauncherConfig.write(massiveLauncherPreferencesFileObject)
-
-        with open(cvlLauncherPreferencesFilePath, 'wb') as cvlLauncherPreferencesFileObject:
-            cvlLauncherConfig.write(cvlLauncherPreferencesFileObject)
-
-        with open(globalLauncherPreferencesFilePath, 'wb') as globalLauncherPreferencesFileObject:
-            globalLauncherConfig.write(globalLauncherPreferencesFileObject)
-
-        if launcherMainFrame.massiveTabSelected:
-            self.logWindow.Show(self.massiveShowDebugWindowCheckBox.GetValue())
-        else:
-            self.logWindow.Show(self.cvlShowDebugWindowCheckBox.GetValue())
+        if jobParams['username'] == "" and self.sites[configName].authURL!=None:
+            dlg = LauncherMessageDialog(self,
+                    "Please enter your username.",
+                    self.programName)
+            dlg.ShowModal()
+            self.loginButton.Enable()
+            usernamefield = self.FindWindowByName('jobParams_username')
+            usernamefield.SetFocus()
+            return
 
 
-        if launcherMainFrame.massiveTabSelected:
-            configName = self.massiveLoginHost
-            resolution = self.massiveVncDisplayResolution
-            cipher     = self.massiveSshTunnelCipher
-            username   = self.massiveUsername
-            autoExit   = self.massiveAutomaticallyExit
-            hours      = self.massiveHoursRequested
-            nodes      = self.massiveVisNodesRequested
-        else:
-            configName = self.cvlConnectionProfile
-            resolution = self.cvlVncDisplayResolution
-            cipher     = self.cvlSshTunnelCipher
-            username   = self.cvlUsername
-            autoExit   = self.cvlAutomaticallyExit
-            hours      = 298261 # maximum number of hours its possible to request without overflowing a signed int32 when converted to seconds.
-            nodes      = 1
-
-        if configName=="Other...":
-            configName = self.cvlLoginHost
-        configName = configName.lstrip().rstrip()
-        resolution = resolution.lstrip().rstrip()
-        cipher     = cipher.lstrip().rstrip()
-        username   = username.lstrip().rstrip()
-
-        logger.debug("Username: " + username)
+        logger.debug("Username: " + jobParams['username'])
         logger.debug("Config: " + configName)
 
         userCanAbort=True
@@ -1503,29 +1462,11 @@ If this computer is not shared, then an SSH key pair will give you advanced feat
             os.makedirs(dotSshDir)
 
         # project hours and nodes will be ignored for the CVL login, but they will be used for Massive.
-        jobParams={}
-        jobParams['username']=username
-        jobParams['loginHost']=configName
-        jobParams['configName']=configName
-        jobParams['resolution']=resolution
-        jobParams['cipher']=cipher
-        jobParams['project']=self.massiveProject
-        jobParams['hours']=hours
-        jobParams['nodes']=nodes
-        jobParams['wallseconds']=int(hours)*60*60
-        if not self.globalOptions.has_key('auth_mode'):
-            mode=self.queryAuthMode()
-            if mode==wx.ID_CANCEL:
-                self.onLoginProcessComplete(None)
-                return
-            self.globalOptions['auth_mode']=mode
-            self.globalOptionsDialog.FindWindowByName('auth_mode').SetSelection(mode)
-            self.identity_menu.disableItems()
-            self.saveGlobalOptions()
-        siteConfigDict = buildSiteConfigCmdRegExDict(configName) #eventually this will be loaded from json downloaded from a website
-        siteConfigObj = siteConfig(siteConfigDict)
-
-        if launcherMainFrame.globalOptionsDialog.FindWindowByName('auth_mode').GetSelection()==LauncherMainFrame.TEMP_SSH_KEY:
+        configName=self.FindWindowByName('jobParams_configName').GetValue()
+        self.savePrefs(section="Global Preferences")
+        jobParams=self.buildJobParams(self)
+        jobParams['wallseconds']=int(jobParams['hours'])*60*60
+        if int(options['auth_mode'])==LauncherMainFrame.TEMP_SSH_KEY:
             logger.debug("launcherMainFrame.onLogin: using a temporary Key pair")
             try:
                 if 'SSH_AUTH_SOCK' in os.environ:
@@ -1535,361 +1476,22 @@ If this computer is not shared, then an SSH key pair will give you advanced feat
             except:
                 logger.debug("launcherMainFrame.onLogin: spawning an ssh-agent (no existing agent found)")
                 pass
-            keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=True)
-            removeKeyOnExit = True
+            self.keyModel=KeyModel(temporaryKey=True,startupinfo=self.startupinfo)
         else:
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
-            keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=False)
-            
-            removeKeyOnExit = False
-        self.loginProcess=LoginTasks.LoginProcess(launcherMainFrame,jobParams,keyModel,siteConfig=siteConfigObj,displayStrings=self.displayStrings,autoExit=autoExit,globalOptions=self.globalOptions,removeKeyOnExit=removeKeyOnExit,startupinfo=launcherMainFrame.startupinfo,creationflags=launcherMainFrame.creationflags,completeCallback=self.onLoginProcessComplete)
-        self.loginProcess.doLogin()
-
-
-        if self.massiveTabSelected:
-            def initializeProgressDialog():
-                CancelCallback=self.loginProcess.cancel
-                self.progressDialog = launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Connecting to MASSIVE...", "", maximumProgressBarValue, userCanAbort,CancelCallback)
-        else:
-            def initializeProgressDialog():
-                CancelCallback=self.loginProcess.cancel
-                self.progressDialog = launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Connecting to CVL...", "", maximumProgressBarValue, userCanAbort,CancelCallback)
-
-#        wx.CallAfter(initializeProgressDialog)
-
-    def onTextEnteredInIntegerField(self, event):
-        if event.GetString()!="":
-
-            # The code below does some validation, so for example:
-            # "2a"  will be replaced by "2".
-            # "a2"  will be replaced by "2"
-            # "1a2" will be replaced by "12" and 
-            # "a"   will be replaced with "".
-
-            # We allow the user to clear the integer field 
-            # temporarily, so they can then type in new digit(s),
-            # even though an empty value is not strictly an integer.
-
-            # If the users clears the field and then tabs away from 
-            # the field, it should revert to a numerical value, set in
-            # onIntegerFieldLostFocus.
-
-            if event.GetEventObject().GetParent()==self.massiveHoursField:
-                if event.GetString().startswith(str(self.massiveHoursField.GetValue())):
-                    event.GetEventObject().SetValue(str(self.massiveHoursField.GetValue()))
-                elif event.GetString().endswith(str(self.massiveHoursField.GetValue())):
-                    event.GetEventObject().SetValue(str(self.massiveHoursField.GetValue()))
-                elif len(event.GetString()) > len(str(self.massiveHoursField.GetValue())):
-                    event.GetEventObject().SetValue(str(self.massiveHoursField.GetValue()))
-                else:
-                    event.GetEventObject().SetValue("")
-            if event.GetEventObject().GetParent()==self.massiveVisNodesField:
-                if event.GetString().startswith(str(self.massiveVisNodesField.GetValue())):
-                    event.GetEventObject().SetValue(str(self.massiveVisNodesField.GetValue()))
-                elif event.GetString().endswith(str(self.massiveVisNodesField.GetValue())):
-                    event.GetEventObject().SetValue(str(self.massiveVisNodesField.GetValue()))
-                elif len(event.GetString()) > len(str(self.massiveHoursField.GetValue())):
-                    event.GetEventObject().SetValue(str(self.massiveVisNodesField.GetValue()))
-                else:
-                    event.GetEventObject().SetValue("")
+            self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
+        jobParams=self.buildJobParams(self)
+        jobParams['strudel_platform']=platformstr
+        jobParams['wallseconds']=int(jobParams['hours'])*60*60
+        autoExit=False
+        globalOptions = self.getPrefsSection("Global Preferences")
+        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[configName],displayStrings=self.sites[configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo)
+        oldParams  = jobParams.copy()
+        lp.setCallback(lambda jobParams: self.loginComplete(lp,oldParams,jobParams))
+        lp.setCancelCallback(lambda jobParams: self.loginCancel(lp,oldParams,jobParams))
+        self.loginProcess.append(lp)
+        lp.doLogin()
         event.Skip()
-
-    def onIntegerFieldLostFocus(self, event):
-        if event.GetEventObject().GetParent()==self.massiveHoursField or event.GetEventObject().GetParent()==self.massiveVisNodesField:
-            if event.GetEventObject().GetValue().strip() == "":
-                event.GetEventObject().SetValue("1")
-        event.Skip()
-
-    def onChildFocus(self, event):
-        if event.GetEventObject().GetParent()==self.massiveHoursField or event.GetEventObject().GetParent()==self.massiveVisNodesField:
-            while event.GetEventObject().Unbind(wx.EVT_KILL_FOCUS):
-                pass
-            event.GetEventObject().Bind(wx.EVT_KILL_FOCUS, self.onIntegerFieldLostFocus)
-        event.Skip()
-
-    def onCvlConnectionProfileChanged(self, event):
-        if self.cvlConnectionProfileComboBox.GetValue()=="Other...":
-            if self.cvlAdvancedLoginCheckBox.GetValue():
-                # Temporarily hide the advanced options panel while we add a new field to the simple options panel.
-                launcherMainFrame.cvlLoginDialogPanelSizer.Show(launcherMainFrame.cvlAdvancedLoginFieldsPanel,False)
-            launcherMainFrame.cvlSimpleLoginFieldsPanelSizer.Show(launcherMainFrame.cvlLoginHostLabel)
-            launcherMainFrame.cvlSimpleLoginFieldsPanelSizer.Show(launcherMainFrame.cvlLoginHostTextFieldPanel)
-            launcherMainFrame.cvlSimpleLoginFieldsPanel.Layout()
-            if self.cvlAdvancedLoginCheckBox.GetValue():
-                launcherMainFrame.cvlLoginDialogPanelSizer.Show(launcherMainFrame.cvlAdvancedLoginFieldsPanel,True)
-            launcherMainFrame.cvlLoginDialogPanel.Layout()
-            launcherMainFrame.cvlLoginHostTextField.SelectAll()
-            launcherMainFrame.cvlLoginHostTextField.SetFocus()
-        else:
-            launcherMainFrame.cvlSimpleLoginFieldsPanelSizer.Show(launcherMainFrame.cvlLoginHostLabel,False)
-            launcherMainFrame.cvlSimpleLoginFieldsPanelSizer.Show(launcherMainFrame.cvlLoginHostTextFieldPanel,False)
-            launcherMainFrame.cvlSimpleLoginFieldsPanelSizer.Layout()
-            launcherMainFrame.cvlLoginDialogPanelSizer.Layout()
-            #launcherMainFrame.cvlLoginHostTextField.SetValue("")
-
-class siteConfig():
-    class cmdRegEx():
-        def __init__(self,cmd=None,regex=None,requireMatch=True,loop=False,async=False,host='login'):
-
-            self.cmd=cmd
-            if (not isinstance(regex,list)):
-                self.regex=[regex]
-            else:
-                self.regex=regex
-            self.loop=loop
-            self.async=async
-            self.requireMatch=requireMatch
-            if regex==None:
-                self.requireMatch=False
-            self.host=host
-            if (self.async):
-                self.host='local'
-
-        def getCmd(self,jobParam={}):
-            if ('exec' in self.host):
-                sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {execHost} '
-            elif ('local' in self.host):
-                sshCmd = ''
-            else:
-                sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
-            string=sshCmd.format(**jobParam)+self.cmd.format(**jobParam)
-            return string
-            
-        
-    def __init__(self,siteConfigDict):
-        self.listAll=siteConfig.cmdRegEx()
-        self.running=siteConfig.cmdRegEx()
-        self.stop=siteConfig.cmdRegEx()
-        self.stopForRestart=siteConfig.cmdRegEx()
-        self.execHost=siteConfig.cmdRegEx()
-        self.startServer=siteConfig.cmdRegEx()
-        self.runSanityCheck=siteConfig.cmdRegEx()
-        self.getProjects=siteConfig.cmdRegEx()
-        self.showStart=siteConfig.cmdRegEx()
-        self.vncDisplay=siteConfig.cmdRegEx()
-        self.otp=siteConfig.cmdRegEx()
-        self.directConnect=siteConfig.cmdRegEx()
-        self.messageRegeexs=siteConfig.cmdRegEx()
-        self.dbusSessionBusAddress=siteConfig.cmdRegEx()
-        self.webDavIntermediatePort=siteConfig.cmdRegEx()
-        self.webDavRemotePort=siteConfig.cmdRegEx()
-        self.webDavMount=siteConfig.cmdRegEx()
-        self.openWebDavShareInRemoteFileBrowser=siteConfig.cmdRegEx()
-        self.webDavWindowID=siteConfig.cmdRegEx()
-        self.displayWebDavInfoDialogOnRemoteDesktop=siteConfig.cmdRegEx()
-        self.webDavTunnel=siteConfig.cmdRegEx()
-        self.webDavUnmount=siteConfig.cmdRegEx()
-        self.webDavCloseWindow=siteConfig.cmdRegEx()
-        self.__dict__.update(siteConfigDict)
-
-def buildSiteConfigCmdRegExDict(configName):
-    import re
-    if sys.platform.startswith("win"):
-        lt = "^<"
-        gt = "^>"
-        pipe = "^|"
-        ampersand = "^&"
-    else:
-        lt = "<"
-        gt = ">"
-        pipe = "|"
-        ampersand = "&"
-    siteConfigDict={}
-    siteConfigDict['messageRegexs']=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
-    if ("m1" in configName or "m2" in configName):
-        siteConfigDict['loginHost']=configName
-        siteConfigDict['listAll']=siteConfig.cmdRegEx('qstat -u {username}','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+(?P<queue>\S+)\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
-        siteConfigDict['running']=siteConfig.cmdRegEx('qstat -u {username}','^\s*(?P<jobid>{jobid})\s+\S+\s+(?P<queue>\S+)\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>R)\s+(?P<elapTime>\S+)\s*$')
-        siteConfigDict['stop']=siteConfig.cmdRegEx('\'qdel -a {jobid}\'')
-        siteConfigDict['stopForRestart']=siteConfig.cmdRegEx('qdel {jobid} ; sleep 5\'')
-        siteConfigDict['execHost']=siteConfig.cmdRegEx('qpeek {jobidNumber}','\s*To access the desktop first create a secure tunnel to (?P<execHost>\S+)\s*$')
-        siteConfigDict['startServer']=siteConfig.cmdRegEx("\'/usr/local/desktop/request_visnode.sh {project} {hours} {nodes} True False False {resolution}\'","^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$")
-        siteConfigDict['runSanityCheck']=siteConfig.cmdRegEx("\'/usr/local/desktop/sanity_check.sh {launcher_version_number}\'")
-        siteConfigDict['getProjects']=siteConfig.cmdRegEx('\"glsproject -A -q | grep \',{username},\|\s{username},\|,{username}\s\|\s{username}\s\' \"','^(?P<group>\S+)\s+.*$')
-        siteConfigDict['showStart']=siteConfig.cmdRegEx("showstart {jobid}","Estimated Rsv based start .*?on (?P<estimatedStart>.*)")
-        siteConfigDict['vncDisplay']= siteConfig.cmdRegEx('"/usr/bin/ssh {execHost} \' module load turbovnc ; vncserver -list\'"','^(?P<vncDisplay>:[0-9]+)\s*(?P<vncPID>[0-9]+)\s*$')
-        siteConfigDict['otp']= siteConfig.cmdRegEx('"/usr/bin/ssh {execHost} \' module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\'"','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
-        siteConfigDict['agent']=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=yes -l {username} {loginHost} \"/usr/bin/ssh -A {execHost} \\"echo agent_hello; bash \\"\"','agent_hello',async=True)
-        siteConfigDict['tunnel']=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=yes -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
-
-        cmd='"echo DBUS_SESSION_BUS_ADDRESS=dummy_dbus_session_bus_address"'
-        regex='^DBUS_SESSION_BUS_ADDRESS=(?P<dbusSessionBusAddress>.*)$'
-        siteConfigDict['dbusSessionBusAddress']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd='\"/usr/local/desktop/get_ephemeral_port.py\"'
-        regex='^(?P<intermediateWebDavPortNumber>[0-9]+)$'
-        siteConfigDict['webDavIntermediatePort']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd='\"/usr/bin/ssh {execHost} /usr/local/desktop/get_ephemeral_port.py\"'
-        regex='^(?P<remoteWebDavPortNumber>[0-9]+)$'
-        siteConfigDict['webDavRemotePort']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd='echo Mounting WebDAV...' # For CentOS 5 / KDE, we are not really "mounting", just displaying the WebDAV share in Konqueror.
-        siteConfigDict['webDavMount']=siteConfig.cmdRegEx(cmd)
-
-        cmd='"/usr/bin/ssh {execHost} \'DISPLAY={vncDisplay} /usr/bin/konqueror webdav://{localUsername}:{vncPasswd}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\'"'
-        siteConfigDict['openWebDavShareInRemoteFileBrowser']=siteConfig.cmdRegEx(cmd)
-
-        # The Window ID is not needed for MASSIVE.  We use the server-side script: /usr/local/desktop/close_webdav_window.sh which figures out which window to close.
-        cmd='"echo DummyWebDavWindowID=-1"'
-        regex='^DummyWebDavWindowID=(?P<webDavWindowID>.*)$'
-        siteConfigDict['webDavWindowID']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd='"/usr/bin/ssh {execHost} \'echo -e \\"You can access your local home directory in Konqueror with the URL:%sbr%s\\nwebdav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}%sbr%s\\nYour one-time password is {vncPasswd}\\" > ~/.vnc/\\$(hostname){vncDisplay}-webdav.txt;\'"'
-        siteConfigDict['displayWebDavInfoDialogOnRemoteDesktop'] = siteConfig.cmdRegEx(cmd)
-
-        # Chris trying to avoid using the intermediate port:
-        #cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {execHost}:{remoteWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"'
-
-        cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {intermediateWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {loginHost} "ssh -R {remoteWebDavPortNumber}:localhost:{intermediateWebDavPortNumber} {execHost} \'echo tunnel_hello; bash\'"'
-        regex='tunnel_hello'
-        siteConfigDict['webDavTunnel']=siteConfig.cmdRegEx(cmd,regex,async=True)
-
-        cmd = 'echo hello'
-        regex = 'hello'
-        siteConfigDict['webDavUnmount']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd = '"/usr/bin/ssh {execHost} \'DISPLAY={vncDisplay} /usr/local/desktop/close_webdav_window.sh webdav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\'"'
-        siteConfigDict['webDavCloseWindow']=siteConfig.cmdRegEx(cmd)
-
-        cmd='echo hello;exit'
-        regex='hello'
-
-    elif ('cvl' in configName or 'CVL' in configName or 'Huygens' in configName):
-        siteConfigDict['loginHost']='login.cvl.massive.org.au'
-        siteConfigDict['directConnect']=True
-        cmd='\"module load pbs ; qstat -f {jobidNumber} | grep exec_host | sed \'s/\ \ */\ /g\' | cut -f 4 -d \' \' | cut -f 1 -d \'/\' | xargs -iname hostn name | grep address | sed \'s/\ \ */\ /g\' | cut -f 3 -d \' \' | xargs -iip echo execHost ip; qstat -f {jobidNumber}\"'
-        regex='^\s*execHost (?P<execHost>\S+)\s*$'
-        siteConfigDict['execHost'] = siteConfig.cmdRegEx(cmd,regex)
-        cmd='\"groups | sed \'s@ @\\n@g\'\"' # '\'groups | sed \'s\/\\\\ \/\\\\\\\\n\/g\'\''
-        regex='^\s*(?P<group>\S+)\s*$'
-        siteConfigDict['getProjects'] = siteConfig.cmdRegEx(cmd,regex)
-        if ("Huygens" in configName):
-            siteConfigDict['listAll']=siteConfig.cmdRegEx('\"module load pbs ; qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+(?P<queue>huygens)\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
-        else:
-            siteConfigDict['listAll']=siteConfig.cmdRegEx('\"module load pbs ; qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+(?P<queue>\S+)\s+(?P<jobname>desktop_\S+)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
-        cmd='\"module load pbs ; module load maui ; qstat | grep {username}\"'
-        regex='^\s*(?P<jobid>{jobidNumber}\.\S+)\s+(?P<jobname>desktop_\S+)\s+\S+\s+(?P<elapTime>\S+)\s+(?P<state>R)\s+(?P<queue>\S+)\s*$'
-        siteConfigDict['running']=siteConfig.cmdRegEx(cmd,regex)
-        if ("Huygens" in configName):
-            cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep {wallseconds}\' |  qsub -q huygens -l nodes=1:ppn=1 -N desktop_{username} -o .vnc/ -e .vnc/\""
-        else:
-            cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep {wallseconds}\' |  qsub -l nodes=1:ppn=1,walltime={wallseconds} -N desktop_{username} -o .vnc/ -e .vnc/\""
-        regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
-        siteConfigDict['startServer']=siteConfig.cmdRegEx(cmd,regex)
-        siteConfigDict['stop']=siteConfig.cmdRegEx('\"module load pbs ; module load maui ; qdel -a {jobidNumber}\"')
-        siteConfigDict['stopForRestart']=siteConfig.cmdRegEx('\"module load pbs ; module load maui ; qdel {jobid}\"')
-        #siteConfigDict['vncDisplay']= siteConfig.cmdRegEx('" /usr/bin/ssh {execHost} \' cat /var/spool/torque/spool/{jobidNumber}.*\'"' ,'^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$')
-        siteConfigDict['vncDisplay']= siteConfig.cmdRegEx('\"cat /var/spool/torque/spool/{jobidNumber}.*\"' ,'^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$',host='exec')
-        cmd= '\"module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\"'
-        regex='^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$'
-        siteConfigDict['otp']=siteConfig.cmdRegEx(cmd,regex,host='exec')
-        siteConfigDict['agent']=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -l {username} {execHost} "echo agent_hello; bash "','agent_hello',async=True)
-        siteConfigDict['tunnel']=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {execHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
-
-        cmd='"/usr/bin/ssh {execHost} \'export DISPLAY={vncDisplay};timeout 15 /usr/local/bin/cat_dbus_session_file.sh\'"'
-        regex='^DBUS_SESSION_BUS_ADDRESS=(?P<dbusSessionBusAddress>.*)$'
-        siteConfigDict['dbusSessionBusAddress']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd='\"/usr/local/bin/get_ephemeral_port.py\"'
-        regex='^(?P<intermediateWebDavPortNumber>[0-9]+)$'
-        siteConfigDict['webDavIntermediatePort']=siteConfig.cmdRegEx(cmd,regex,host='exec')
-
-        cmd='\"/usr/local/bin/get_ephemeral_port.py\"'
-        regex='^(?P<remoteWebDavPortNumber>[0-9]+)$'
-        siteConfigDict['webDavRemotePort']=siteConfig.cmdRegEx(cmd,regex,host='exec')
-
-        # Below, I initially tried to respect the user's Nautilus setting of always_use_location_entry and change it back after launching Nautilus,
-        # but doing so changes this setting in already-running Nautilus windows, and I want the user to see Nautilus's location bar when showing 
-        # them the WebDav share.  So now, I just brutally change the user's Nautilus location-bar setting to always_use_location_entry.
-        # Note that we might end up mounting WebDAV in a completely different way (e.g. using wdfs), but for now I'm trying to make the user
-        # experience similar on MASSIVE and the CVL.  On MASSIVE, users are not automatically added to the "fuse" group, but they can still 
-        # access a WebDAV share within Konqueror.  The method below for the CVL/Nautilus does require fuse membership, but it ends up looking
-        # similar to MASSIVE/Konqueror from the user's point of view.  
-
-        cmd="\"/usr/bin/ssh {execHost} \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};echo \\\\\\\"import pexpect;child = pexpect.spawn('gvfs-mount dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}');child.expect('Password: ');child.sendline('{vncPasswd}');child.expect(pexpect.EOF);child.close();print 'gvfs-mount returned ' + str(child.exitstatus)\\\\\\\" %s python\\\"\"" % (pipe,)
-        regex='^gvfs-mount returned (?P<webDavMountingExitCode>.*)$'
-        siteConfigDict['webDavMount']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd="\"/usr/bin/ssh {execHost} \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};/usr/bin/gconftool-2 --type=Boolean --set /apps/nautilus/preferences/always_use_location_entry true %s%s DISPLAY={vncDisplay} xdg-open dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\\\"\"" % (ampersand,ampersand)
-        siteConfigDict['openWebDavShareInRemoteFileBrowser']=siteConfig.cmdRegEx(cmd)
-
-        cmd='"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress}; DISPLAY={vncDisplay} xwininfo -root -tree\'"'
-        regex= '^\s+(?P<webDavWindowID>\S+)\s+"{homeDirectoryWebDavShareName}.*Browser.*$'
-        siteConfigDict['webDavWindowID']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd = '"/usr/bin/ssh {execHost} \'echo -e \\"You can access your local home directory in Nautilus File Browser, using the location:\\n\\ndav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\\n\\nYour one-time password is {vncPasswd}\\" > ~/.vnc/\\$(hostname){vncDisplay}-webdav.txt\'"'
-        siteConfigDict['displayWebDavInfoDialogOnRemoteDesktop']=siteConfig.cmdRegEx(cmd)
-
-        cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {remoteWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {execHost} "echo tunnel_hello; bash"'
-        regex='tunnel_hello'
-        siteConfigDict['webDavTunnel']=siteConfig.cmdRegEx(cmd,regex,async=True)
-
-        # 1. I'm using gvfs-mount --unmount-scheme dav for now, to unmount all GVFS WebDAV mounts,
-        #    because using "gvfs-mount --unmount " on a specific mount point from a Launcher
-        #    subprocess doesn't seem to work reliably, even though it works fine outside of the 
-        #    Launcher.
-        # 2. I'm using timeout with gvfs-mount, because sometimes the process never exits
-        #    when unmounting, even though the unmounting operation is complete.
-        #cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};DISPLAY={vncDisplay} timeout 3 gvfs-mount -u \".gvfs/WebDAV on localhost\"\'"'
-        cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay};timeout 1 gvfs-mount --unmount-scheme dav\'"'
-        siteConfigDict['webDavUnmount']=siteConfig.cmdRegEx(cmd)
-
-        cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay}; wmctrl -F -i -c {webDavWindowID}\'"'
-        siteConfigDict['webDavCloseWindow']=siteConfig.cmdRegEx(cmd)
-    else:
-        siteConfigDict['loginHost']=configName
-        siteConfigDict['listAll']=siteConfig.cmdRegEx('\'module load turbovnc ; vncserver -list\'','^(?P<vncDisplay>:[0-9]+)\s+[0-9]+\s*$',requireMatch=False)
-        siteConfigDict['startServer']=siteConfig.cmdRegEx('\"/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution}\"','^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$')
-        siteConfigDict['stop']=siteConfig.cmdRegEx('\'module load turbovnc ; vncserver -kill {vncDisplay}\'')
-        siteConfigDict['stopForRestart']=siteConfig.cmdRegEx('\'module load turbovnc ; vncserver -kill {vncDisplay}\'')
-        siteConfigDict['otp']= siteConfig.cmdRegEx('\'module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\'','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
-        siteConfigDict['agent']=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -l {username} {loginHost} "echo agent_hello; bash "','agent_hello',async=True)
-        siteConfigDict['tunnel']=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
-
-        cmd='"export DISPLAY={vncDisplay};timeout 15 /usr/local/bin/cat_dbus_session_file.sh"'
-        regex='^DBUS_SESSION_BUS_ADDRESS=(?P<dbusSessionBusAddress>.*)$'
-        siteConfigDict['dbusSessionBusAddress']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd='\"/usr/local/bin/get_ephemeral_port.py\"'
-        regex='^(?P<remoteWebDavPortNumber>[0-9]+)$'
-        siteConfigDict['webDavRemotePort']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {remoteWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {loginHost} \'echo tunnel_hello; bash\''
-        regex='tunnel_hello'
-        siteConfigDict['webDavTunnel']=siteConfig.cmdRegEx(cmd,regex,async=True)
-
-        cmd="\"/usr/bin/ssh -oStrictHostKeyChecking=no localhost \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};echo \\\\\\\"import pexpect;child = pexpect.spawn('gvfs-mount dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}');child.expect('Password: ');child.sendline('{vncPasswd}');child.expect(pexpect.EOF);child.close();print 'gvfs-mount returned ' + str(child.exitstatus)\\\\\\\" %s python\\\"\"" % (pipe,)
-        regex='^gvfs-mount returned (?P<webDavMountingExitCode>.*)$'
-        siteConfigDict['webDavMount']=siteConfig.cmdRegEx(cmd,regex)
-
-        cmd="\"/usr/bin/ssh -oStrictHostKeyChecking=no localhost \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};/usr/bin/gconftool-2 --type=Boolean --set /apps/nautilus/preferences/always_use_location_entry true %s%s DISPLAY={vncDisplay} xdg-open dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\\\"\"" % (ampersand,ampersand)
-        siteConfigDict['openWebDavShareInRemoteFileBrowser']=siteConfig.cmdRegEx(cmd)
-
-        cmd='"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress}; DISPLAY={vncDisplay} xwininfo -root -tree"'
-        regex= '^\s+(?P<webDavWindowID>\S+)\s+"{homeDirectoryWebDavShareName}.*Browser.*$'
-        siteConfigDict['webDavWindowID']=siteConfig.cmdRegEx(cmd,regex)
-
-        # 1. I'm using gvfs-mount --unmount-scheme dav for now, to unmount all GVFS WebDAV mounts,
-        #    because using "gvfs-mount --unmount " on a specific mount point from a Launcher
-        #    subprocess doesn't seem to work reliably, even though it works fine outside of the 
-        #    Launcher.
-        # 2. I'm using timeout with gvfs-mount, because sometimes the process never exits
-        #    when unmounting, even though the unmounting operation is complete.
-        cmd = '"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay};timeout 1 gvfs-mount --unmount-scheme dav"'
-        siteConfigDict['webDavUnmount']=siteConfig.cmdRegEx(cmd)
-
-        cmd = '"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay}; wmctrl -F -i -c {webDavWindowID}"'
-        siteConfigDict['webDavCloseWindow']=siteConfig.cmdRegEx(cmd)
-
-
-
-
-
-
-
-
-    return siteConfigDict
 
 class LauncherStatusBar(wx.StatusBar):
     def __init__(self, parent):
@@ -1902,48 +1504,32 @@ class LauncherStatusBar(wx.StatusBar):
 class MyApp(wx.App):
     def OnInit(self):
 
-        appDirs = appdirs.AppDirs("MASSIVE Launcher", "Monash University")
+        appDirs = appdirs.AppDirs("strudel", "Monash University")
         appUserDataDir = appDirs.user_data_dir
         # Add trailing slash:
         appUserDataDir = os.path.join(appUserDataDir,"")
         if not os.path.exists(appUserDataDir):
             os.makedirs(appUserDataDir)
 
-        sys.modules[__name__].massiveLauncherConfig = ConfigParser.RawConfigParser(allow_no_value=True)
-        massiveLauncherConfig = sys.modules[__name__].massiveLauncherConfig
-        sys.modules[__name__].massiveLauncherPreferencesFilePath = os.path.join(appUserDataDir,"MASSIVE Launcher Preferences.cfg")
-        massiveLauncherPreferencesFilePath = sys.modules[__name__].massiveLauncherPreferencesFilePath
-        if os.path.exists(massiveLauncherPreferencesFilePath):
-            massiveLauncherConfig.read(massiveLauncherPreferencesFilePath)
-        if not massiveLauncherConfig.has_section("MASSIVE Launcher Preferences"):
-            massiveLauncherConfig.add_section("MASSIVE Launcher Preferences")
-
-        sys.modules[__name__].cvlLauncherConfig = ConfigParser.RawConfigParser(allow_no_value=True)
-        cvlLauncherConfig = sys.modules[__name__].cvlLauncherConfig
-        sys.modules[__name__].cvlLauncherPreferencesFilePath = os.path.join(appUserDataDir,"CVL Launcher Preferences.cfg")
-        cvlLauncherPreferencesFilePath = sys.modules[__name__].cvlLauncherPreferencesFilePath
-        if os.path.exists(cvlLauncherPreferencesFilePath):
-            cvlLauncherConfig.read(cvlLauncherPreferencesFilePath)
-        if not cvlLauncherConfig.has_section("CVL Launcher Preferences"):
-            cvlLauncherConfig.add_section("CVL Launcher Preferences")
-
-        sys.modules[__name__].globalLauncherConfig = ConfigParser.RawConfigParser(allow_no_value=True)
-        globalLauncherConfig = sys.modules[__name__].globalLauncherConfig
-        sys.modules[__name__].globalLauncherPreferencesFilePath = os.path.join(appUserDataDir,"Global Preferences.cfg")
-        globalLauncherPreferencesFilePath = sys.modules[__name__].globalLauncherPreferencesFilePath
-        if os.path.exists(globalLauncherPreferencesFilePath):
-            globalLauncherConfig.read(globalLauncherPreferencesFilePath)
-        if not globalLauncherConfig.has_section("Global Preferences"):
-            globalLauncherConfig.add_section("Global Preferences")
-
-        logger.setGlobalLauncherConfig(globalLauncherConfig)
-        logger.setGlobalLauncherPreferencesFilePath(globalLauncherPreferencesFilePath)
+        global launcherPreferencesFilePath 
+        launcherPreferencesFilePath = os.path.join(appUserDataDir,"strudel.cfg")
 
         if sys.platform.startswith("win"):
             os.environ['CYGWIN'] = "nodosfilewarning"
-        sys.modules[__name__].launcherMainFrame = LauncherMainFrame(None, wx.ID_ANY, 'MASSIVE/CVL Launcher')
+
+        logger.setGlobalLauncherPreferencesFilePath(launcherPreferencesFilePath)
+        sys.modules[__name__].launcherMainFrame = LauncherMainFrame(None, wx.ID_ANY, 'Strudel Beta')
         launcherMainFrame = sys.modules[__name__].launcherMainFrame
+        launcherMainFrame.SetStatusBar(launcherMainFrame.loginDialogStatusBar)
+        launcherMainFrame.SetMenuBar(launcherMainFrame.menu_bar)
+        launcherMainFrame.Fit()
+        launcherMainFrame.Layout()
+        launcherMainFrame.Center()
         launcherMainFrame.Show(True)
+        evt=wx.PyCommandEvent(wx.wxEVT_COMMAND_MENU_SELECTED,id=launcherMainFrame.loadDefaultSessionsId)
+        wx.PostEvent(launcherMainFrame.GetEventHandler(),evt)
+        t=threading.Thread(target=launcherMainFrame.checkVersionNumber)
+        t.start()
 
         return True
 

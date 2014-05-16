@@ -55,8 +55,9 @@ import create_commit_def
 import requests
 import os
 import pkgutil
+myname="Strudel"
 
-resource_files=["MASSIVE.icns", requests.certs.where()]
+resource_files=["MASSIVE.icns", requests.certs.where(), "masterList.url"]
 
 launcherVersionNumberModulePath = os.path.dirname(pkgutil.get_loader("launcher_version_number").filename)
 helpFilesDirectory = os.path.join(launcherVersionNumberModulePath, "help", "helpfiles")
@@ -76,11 +77,11 @@ setup(
         arch='i386',
         plist=dict(
             CFBundleDevelopmentRegion="English",
-            CFBundleDisplayName="MASSIVE Launcher",
-            CFBundleExecutable="MASSIVE Launcher",
+            CFBundleDisplayName=myname,
+            CFBundleExecutable=myname,
             CFBundleIconFile="MASSIVE.icns",
             CFBundleIdentifier="au.edu.monash.MASSIVE",
-            CFBundleName="MASSIVE Launcher",
+            CFBundleName="Strudel",
             CFBundlePackageType="APPL",
             CFBundleVersion="Version " + launcher_version_number.version_number,
             LSArchitecturePriority=["i386"]
@@ -88,7 +89,7 @@ setup(
         )
     ),
     data_files=resource_files,
-    name="MASSIVE Launcher",
+    name=myname,
     setup_requires=["py2app"],
     app=['launcher.py']
 )

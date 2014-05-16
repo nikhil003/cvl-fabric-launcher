@@ -11,119 +11,13 @@ import sys
 import itertools
 import wx.lib.mixins.listctrl as listmix
 import zipfile
+import json
 
 from logger.Logger import logger
 
 LAUNCHER_URL = "https://www.massive.org.au/userguide/cluster-instructions/massive-launcher"
 
 TURBOVNC_BASE_URL = "http://sourceforge.net/projects/virtualgl/files/TurboVNC/"
-
-class sshKeyDistDisplayStrings(object):
-    def __init__(self):
-        self.passwdPrompt="enter passwd"
-        self.passwdPromptIncorrect="passwd incorrect. reenter"
-        self.passphrasePrompt="enter key passphrase"
-        self.passphrasePromptIncorrectl="Incorrect. enter key passphrase"
-        self.newPassphraseEmptyForbidden="new passphrase. empty passphrase forbidden"
-        self.newPassphraseTooShort="passphrase to short. enter a new passphrase"
-        self.newPassphraseMismatch="passphrases don't match. enter new passphrases"
-        self.newPassphrase="new passphrase for new key"
-        self.newPassphraseTitle="Please enter a new passphrase"
-        self.temporaryKey="""
-Would you like to use the launchers old behaviour (entering a password every time you start a new desktop) or try the new behaviour (creating an ssh key pair and entering a passphrase the first time you use the launcher after reboot.)
-
-Passwords are recomended if this is a shared user account.
-
-SSH Keys are recommended if you are the only person who uses this account.
-
-This option can be changed from the Identity menu.
-"""
-        self.temporaryKeyYes="Use my password"
-        self.temporaryKeyNo="Use an SSH key pair"
-        self.qdelQueuedJob="""It looks like you've been waiting for a job to start.
-Do you want me to delete the job or leave it in the queue so you can reconnect later?
-"""
-        self.qdelQueuedJobQdel="Delete the job"
-        self.qdelQueuedJobNOOP="Leave it in the queue (I'll reconnect later)"
-        self.persistentMessage="Would you like to leave your current session running so that you can reconnect later?\nIt has {timestring} remaining."
-        self.persistentMessageStop="Stop the desktop"
-        self.persistentMessagePersist="Leave it running"
-        self.reconnectMessage="An Existing Desktop was found. It has {timestring} remaining. Would you like to reconnect or kill it and start a new desktop?"
-        self.reconnectMessageYes="Reconnect"
-        self.reconnectMessageNo="New desktop"
-        self.helpEmailAddress="help@massive.org.au"
-
-class sshKeyDistDisplayStringsCVL(sshKeyDistDisplayStrings):
-    def __init__(self):
-        super(sshKeyDistDisplayStringsCVL, self).__init__()
-        self.passwdPrompt="""Please enter the password for your CVL account.
-This is the password you entered when you requested an account
-at the website https://web.cvl.massive.org.au/users"""
-        #self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
-        self.passwdPromptIncorrect="Authentication failed. Please check your username and password.\n"+self.passwdPrompt
-        self.passphrasePrompt="Please enter the passphrase for your SSH key"
-        self.passphrasePromptIncorrect="""Sorry, that passphrase was incorrect.
-Please enter the passphrase for your SSH Key
-If you have forgotten the passphrase for your key, you may need to delete it and create a new key.
-You can find this option under the Identity menu.
-"""
-        self.newPassphrase="""It looks like this is the first time you're using the CVL on this
-computer. To use the CVL, the launcher will generate a local
-passphrase protected key on your computer which is used to
-authenticate you and set up your remote CVL environment.
-
-Please enter a new passphrase (twice to avoid typos) to protect your local key. 
-After you've done this, your passphrase will be the primary method of
-authentication for the launcher.
-
-WHY?
-
-This new method of authentication allows you to create file system
-mounts to remote computer systems, and in the future it will support
-launching remote HPC jobs."""
-        self.newPassphraseEmptyForbidden="Sorry, empty passphrases are forbidden.\n"+self.newPassphrase
-        self.createNewKeyDialogNewPassphraseEmptyForbidden="Sorry, empty passphrases are forbidden."
-        self.newPassphraseTooShort="Sorry, the passphrase must be at least six characters.\n"+self.newPassphrase
-        self.createNewKeyDialogNewPassphraseTooShort="Passphrase is too short."
-        self.newPassphraseMismatch="Sorry, the two passphrases you entered don't match.\n"+self.newPassphrase
-        self.createNewKeyDialogNewPassphraseMismatch="Passphrases don't match!"
-        self.newPassphraseTitle="Please enter a new passphrase"
-        self.persistentMessage="Would you like to leave your current session running so that you can reconnect later?"
-        self.reconnectMessage="An Existing Desktop was found. Would you like to reconnect or kill it and start a new desktop?"
-        self.helpEmailAddress="cvl-help@monash.edu"
-
-class sshKeyDistDisplayStringsMASSIVE(sshKeyDistDisplayStrings):
-    def __init__(self):
-        super(sshKeyDistDisplayStringsMASSIVE, self).__init__()
-        self.passwdPrompt="""Please enter the password for your MASSIVE account."""
-        #self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
-        self.passwdPromptIncorrect="Authentication failed. Please check your username and password.\n"+self.passwdPrompt
-        self.passphrasePrompt="Please enter the passphrase for your SSH key"
-        self.passphrasePromptIncorrect="""
-Sorry, that passphrase was incorrect.
-Please enter the passphrase for your SSH Key
-If you have forgotten the passphrase for your key, you may need to delete it and create a new key.
-You can find this option under the Identity menu.
-"""
-        self.newPassphrase="""It looks like this is the first time you're logging in to MASSIVE with this version of the launcher.
-To make logging in faster and more secure, the launcher will generate a local
-passphrase protected key on your computer which is used to
-authenticate you and set up your MASSIVE desktop.
-
-Please enter a new passphrase (twice to avoid typos) to protect your local key. 
-After you've done this, your passphrase will be the primary method of
-authentication for the launcher."""
-
-        self.newPassphraseEmptyForbidden="Sorry, empty passphrases are forbidden.\n"+self.newPassphrase
-        self.createNewKeyDialogNewPassphraseEmptyForbidden="Sorry, empty passphrases are forbidden."
-        self.newPassphraseTooShort="Sorry, the passphrase must be at least 6 characters.\n"+self.newPassphrase
-        self.createNewKeyDialogNewPassphraseTooShort="Passphrase is too short."
-        self.newPassphraseMismatch="Sorry, the two passphrases you entered don't match.\n"+self.newPassphrase
-        self.createNewKeyDialogNewPassphraseMismatch="Passphrases don't match!"
-        self.newPassphraseTitle="Please enter a new passphrase"
-        self.helpEmailAddress="help@massive.org.au"
-
-
 
 def parseMessages(regexs,stdout,stderr):
     # compare each line of output against a list of regular expressions and build up a dictionary of messages to give the user
@@ -349,7 +243,7 @@ class ListSelectionDialog(wx.Dialog):
         if self.listSelectionList.GetFirstSelected()==-1:
             dlg = wx.MessageDialog(self.parent, 
                 self.noSelectionMessage,
-                "MASSIVE/CVL Launcher", 
+                "", 
                 wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             self.listSelectionList.SetFocus()
@@ -535,7 +429,7 @@ def die_from_login_thread(launcherMainFrame,error_message, display_error_dialog=
     if display_error_dialog:
         def error_dialog():
             dlg = wx.MessageDialog(launcherMainFrame, error_message,
-                            "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+                            "", wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
             launcherMainFrame.loginThread.die_from_login_thread_completed = True
@@ -562,7 +456,7 @@ def die_from_main_frame(launcherMainFrame,error_message):
 
     def error_dialog():
         dlg = wx.MessageDialog(launcherMainFrame, "Error: " + error_message + "\n\n" + "The launcher cannot continue.\n",
-                        "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+                        "", wx.OK | wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
 #        launcherMainFrame.loginThread.die_from_main_frame_dialog_completed = True

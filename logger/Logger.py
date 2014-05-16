@@ -19,6 +19,8 @@ class Logger():
         self.loggerOutput = None
         self.loggerFileHandler = None
         self.configureLogger()
+        self.globalLauncherConfig=None
+        self.globalLauncherPreferencesFilePath=None
 
     def setGlobalLauncherConfig(self, globalLauncherConfig):
         self.globalLauncherConfig = globalLauncherConfig
@@ -28,7 +30,10 @@ class Logger():
 
     def sendLogMessagesToDebugWindowTextControl(self, logTextCtrl):
         # Send all log messages to the debug window, which may or may not be visible.
-        log_window_handler = logging.StreamHandler(stream=logTextCtrl)
+        try:
+            log_window_handler = logging.StreamHandler(stream=logTextCtrl)
+        except:
+            log_window_handler = logging.StreamHandler(strm=logTextCtrl)
         log_window_handler.setLevel(logging.DEBUG)
         log_format_string = '%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s'
         log_window_handler.setFormatter(logging.Formatter(log_format_string))
@@ -53,7 +58,10 @@ class Logger():
 
         # Send all log messages to a string.
         self.loggerOutput = StringIO()
-        string_handler = logging.StreamHandler(stream=self.loggerOutput)
+        try:
+            string_handler = logging.StreamHandler(stream=self.loggerOutput)
+        except:
+            string_handler = logging.StreamHandler(strm=self.loggerOutput)
         string_handler.setLevel(logging.DEBUG)
         string_handler.setFormatter(logging.Formatter(log_format_string))
         self.loggerObject.addHandler(string_handler)
@@ -101,10 +109,10 @@ class Logger():
         def showSubmitDebugLogDialog():
             dlg = SubmitDebugReportDialog(None,wx.ID_ANY,'MASSIVE/CVL Launcher',self.loggerOutput.getvalue(),self.globalLauncherConfig,self.globalLauncherPreferencesFilePath,showFailedToOpenRemoteDesktopMessage=showFailedToOpenRemoteDesktopMessage)
             try:
-                try:
+                if wx.IsBusy():
                     wx.EndBusyCursor()
                     stoppedBusyCursor = True
-                except:
+                else:
                     stoppedBusyCursor = False
                 result = dlg.ShowModal()
                 if stoppedBusyCursor:

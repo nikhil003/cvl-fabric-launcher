@@ -12,6 +12,7 @@ class LauncherMessageDialog(wx.Dialog):
             self.Centre()
 
         self.helpEmailAddress = helpEmailAddress
+        self.ButtonLabels=['OK']
 
         self.dialogPanel = wx.Panel(self, wx.ID_ANY)
 
@@ -60,8 +61,21 @@ class LauncherMessageDialog(wx.Dialog):
         self.contactEmailHyperlink.SetPosition(hyperlinkPosition)
 
     def onClose(self, event):
+        obj=event.GetEventObject()
+        if (isinstance(obj,wx.Button)):
+            label=obj.GetLabel()
+            ln=0
+            for i in self.ButtonLabels:
+                if (label==i):
+                    self.EndModal(ln)
+                else:
+                    ln=ln+1
+        else:
+            self.EndModal(-1)
+    def onClose(self, event):
         self.Show(False) 
         self.Destroy()
+        self.EndModal(0)
 
 class MyApp(wx.App):
     def OnInit(self):
@@ -70,5 +84,6 @@ class MyApp(wx.App):
         dialog.ShowModal()
         return True
 
-#app = MyApp(False)
-#app.MainLoop()
+if __name__ == '__main__':
+    app = MyApp(False)
+    app.MainLoop()
