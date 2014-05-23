@@ -17,7 +17,7 @@ from logger.Logger import logger
 
 LAUNCHER_URL = "https://www.massive.org.au/userguide/cluster-instructions/massive-launcher"
 
-TURBOVNC_BASE_URL = "http://sourceforge.net/projects/virtualgl/files/TurboVNC/"
+TURBOVNC_BASE_URL = "http://www.sourceforge.net/projects/turbovnc/files"
 
 def parseMessages(regexs,stdout,stderr):
     # compare each line of output against a list of regular expressions and build up a dictionary of messages to give the user
