@@ -87,6 +87,8 @@ class siteListDialog(wx.Dialog):
         self.siteList.SetMinSize((w,200))
         self.siteList.SetColumnWidth(1,-3)
         mainSizer.Add(self.siteList,flag=wx.EXPAND,proportion=1)
+        self.siteList.Bind(ULC.EVT_LIST_ITEM_SELECTED,self.onItemSelected)
+
 
         p=wx.Panel(self,wx.ID_ANY)
         s=wx.BoxSizer(wx.HORIZONTAL)
@@ -108,6 +110,11 @@ class siteListDialog(wx.Dialog):
         self.Fit()
         self.Refresh()
         self.Update()
+
+    def onItemSelected(self,evt):
+        itemNumber=self.siteList.GetFirstSelected()
+        cb=self.siteList.GetItemWindow(itemNumber,2)
+        cb.SetValue(not cb.IsChecked())
 
     def onNew(self,evt):
         dlg=newSiteDialog(parent=self)
