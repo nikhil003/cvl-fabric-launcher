@@ -922,9 +922,11 @@ Don't remember me does not store this token permantly. You will need to enter a 
 
         self.authPanel.Layout()
         var='auth_mode'
+        auth_mode = self.FindWindowByName(var)
         if var in globalOptions:
-            auth_mode = self.FindWindowByName(var)
             auth_mode.SetSelection(int(globalOptions[var]))
+        else:
+            auth_mode.SetSelection(0)
         var='uuid'
         uuidtc = self.FindWindowByName(var)
         if var in globalOptions:
