@@ -740,17 +740,7 @@ class LauncherMainFrame(wx.Frame):
         if time!=None:
             timer=threading.Timer(time,r.put,args=[timeoutObject])
             timer.start()
-        dq=Queue.Queue()
-        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingSiteList.message,ButtonLabels=dialogs.loadingSiteList.ButtonLabels,q=dq)
-        progressdlg=dq.get()
-        wx.CallAfter(self.showModalFromThread,progressdlg,r)
-        wx.CallAfter(wx.BeginBusyCursor)
         newlist=r.get()
-        wx.CallAfter(wx.EndBusyCursor)
-        try:
-            wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
-        except:
-            pass
         if isinstance(newlist,type([])):
             pass
         elif newlist == timeoutObject:
@@ -767,6 +757,10 @@ class LauncherMainFrame(wx.Frame):
         siteList=[]
         tlist=[]
 
+        origq=Queue.Queue()
+        threading.Thread(target=self.getSitePrefs,args=[origq]).start()
+
+        wx.CallAfter(wx.BeginBusyCursor)
         retry=True
         try:
             newlist=self.loadNewSitesNonBlocking(time=10)
@@ -780,27 +774,20 @@ class LauncherMainFrame(wx.Frame):
             newlist=[]
             retry=False
             dq=Queue.Queue()
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
-            dlg=dq.get()
+            wx.CallAfter(wx.EndBusyCursor)
+            wx.CallAfter(self.createAndShowModalDialog,q=q,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels)
             q=Queue.Queue()
-            wx.CallAfter(self.showModalFromThread,dlg,q)
             button=q.get()
+            wx.CallAfter(wx.BeginBusyCursor)
 
+        origSiteList=origq.get()
 
-        q=Queue.Queue()
-        threading.Thread(target=self.getSitePrefs,args=[q]).start()
-        wx.CallAfter(wx.BeginBusyCursor)
-        origSiteList=q.get()
         wx.CallAfter(wx.EndBusyCursor)
 
         if origSiteList==[] and newlist==[] and retry==True:
 
-
             q=Queue.Queue()
-            dq=Queue.Queue()
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels,q=dq)
-            dlg=dq.get()
-            wx.CallAfter(self.showModalFromThread,dlg,q)
+            wx.CallAfter(self.createAndShowModalDialog,q=q,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels)
             button=q.get()
             if button==0:
                 retry=False
@@ -815,14 +802,11 @@ class LauncherMainFrame(wx.Frame):
                     logger.debug("getNewSites: Exception %s"%e)
                     logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
                     q=Queue.Queue()
-                    dq=Queue.Queue()
-                    wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
-                    dlg=dq.get()
-                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    wx.CallAfter(self.createAndShowModalDialog,q=q,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels)
                     button=q.get()
                     retry=False
                 if retry:
-                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    wx.CallAfter(self.createAndShowModalDialog,q=q,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels)
                     button=q.get()
                     if button==0:
                         retry=False
@@ -926,10 +910,7 @@ class LauncherMainFrame(wx.Frame):
         retry=True
         while sites.keys() == [] and retry:
             q=Queue.Queue()
-            dq=Queue.Queue()
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,message=dialogs.siteListFirstUseInfo.message,ButtonLabels=dialogs.siteListFirstUseInfo.ButtonLabels,title="",q=dq)
-            dlg=dq.get()
-            wx.CallAfter(self.showModalFromThread,dlg,q)
+            wx.CallAfter(self.createAndShowModalDialog,q=q,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,message=dialogs.siteListFirstUseInfo.message,ButtonLabels=dialogs.siteListFirstUseInfo.ButtonLabels,title="")
             button=q.get()
             if button==0:
                 retry=False
@@ -938,15 +919,7 @@ class LauncherMainFrame(wx.Frame):
                 sites=self.getPrefsSection(section='configured_sites')
             
         wx.CallAfter(wx.BeginBusyCursor)
-        q=Queue.Queue()
-        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingFlavours.message,ButtonLabels=dialogs.loadingFlavours.ButtonLabels,q=q)
-        dlg=q.get()
-        # For some reason, these CallAfters trigger a bug in wx3.0 on MacOS but not on wx2.8/Linux. I don't think the code is wrong, I think its a problem in wx3.0/cocoa
-        if not sys.platform.startswith("darwin"):
-            wx.CallAfter(dlg.ShowModal)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
-        if not sys.platform.startswith("darwin"):
-            wx.CallAfter(dlg.EndModal,0)
         wx.CallAfter(wx.EndBusyCursor)
         wx.CallAfter(self.loadDefaultSessionsGUI,redraw)
 
