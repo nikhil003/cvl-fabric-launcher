@@ -934,7 +934,6 @@ class LauncherMainFrame(wx.Frame):
                 self.manageSites()
                 return
             
-        
         wx.CallAfter(wx.BeginBusyCursor)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
         wx.CallAfter(wx.EndBusyCursor)
