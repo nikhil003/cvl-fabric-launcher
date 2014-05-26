@@ -928,16 +928,12 @@ class LauncherMainFrame(wx.Frame):
             wx.CallAfter(self.createAndShowModalDialog,event=e,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,message=dialogs.siteListFirstUseInfo.message,ButtonLabels=dialogs.siteListFirstUseInfo.ButtonLabels,title="",q=q)
             e.wait()
             button=q.get()
-            print "button %s"%button
             if button==0:
                 retry=False
             else:
                 self.manageSites()
                 return
             
-        print "loading default sessions"
-        print "sites keys %s"%sites.keys()
-        print "retry %s"%retry
         
         wx.CallAfter(wx.BeginBusyCursor)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
