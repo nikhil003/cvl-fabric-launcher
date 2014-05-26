@@ -941,9 +941,12 @@ class LauncherMainFrame(wx.Frame):
         q=Queue.Queue()
         wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingFlavours.message,ButtonLabels=dialogs.loadingFlavours.ButtonLabels,q=q)
         dlg=q.get()
-        wx.CallAfter(dlg.ShowModal)
+        # For some reason, these CallAfters trigger a bug in wx3.0 on MacOS but not on wx2.8/Linux. I don't think the code is wrong, I think its a problem in wx3.0/cocoa
+        if not sys.platform.startswith("darwin"):
+            wx.CallAfter(dlg.ShowModal)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
-        wx.CallAfter(dlg.EndModal,0)
+        if not sys.platform.startswith("darwin"):
+            wx.CallAfter(dlg.EndModal,0)
         wx.CallAfter(wx.EndBusyCursor)
         wx.CallAfter(self.loadDefaultSessionsGUI,redraw)
 
