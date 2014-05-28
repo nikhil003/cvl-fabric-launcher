@@ -753,7 +753,7 @@ class LauncherMainFrame(wx.Frame):
             raise siteConfig.CancelException("Canceled load new sites")
         return newlist
 
-    def manageSites(self):
+    def manageSites(self,loadDefaultSessions=True):
         siteList=[]
         tlist=[]
 
@@ -860,7 +860,8 @@ class LauncherMainFrame(wx.Frame):
                 self.setPrefsSection('configured_sites',options)
                 self.savePrefs(section='configured_sites')
 
-                launcherMainFrame.loadDefaultSessions(True)
+                if loadDefaultSessions:
+                    launcherMainFrame.loadDefaultSessions(True)
 
     def loadSessionEvent(self,event):
         dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)

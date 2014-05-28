@@ -103,15 +103,11 @@ class multiButtonDialog(wx.Dialog):
     def onClose(self, event):
         wx.Yield()
         obj=event.GetEventObject()
-        print "in onClose, label is %s"%obj.GetLabel()
-        print "in onClose button labels %s"%self.ButtonLabels
         if (isinstance(obj,wx.Button)):
             label=obj.GetLabel()
             ln=0
             for i in self.ButtonLabels:
-                print "in onClose i is %s %s"%(i,ln)
                 if (label==i):
-                    print "in onClose, EndModal with %s"%ln
                     if self.q!=None:
                         self.q.put(ln)
                     self.EndModal(ln)
