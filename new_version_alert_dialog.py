@@ -105,7 +105,7 @@ class NewVersionAlertDialog(wx.Dialog):
         else:
             font.SetPointSize(8)
         newVersionAlertHyperlink.SetFont(font)
-        newVersionAlertPanelSizer.Add(newVersionAlertHyperlink, border=10, flag=wx.LEFT|wx.BORDER)
+        newVersionAlertPanelSizer.Add(newVersionAlertHyperlink, border=10, flag=wx.LEFT)
         newVersionAlertPanelSizer.Add(wx.StaticText(newVersionAlertPanel))
 
         self.latestVersionChangesTextCtrl = wx.TextCtrl(newVersionAlertPanel,
@@ -129,7 +129,7 @@ class NewVersionAlertDialog(wx.Dialog):
         else:
             font.SetPointSize(9)
         newVersionAlertQueriesContactLabel.SetFont(font)
-        newVersionAlertPanelSizer.Add(newVersionAlertQueriesContactLabel, border=10, flag=wx.EXPAND|wx.BORDER)
+        newVersionAlertPanelSizer.Add(newVersionAlertQueriesContactLabel, border=10, flag=wx.EXPAND)
 
         contactEmailHyperlink = wx.HyperlinkCtrl(newVersionAlertPanel,
             id = wx.ID_ANY,
@@ -141,7 +141,7 @@ class NewVersionAlertDialog(wx.Dialog):
         else:
             font.SetPointSize(8)
         contactEmailHyperlink.SetFont(font)
-        newVersionAlertPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.BORDER)
+        newVersionAlertPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT)
 
         def onOK(event):
             self.EndModal(wx.ID_OK)

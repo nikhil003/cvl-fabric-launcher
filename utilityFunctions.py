@@ -139,8 +139,8 @@ class ListSelectionDialog(wx.Dialog):
             font.SetPointSize(8)
         contactEmailHyperlink.SetFont(font)
 
-        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BORDER)
-        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.BORDER)
+        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT)
+        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM)
 
         contactPanelSizer.Fit(contactPanel)
 
@@ -252,10 +252,14 @@ class ListSelectionDialog(wx.Dialog):
         itemnum=self.listSelectionList.GetFocusedItem()
         item=self.listSelectionList.GetItem(itemnum,0)
         if self.okCallback != None:
+            logger.debug("ListSelectionDialog.onClose: calling okCallback")
             self.okCallback(item)
-        self.Destroy()
+            logger.debug("ListSelectionDialog.onClose: okCallback returned, calling destroy")
+        #self.Destroy()
+        self.EndModal(e.GetId())
 
         if self.closedProgressDialog:
+            logger.debug("ListSelectionDialog.onClose: Progress dialog was closed, seeing if it exists to open again")
             if self.progressDialog is not None:
                 self.progressDialog.Show(True)
 
@@ -308,8 +312,8 @@ class HelpDialog(wx.Dialog):
         contactEmailHyperlink.SetFont(font)
 
 #        contactPanelSizer.Add(wx.StaticText(contactPanel, wx.ID_ANY, ""))
-        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BORDER)
-        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.BORDER)
+        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT)
+        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM)
 
         #contactPanelSizer.Add(wx.StaticText(contactPanel))
         contactPanelSizer.Fit(contactPanel)
@@ -335,9 +339,13 @@ class HelpDialog(wx.Dialog):
 
 
     def OnClose(self, e):
-        self.Destroy()
         if self.callback != None:
             self.callback()
+        try:
+            self.EndModal(e.GetId())
+        except:
+            pass
+        self.Destroy()
 
 
 class MyHtmlParser(HTMLParser.HTMLParser):
