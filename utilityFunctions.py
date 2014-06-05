@@ -237,6 +237,10 @@ class ListSelectionDialog(wx.Dialog):
             if self.cancelCallback != None:
                 #self.cancelCallback("User canceled from ListSelectionDialog.")
                 self.cancelCallback("")
+            try:
+                self.EndModal(e.GetId())
+            except:
+                pass
             self.Destroy()
             return
 
@@ -256,7 +260,10 @@ class ListSelectionDialog(wx.Dialog):
             self.okCallback(item)
             logger.debug("ListSelectionDialog.onClose: okCallback returned, calling destroy")
         #self.Destroy()
-        self.EndModal(e.GetId())
+        try:
+            self.EndModal(e.GetId())
+        except:
+            pass
 
         if self.closedProgressDialog:
             logger.debug("ListSelectionDialog.onClose: Progress dialog was closed, seeing if it exists to open again")
