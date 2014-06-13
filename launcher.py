@@ -382,9 +382,6 @@ class LauncherMainFrame(wx.Frame):
         emailHelpAtMassiveMenuItemID = wx.NewId()
         self.help_menu.Append(emailHelpAtMassiveMenuItemID, "Email &help@massive.org.au")
         self.Bind(wx.EVT_MENU, self.onEmailHelpAtMassive, id=emailHelpAtMassiveMenuItemID)
-        emailCvlHelpAtMonashMenuItemID = wx.NewId()
-        self.help_menu.Append(emailCvlHelpAtMonashMenuItemID, "Email &cvl-help@monash.edu")
-        self.Bind(wx.EVT_MENU, self.onEmailCvlHelpAtMonash, id=emailCvlHelpAtMonashMenuItemID)
         submitDebugLogMenuItemID = wx.NewId()
         self.help_menu.Append(submitDebugLogMenuItemID, "&Submit debug log")
         self.Bind(wx.EVT_MENU, self.onSubmitDebugLog, id=submitDebugLogMenuItemID)
@@ -1232,15 +1229,11 @@ class LauncherMainFrame(wx.Frame):
         import webbrowser
         webbrowser.open("mailto:help@massive.org.au")
 
-    def onEmailCvlHelpAtMonash(self, event):
-        import webbrowser
-        webbrowser.open("mailto:cvl-help@monash.edu")
-
     def onSubmitDebugLog(self, event):
         logger.dump_log(launcherMainFrame,submit_log=True,showFailedToOpenRemoteDesktopMessage=False)
 
     def onAbout(self, event):
-        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
+        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
