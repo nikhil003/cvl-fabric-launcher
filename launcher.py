@@ -382,9 +382,6 @@ class LauncherMainFrame(wx.Frame):
         emailHelpAtMassiveMenuItemID = wx.NewId()
         self.help_menu.Append(emailHelpAtMassiveMenuItemID, "Email &help@massive.org.au")
         self.Bind(wx.EVT_MENU, self.onEmailHelpAtMassive, id=emailHelpAtMassiveMenuItemID)
-        emailCvlHelpAtMonashMenuItemID = wx.NewId()
-        self.help_menu.Append(emailCvlHelpAtMonashMenuItemID, "Email &cvl-help@monash.edu")
-        self.Bind(wx.EVT_MENU, self.onEmailCvlHelpAtMonash, id=emailCvlHelpAtMonashMenuItemID)
         submitDebugLogMenuItemID = wx.NewId()
         self.help_menu.Append(submitDebugLogMenuItemID, "&Submit debug log")
         self.Bind(wx.EVT_MENU, self.onSubmitDebugLog, id=submitDebugLogMenuItemID)
@@ -750,7 +747,7 @@ class LauncherMainFrame(wx.Frame):
         elif isinstance(newlist,type("")):
             raise siteConfig.StatusCode(newlist)
         else:
-            raise siteConfig.CancelException("Canceled load new sites")
+            raise siteConfig.CancelException("Cancelled load new sites")
         return newlist
 
     def manageSites(self,loadDefaultSessions=True):
@@ -867,7 +864,7 @@ class LauncherMainFrame(wx.Frame):
         dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)
         status=dlg.ShowModal()
         if status==wx.ID_CANCEL:
-            logger.debug('loadSession cancled')
+            logger.debug('loadSession cancelled')
         f=open(dlg.GetPath(),'r')
         self.loadSession(f)
         f.close()
@@ -1027,7 +1024,7 @@ class LauncherMainFrame(wx.Frame):
         dlg=wx.FileDialog(self,"Save your desktop session",style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         status=dlg.ShowModal()
         if status==wx.ID_CANCEL:
-            logger.debug('saveSession canceled')
+            logger.debug('saveSession cancelled')
             return
         filename=dlg.GetPath()
         q.put(filename)
@@ -1232,15 +1229,11 @@ class LauncherMainFrame(wx.Frame):
         import webbrowser
         webbrowser.open("mailto:help@massive.org.au")
 
-    def onEmailCvlHelpAtMonash(self, event):
-        import webbrowser
-        webbrowser.open("mailto:cvl-help@monash.edu")
-
     def onSubmitDebugLog(self, event):
         logger.dump_log(launcherMainFrame,submit_log=True,showFailedToOpenRemoteDesktopMessage=False)
 
     def onAbout(self, event):
-        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
+        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -1279,7 +1272,7 @@ class LauncherMainFrame(wx.Frame):
             self.savePrefs(section="Global Preferences")
         dlg.Destroy()
         options=self.getPrefsSection('Global Preferences')
-        #auth_mode won't be set if, for example, this is the first use and the user displayed options then canceled
+        #auth_mode won't be set if, for example, this is the first use and the user displayed options then cancelled
         if options.has_key('auth_mode'): 
             auth_mode = int(options['auth_mode'])
             self.identity_menu.setRadio(auth_mode)
@@ -1411,7 +1404,7 @@ class LauncherMainFrame(wx.Frame):
         logger.debug("launcher.py: onLogin: Enabling login button.")
         # The refresh below is a workaround for a Windows bug where a
         # dark-coloured rectangle appears in the middle of the main
-        # dialog's current panel after a completed or canceled login session:
+        # dialog's current panel after a completed or cancelled login session:
         self.massiveLoginDialogPanel.Refresh()
         self.cvlLoginDialogPanel.Refresh()
         self.loginButton.Enable()

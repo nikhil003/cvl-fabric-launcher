@@ -296,7 +296,7 @@ def getCVLSiteConfigXML(queue):
     c.defaults['jobParams_mem']=4
 
 
-    cmd = '\"module load pbs ; qstat -x | xmlstarlet sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n -\"'
+    cmd = '\"module load pbs ; qstat -x | xmlstarlet sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n - 2>/dev/null\"'
     regex='(?P<jobid>(?P<jobidNumber>[0-9]+).\S+) (?P<remainingWalltime>.*)$'
     c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
 
@@ -653,6 +653,18 @@ defaultSites['CVL 16 core node']=multicpu
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_flavours_20140419.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# CVL UQ with password
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['CVL Desktop at UQ']=  getCVLSiteConfigXML("batch")
+defaultSites['CVL Desktop at UQ'].authURL=None
+defaultSites['CVL Desktop at UQ'].loginHost='uq.login.cvl.massive.org.au'
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('cvl_uq_flavours_20140419.json','w') as f:
     f.write(jsons)
     
 ########################################################################################
