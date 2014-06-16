@@ -107,7 +107,7 @@ class Logger():
             return
 
         def showSubmitDebugLogDialog():
-            dlg = SubmitDebugReportDialog(None,wx.ID_ANY,'MASSIVE/CVL Launcher',self.loggerOutput.getvalue(),self.globalLauncherConfig,self.globalLauncherPreferencesFilePath,showFailedToOpenRemoteDesktopMessage=showFailedToOpenRemoteDesktopMessage)
+            dlg = SubmitDebugReportDialog(None,wx.ID_ANY,launcherMainFrame.programName,self.loggerOutput.getvalue(),self.globalLauncherConfig,self.globalLauncherPreferencesFilePath,showFailedToOpenRemoteDesktopMessage=showFailedToOpenRemoteDesktopMessage)
             try:
                 if wx.IsBusy():
                     wx.EndBusyCursor()

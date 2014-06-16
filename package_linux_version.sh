@@ -6,6 +6,7 @@
 # pyinstaller was unpacked.
 
 PYINSTALLERDIR=`pwd`/pyinstaller-2.1
+PYINSTALLERDIR=`pwd`/pyinstaller
 
 set -o nounset
 set -e

@@ -118,13 +118,13 @@ class IdentityMenu(wx.Menu):
                          "generated automatically when you try logging into a remote\n" +
                          "server, e.g. MASSIVE.\n\n" +
                          "Would you like to generate a key now?",
-                        "MASSIVE/CVL Launcher", wx.YES_NO | wx.ICON_QUESTION)
+                        "Strudel", wx.YES_NO | wx.ICON_QUESTION)
         return dlg.ShowModal()
 
 
     def createKey(self):
 
-        createNewKeyDialog = CreateNewKeyDialog(None, None, wx.ID_ANY, 'MASSIVE/CVL Launcher Private Key',self.launcherMainFrame.keyModel.getPrivateKeyFilePath(),self.launcherMainFrame.displayStrings)
+        createNewKeyDialog = CreateNewKeyDialog(None, None, wx.ID_ANY, 'Strudel Private Key',self.launcherMainFrame.keyModel.getPrivateKeyFilePath(),self.launcherMainFrame.displayStrings)
         createNewKeyDialog.Center()
         if createNewKeyDialog.ShowModal()==wx.ID_OK:
             logger.debug("User pressed OK from CreateNewKeyDialog.")
@@ -160,15 +160,15 @@ class IdentityMenu(wx.Menu):
 
         if self.privateKeyExists():
             dlg = wx.MessageDialog(self.launcherMainFrame,
-                            "You already have a MASSIVE Launcher key.\n\n" +
+                            "You already have a Strudel key.\n\n" +
                             "Do you want to delete your existing key and create a new one?",
-                            "MASSIVE/CVL Launcher", wx.YES_NO | wx.ICON_QUESTION)
+                            "Strudel", wx.YES_NO | wx.ICON_QUESTION)
             if dlg.ShowModal()==wx.ID_YES:
                 success = self.deleteKey()
                 if not success:
                     dlg = wx.MessageDialog(self.launcherMainFrame, 
                         "An error occured while attempting to delete your existing key.",
-                        "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+                        "Strudel", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
                     return
             else:
@@ -195,7 +195,7 @@ class IdentityMenu(wx.Menu):
             else:
                 return
 
-        inspectKeyDialog = InspectKeyDialog(None, wx.ID_ANY, 'MASSIVE/CVL Launcher Key Properties', self.launcherMainFrame.keyModel)
+        inspectKeyDialog = InspectKeyDialog(None, wx.ID_ANY, 'Strudel Key Properties', self.launcherMainFrame.keyModel)
         inspectKeyDialog.Center()
         inspectKeyDialog.ShowModal()
 
@@ -227,7 +227,7 @@ class IdentityMenu(wx.Menu):
                 "Are you sure you want to delete your key, located at:\n\n" +
                 self.launcherMainFrame.keyModel.getPrivateKeyFilePath() +
                 " ?",
-                "MASSIVE/CVL Launcher", wx.YES_NO | wx.ICON_QUESTION)
+                "Strudel", wx.YES_NO | wx.ICON_QUESTION)
             if dlg.ShowModal()==wx.ID_YES:
                 success = self.deleteKey()
                 if success:
@@ -235,14 +235,14 @@ class IdentityMenu(wx.Menu):
                 else:
                     message = "An error occured while attempting to delete your key."
                 dlg = wx.MessageDialog(self.launcherMainFrame, message,
-                    "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+                    "Strudel", wx.OK | wx.ICON_INFORMATION)
                 dlg.ShowModal()
         else:
             dlg = wx.MessageDialog(None,
                         "You don't seem to have a Launcher key yet. The key will be\n" +
                          "generated automatically when you try logging into a remote\n" +
                          "server, e.g. MASSIVE.",
-                        "MASSIVE/CVL Launcher", wx.OK | wx.ICON_INFORMATION)
+                        "Strudel", wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
 
 
