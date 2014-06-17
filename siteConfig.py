@@ -120,7 +120,7 @@ def getSites(prefs,path):
     for site in siteList:
         requestThread(site,q).start()
         nthreads=nthreads+1
-    timerThread(q,2).start()
+    timerThread(q,10).start()
     foundSites={}
     t=waitThread(q,foundSites,nthreads)
     t.start()

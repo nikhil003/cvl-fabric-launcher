@@ -382,9 +382,6 @@ class LauncherMainFrame(wx.Frame):
         emailHelpAtMassiveMenuItemID = wx.NewId()
         self.help_menu.Append(emailHelpAtMassiveMenuItemID, "Email &help@massive.org.au")
         self.Bind(wx.EVT_MENU, self.onEmailHelpAtMassive, id=emailHelpAtMassiveMenuItemID)
-        emailCvlHelpAtMonashMenuItemID = wx.NewId()
-        self.help_menu.Append(emailCvlHelpAtMonashMenuItemID, "Email &cvl-help@monash.edu")
-        self.Bind(wx.EVT_MENU, self.onEmailCvlHelpAtMonash, id=emailCvlHelpAtMonashMenuItemID)
         submitDebugLogMenuItemID = wx.NewId()
         self.help_menu.Append(submitDebugLogMenuItemID, "&Submit debug log")
         self.Bind(wx.EVT_MENU, self.onSubmitDebugLog, id=submitDebugLogMenuItemID)
@@ -740,17 +737,7 @@ class LauncherMainFrame(wx.Frame):
         if time!=None:
             timer=threading.Timer(time,r.put,args=[timeoutObject])
             timer.start()
-        dq=Queue.Queue()
-        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingSiteList.message,ButtonLabels=dialogs.loadingSiteList.ButtonLabels,q=dq)
-        progressdlg=dq.get()
-        wx.CallAfter(self.showModalFromThread,progressdlg,r)
-        wx.CallAfter(wx.BeginBusyCursor)
         newlist=r.get()
-        wx.CallAfter(wx.EndBusyCursor)
-        try:
-            wx.CallAfter(progressdlg.EndModal,wx.ID_OK)
-        except:
-            pass
         if isinstance(newlist,type([])):
             pass
         elif newlist == timeoutObject:
@@ -760,13 +747,17 @@ class LauncherMainFrame(wx.Frame):
         elif isinstance(newlist,type("")):
             raise siteConfig.StatusCode(newlist)
         else:
-            raise siteConfig.CancelException("Canceled load new sites")
+            raise siteConfig.CancelException("Cancelled load new sites")
         return newlist
 
-    def manageSites(self):
+    def manageSites(self,loadDefaultSessions=True):
         siteList=[]
         tlist=[]
 
+        origq=Queue.Queue()
+        threading.Thread(target=self.getSitePrefs,args=[origq]).start()
+
+        wx.CallAfter(wx.BeginBusyCursor)
         retry=True
         try:
             newlist=self.loadNewSitesNonBlocking(time=10)
@@ -779,28 +770,24 @@ class LauncherMainFrame(wx.Frame):
         except siteConfig.StatusCode as e:
             newlist=[]
             retry=False
-            dq=Queue.Queue()
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
-            dlg=dq.get()
             q=Queue.Queue()
-            wx.CallAfter(self.showModalFromThread,dlg,q)
+            wx.CallAfter(wx.EndBusyCursor)
+            wx.CallAfter(self.createAndShowModalDialog,e,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=q)
+            e.wait()
             button=q.get()
+            wx.CallAfter(wx.BeginBusyCursor)
 
+        origSiteList=origq.get()
 
-        q=Queue.Queue()
-        threading.Thread(target=self.getSitePrefs,args=[q]).start()
-        wx.CallAfter(wx.BeginBusyCursor)
-        origSiteList=q.get()
         wx.CallAfter(wx.EndBusyCursor)
 
         if origSiteList==[] and newlist==[] and retry==True:
 
-
             q=Queue.Queue()
-            dq=Queue.Queue()
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels,q=dq)
-            dlg=dq.get()
-            wx.CallAfter(self.showModalFromThread,dlg,q)
+            e=threading.Event()
+            e.clear()
+            wx.CallAfter(self.createAndShowModalDialog,e,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels,q=q)
+            e.wait()
             button=q.get()
             if button==0:
                 retry=False
@@ -815,14 +802,18 @@ class LauncherMainFrame(wx.Frame):
                     logger.debug("getNewSites: Exception %s"%e)
                     logger.debug("getNewSites: Traceback %s"%traceback.format_exc())
                     q=Queue.Queue()
-                    dq=Queue.Queue()
-                    wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=dq)
-                    dlg=dq.get()
-                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    e=threading.Event()
+                    e.clear()
+                    wx.CallAfter(self.createAndShowModalDialog,e,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=q)
+                    e.wait()
                     button=q.get()
                     retry=False
                 if retry:
-                    wx.CallAfter(self.showModalFromThread,dlg,q)
+                    q=Queue.Queue()
+                    e=threading.Event()
+                    e.clear()
+                    wx.CallAfter(self.createAndShowModalDialog,e,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListRetry.message,ButtonLabels=dialogs.siteListRetry.ButtonLabels,q=q)
+                    e.wait()
                     button=q.get()
                     if button==0:
                         retry=False
@@ -866,13 +857,14 @@ class LauncherMainFrame(wx.Frame):
                 self.setPrefsSection('configured_sites',options)
                 self.savePrefs(section='configured_sites')
 
-                launcherMainFrame.loadDefaultSessions(True)
+                if loadDefaultSessions:
+                    launcherMainFrame.loadDefaultSessions(True)
 
     def loadSessionEvent(self,event):
         dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)
         status=dlg.ShowModal()
         if status==wx.ID_CANCEL:
-            logger.debug('loadSession cancled')
+            logger.debug('loadSession cancelled')
         f=open(dlg.GetPath(),'r')
         self.loadSession(f)
         f.close()
@@ -908,10 +900,13 @@ class LauncherMainFrame(wx.Frame):
 
 
 
-    def createAndShowModalDialog(self,q,dlgclass,*args,**kwargs):
+    def createAndShowModalDialog(self,event,dlgclass,*args,**kwargs):
         dlg=dlgclass(*args,**kwargs)
-        r=dlg.ShowModal()
-        q.put(r)
+        # Do not use the return value from ShowModal. It seems on MacOS wx3.0, this event handler may run before the onClose method of the dialog
+        # Resulting in ShowModal returning an incorrect value. If you need the return value, pass a queue to the dialog and get the onClose method to 
+        # put a value on the queue (as is done in multiButtonDialog)
+        dlg.ShowModal()
+        event.set()
 
     def createMultiButtonDialog(self,q,*args,**kwargs):
         dlg=LauncherOptionsDialog.multiButtonDialog(*args,**kwargs)
@@ -926,26 +921,33 @@ class LauncherMainFrame(wx.Frame):
         retry=True
         while sites.keys() == [] and retry:
             q=Queue.Queue()
-            dq=Queue.Queue()
-            wx.CallAfter(self.createMultiButtonDialog,parent=self,message=dialogs.siteListFirstUseInfo.message,ButtonLabels=dialogs.siteListFirstUseInfo.ButtonLabels,title="",q=dq)
-            dlg=dq.get()
-            wx.CallAfter(self.showModalFromThread,dlg,q)
+            e=threading.Event()
+            wx.CallAfter(self.createAndShowModalDialog,event=e,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,message=dialogs.siteListFirstUseInfo.message,ButtonLabels=dialogs.siteListFirstUseInfo.ButtonLabels,title="",q=q)
+            e.wait()
             button=q.get()
             if button==0:
                 retry=False
             else:
                 self.manageSites()
-                sites=self.getPrefsSection(section='configured_sites')
+                return
             
         wx.CallAfter(wx.BeginBusyCursor)
-        q=Queue.Queue()
-        wx.CallAfter(self.createMultiButtonDialog,parent=self,title="",message=dialogs.loadingFlavours.message,ButtonLabels=dialogs.loadingFlavours.ButtonLabels,q=q)
-        dlg=q.get()
-        wx.CallAfter(dlg.ShowModal)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
-        wx.CallAfter(dlg.EndModal,0)
         wx.CallAfter(wx.EndBusyCursor)
         wx.CallAfter(self.loadDefaultSessionsGUI,redraw)
+        applicationName=self.programName
+        # Something buggy in wx3.0 on MacOS. Even if the application has focus it won't render some widgets correctly
+        # Using finder/osascript to refocus seems to correct this
+        if sys.platform.startswith("darwin"):
+            subprocess.Popen(['osascript', '-e',
+                "tell application \"System Events\"\r" +
+                "  set launcherApps to every process whose name contains \"" + applicationName + "\"\r" +
+                "  try\r" +
+                "    set launcherApp to item 1 of launcherApps\r" +
+                "    set frontmost of launcherApp to true\r" +
+                "    tell application \"" + applicationName + "\" to activate\r" +
+                "  end try\r" +
+                "end tell\r"])
 
     def loadDefaultSessionsGUI(self,redraw):
         cb=self.FindWindowByName('jobParams_configName')
@@ -1022,7 +1024,7 @@ class LauncherMainFrame(wx.Frame):
         dlg=wx.FileDialog(self,"Save your desktop session",style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         status=dlg.ShowModal()
         if status==wx.ID_CANCEL:
-            logger.debug('saveSession canceled')
+            logger.debug('saveSession cancelled')
             return
         filename=dlg.GetPath()
         q.put(filename)
@@ -1050,18 +1052,20 @@ class LauncherMainFrame(wx.Frame):
         except:
             logger.debug(traceback.format_exc())
             self.contacted_massive_website = False
-            q=Queue.Queue()
-            wx.CallAfter(self.createAndShowModalDialog,q,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
-            q.get()
+            e=threading.Event()
+            e.clear()
+            wx.CallAfter(self.createAndShowModalDialog,e,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
+            e.wait()
 
             latestVersionNumber = launcher_version_number.version_number
             latestVersionChanges = ''
 
         if latestVersionNumber > launcher_version_number.version_number:
             import new_version_alert_dialog
-            q=Queue.Queue()
-            wx.CallAfter(self.createAndShowModalDialog,q,new_version_alert_dialog.NewVersionAlertDialog,self,wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
-            q.get()
+            e=threading.Event()
+            e.clear()
+            wx.CallAfter(self.createAndShowModalDialog,e,new_version_alert_dialog.NewVersionAlertDialog,self,wx.ID_ANY, self.programName, latestVersionNumber, latestVersionChanges, LAUNCHER_URL)
+            e.wait()
             logger.debug('Old launcher version !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             logger.debug('launcher version: ' + str(launcher_version_number.version_number))
 
@@ -1225,15 +1229,11 @@ class LauncherMainFrame(wx.Frame):
         import webbrowser
         webbrowser.open("mailto:help@massive.org.au")
 
-    def onEmailCvlHelpAtMonash(self, event):
-        import webbrowser
-        webbrowser.open("mailto:cvl-help@monash.edu")
-
     def onSubmitDebugLog(self, event):
         logger.dump_log(launcherMainFrame,submit_log=True,showFailedToOpenRemoteDesktopMessage=False)
 
     def onAbout(self, event):
-        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="cvl-help@massive.org.au" )
+        dlg = LauncherMessageDialog(self, dialogs.aboutMessage.message, self.programName, helpEmailAddress="help@massive.org.au" )
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -1272,7 +1272,7 @@ class LauncherMainFrame(wx.Frame):
             self.savePrefs(section="Global Preferences")
         dlg.Destroy()
         options=self.getPrefsSection('Global Preferences')
-        #auth_mode won't be set if, for example, this is the first use and the user displayed options then canceled
+        #auth_mode won't be set if, for example, this is the first use and the user displayed options then cancelled
         if options.has_key('auth_mode'): 
             auth_mode = int(options['auth_mode'])
             self.identity_menu.setRadio(auth_mode)
@@ -1404,7 +1404,7 @@ class LauncherMainFrame(wx.Frame):
         logger.debug("launcher.py: onLogin: Enabling login button.")
         # The refresh below is a workaround for a Windows bug where a
         # dark-coloured rectangle appears in the middle of the main
-        # dialog's current panel after a completed or canceled login session:
+        # dialog's current panel after a completed or cancelled login session:
         self.massiveLoginDialogPanel.Refresh()
         self.cvlLoginDialogPanel.Refresh()
         self.loginButton.Enable()
@@ -1440,7 +1440,7 @@ class LauncherMainFrame(wx.Frame):
         configName=self.FindWindowByName('jobParams_configName').GetValue()
         jobParams = self.buildJobParams(self)
 
-        if jobParams['username'] == "" and self.sites[configName].authURL!=None:
+        if jobParams['username'] == "" and self.sites[configName].authURL==None:
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
                     self.programName)

@@ -645,7 +645,7 @@ class LoginProcess():
             else:
                 font.SetPointSize(8)
             turboVncNotFoundHyperlink.SetFont(font)
-            turboVncNotFoundPanelSizer.Add(turboVncNotFoundHyperlink, border=10, flag=wx.LEFT|wx.RIGHT|wx.BORDER)
+            turboVncNotFoundPanelSizer.Add(turboVncNotFoundHyperlink, border=10, flag=wx.LEFT|wx.RIGHT)
             if sys.platform.startswith("darwin"):
                 from distutils.version import StrictVersion
                 if StrictVersion(platform.mac_ver()[0]) >= StrictVersion("10.8.0"):
@@ -673,13 +673,14 @@ class LoginProcess():
                     else:
                         font.SetPointSize(8)
                     appleGateKeeperSupportHyperlink.SetFont(font)
-                    turboVncNotFoundPanelSizer.Add(appleGateKeeperSupportHyperlink, border=10, flag=wx.LEFT|wx.RIGHT|wx.BORDER)
+                    turboVncNotFoundPanelSizer.Add(appleGateKeeperSupportHyperlink, border=10, flag=wx.LEFT|wx.RIGHT)
 
             turboVncNotFoundPanelSizer.Add(wx.StaticText(turboVncNotFoundPanel))
 
             turboVncNotFoundDialog.addPanel(turboVncNotFoundPanel)
             turboVncNotFoundDialog.Centre()
             showModal(turboVncNotFoundDialog,self.loginprocess)
+            logger.debug("turboVncNotFoundDialog finished, calling loginprocess.cancel()")
 
             self.loginprocess.cancel()
     
@@ -812,7 +813,7 @@ class LoginProcess():
                 logger.debug('distributeKey: authURL set to %s'%event.loginprocess.siteConfig.authURL)
                 if event.loginprocess.siteConfig.authURL!=None:
                     logger.debug("LoginTasks, using AAF to authorize ssh pub key")
-                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,authURL=event.loginprocess.siteConfig.authURL,aaf_username=event.loginprocess.globalOptions['aaf_username'],aaf_idp=event.loginprocess.globalOptions['aaf_idp'],jobParams=event.loginprocess.jobParams)
+                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,authURL=event.loginprocess.siteConfig.authURL,jobParams=event.loginprocess.jobParams)
                 else:
                     logger.debug("LoginTasks, using password to authorise ssh key")
                     event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,jobParams=event.loginprocess.jobParams)
@@ -953,8 +954,10 @@ class LoginProcess():
                     cancelCallback=lambda x: event.loginprocess.cancel(x)
                     dlg=ListSelectionDialog(parent=event.loginprocess.notify_window, progressDialog=event.loginprocess.progressDialog, title=event.loginprocess.parentWindow.programName, headers=None, message=msg, noSelectionMessage="Please select a valid project from the list.", items=grouplist, okCallback=okCallback, cancelCallback = cancelCallback, style=wx.DEFAULT_DIALOG_STYLE, helpEmailAddress=event.loginprocess.displayStrings.helpEmailAddress)
                     showModal(dlg,event.loginprocess)
+                    logger.debug("flow control has returned to selectProject")
                     dlg.Destroy()
                 if (not event.loginprocess.canceled()):
+                    logger.debug("posting START_SERVER event")
                     nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_START_SERVER,event.loginprocess)
                     wx.PostEvent(event.loginprocess.notify_window,nextevent)
             else:

@@ -63,7 +63,7 @@ class ModalQuestion(wx.Dialog):
         topSizer = wx.BoxSizer(orient=wx.VERTICAL)
         self.SetSizer(topSizer)
 
-        topSizer.Add(wx.StaticText(self, label=message), flag=wx.ALIGN_CENTRE|wx.ALL|wx.BORDER, border=25)
+        topSizer.Add(wx.StaticText(self, label=message), flag=wx.ALIGN_CENTRE|wx.ALL, border=25)
 
         buttonSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         topSizer.Add(buttonSizer, flag=wx.ALIGN_CENTRE)
@@ -77,7 +77,7 @@ class ModalQuestion(wx.Dialog):
                 b = wx.Button(self, label=button)
 
             self.Bind(wx.EVT_BUTTON, dropArgs(curry(self.EndModal, i)), id=b.GetId())
-            buttonSizer.Add(b, flag=wx.ALL|wx.BORDER, border=25)
+            buttonSizer.Add(b, flag=wx.ALL, border=25)
             #buttonSizer.Add(b, flag=wx.ALL)
 
         self.Fit()

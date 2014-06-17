@@ -207,7 +207,7 @@ def getCQUGPUConfig(queue):
     c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
     #cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ;  echo \\\" vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus=1,mem=4g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
 
-    cmd='\" /usr/local/bin/vnc-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus=1,mem=4g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
+    cmd='\" /usr/local/bin/vnc-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" vncserver -geometry {resolution} -xstartup /usr/local/bin/xstartup ; sleep 10000000000\\\" | qsub  -l ncpus=1,mem=4g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
     regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
@@ -296,7 +296,7 @@ def getCVLSiteConfigXML(queue):
     c.defaults['jobParams_mem']=4
 
 
-    cmd = '\"module load pbs ; qstat -x | xmlstarlet sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n -\"'
+    cmd = '\"module load pbs ; qstat -x | xmlstarlet sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n - 2>/dev/null\"'
     regex='(?P<jobid>(?P<jobidNumber>[0-9]+).\S+) (?P<remainingWalltime>.*)$'
     c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
 
@@ -653,6 +653,49 @@ defaultSites['CVL 16 core node']=multicpu
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_flavours_20140419.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# CVL UQ with password
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['CVL Desktop at UQ']=  getCVLSiteConfigXML("batch")
+defaultSites['CVL Desktop at UQ'].authURL=None
+defaultSites['CVL Desktop at UQ'].loginHost='uq.login.cvl.massive.org.au'
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('cvl_uq_flavours_20140419.json','w') as f:
+    f.write(jsons)
+    
+########################################################################################
+# BPA with password
+########################################################################################
+cmd="\"module load pbs ; module load maui ; module load turbovnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo \' /opt/TurboVNC/bin/vncserver -geometry {resolution} -xstartup /usr/local/bin/xstartup ; /usr/local/bin/git_clone_or_pull.sh https://github.com/swcarpentry/bc.git ; cd bc/novice/python ; ipython notebook --no-browser & sleep 36000000 \' |  qsub -q %s -l nodes=1:ppn=2 -l walltime={hours}:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""%'carpentry'
+regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+
+defaultSites=collections.OrderedDict()
+
+defaultSites['SWC Desktop']=  getCVLSiteConfigXML("carpentry")
+defaultSites['SWC Desktop'].authURL=None
+defaultSites['SWC Desktop'].defaults['jobParams_ppn']=2
+defaultSites['SWC Desktop'].defaults['jobParams_nodes']=1
+defaultSites['SWC Desktop'].defaults['jobParams_hours']=4
+defaultSites['SWC Desktop'].startServer=siteConfig.cmdRegEx(cmd,regex)
+defaultSites['SWC Desktop'].otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+defaultSites['SWC Desktop'].tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -L 8888:localhost:8888 -l {username} {execHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+
+defaultSites['SWC Desktop with AAF']=  getCVLSiteConfigXML("carpentry")
+defaultSites['SWC Desktop with AAF'].authURL="https://autht.massive.org.au/cvl/"
+defaultSites['SWC Desktop with AAF'].defaults['jobParams_ppn']=2
+defaultSites['SWC Desktop with AAF'].defaults['jobParams_nodes']=1
+defaultSites['SWC Desktop with AAF'].defaults['jobParams_hours']=4
+defaultSites['SWC Desktop with AAF'].startServer=siteConfig.cmdRegEx(cmd,regex)
+defaultSites['SWC Desktop with AAF'].otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+defaultSites['SWC Desktop with AAF'].tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -L 8888:localhost:8888 -l {username} {execHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('bpa.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
