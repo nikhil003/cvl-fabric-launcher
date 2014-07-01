@@ -5,7 +5,6 @@
 # You may have to change PYINSTALLERDIR to point to the directory where
 # pyinstaller was unpacked.
 
-PYINSTALLERDIR=`pwd`/pyinstaller-2.1
 PYINSTALLERDIR=`pwd`/pyinstaller
 
 set -o nounset
