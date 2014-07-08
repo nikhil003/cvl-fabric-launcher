@@ -44,7 +44,7 @@ yum -y install gcc glibc glibc-devel libgcc  \
 wget http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
 rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
 rpm -K rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
-yum install ./rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
+yum -y install ./rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
 yum -y install git
 
 tar zxf modules-3.2.9c.tar.gz
