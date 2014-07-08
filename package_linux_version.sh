@@ -18,7 +18,8 @@ rm -fr dist
 python create_commit_def.py
 
 # PyInstaller 2.1
-python ${PYINSTALLERDIR}/pyinstaller.py --paths=/usr/lib/python2.7/site-packages/ launcher.py
+PATHS=`python -c 'import appdirs ; import os ; print os.path.dirname(appdirs.__file__)'`
+python ${PYINSTALLERDIR}/pyinstaller.py --paths=$PATHS launcher.py
 
 cp "Strudel.desktop" 	dist/launcher/
 cp strudel.sh 		dist/launcher/

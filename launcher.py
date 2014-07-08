@@ -167,7 +167,11 @@ class LauncherMainFrame(wx.Frame):
 # Use this method to read a specifig section of the preferences file
     def loadConfig(self):
         assert self.prefs == None
-        self.prefs=ConfigParser.SafeConfigParser(allow_no_value=True)
+        try:
+            self.prefs=ConfigParser.SafeConfigParser(allow_no_value=True)
+        except:
+            # For compatibility with older ConfigParser on Centos6
+            self.prefs=ConfigParser.SafeConfigParser()
         if (os.path.exists(launcherPreferencesFilePath)):
             with open(launcherPreferencesFilePath,'r') as o:
                 self.prefs.readfp(o)
