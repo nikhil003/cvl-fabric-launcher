@@ -370,7 +370,10 @@ class LoginProcess():
                     logger.debug('turboVncFinishTime = ' + str(self.loginprocess.turboVncFinishTime))
 
                     self.loginprocess.turboVncElapsedTime = self.loginprocess.turboVncFinishTime - self.loginprocess.turboVncStartTime
-                    self.loginprocess.turboVncElapsedTimeInSeconds = self.loginprocess.turboVncElapsedTime.total_seconds()
+                    try:
+                        self.loginprocess.turboVncElapsedTimeInSeconds = self.loginprocess.turboVncElapsedTime.total_seconds()
+                    except:
+                        self.loginprocess.turboVncElapsedTimeInSeconds = 0
 
                     if self.loginprocess.turboVncStderr != None and self.loginprocess.turboVncStderr.strip()!="":
                         logger.debug('self.loginprocess.turboVncStderr: ' + self.loginprocess.turboVncStderr)
