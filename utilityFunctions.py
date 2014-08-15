@@ -217,7 +217,6 @@ class ListSelectionDialog(wx.Dialog):
         if headers!=None:
             col=0
             for hdr in headers:
-                print hdr
                 self.listSelectionList.InsertColumn(col,hdr,width=-1)
                 col=col+1
         for item in self.itemList:

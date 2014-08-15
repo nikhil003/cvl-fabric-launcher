@@ -1177,11 +1177,13 @@ class LauncherMainFrame(wx.Frame):
             if self.sites.has_key(sc):
                 visible = self.sites[sc].visibility
                 relabel=self.sites[sc].relabel
+                siteRanges=self.sites[sc].siteRanges
                 authURL=self.sites[sc].authURL
             else:
                 sc=""
                 visible={}
                 relabel={}
+                siteRanges={}
                 authURL=None
         except Exception as e:
             logger.debug('updateVisibility: looking for site %s'%sc)
@@ -1193,6 +1195,16 @@ class LauncherMainFrame(wx.Frame):
                 window=self.FindWindowByName(key)
                 window.SetLabel(relabel[key])
             except:
+                pass
+        for key in siteRanges.keys():
+            try:
+                logger.debug('setting range for %s %s %s'%(key,siteRanges[key][0],siteRanges[key][1]))
+                window=self.FindWindowByName(key)
+                window.SetRange(siteRanges[key][0],siteRanges[key][1])
+            except Exception as e:
+                logger.debug('exception setting range for %s'%key)
+                logger.debug(e)
+                logger.debug(traceback.format_exc())
                 pass
         for key in visible.keys():
             try:
