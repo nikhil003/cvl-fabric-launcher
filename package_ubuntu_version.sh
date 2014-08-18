@@ -37,6 +37,9 @@ sed -i "s/XXINSTALLEDSIZE/${installedSize}/g" $TMP/DEBIAN/control
 sudo chown -R root.root $TMP
 sudo find $TMP/ -iname '*.so.*' -exec chmod a-x {} \;
 sudo find $TMP/ -iname '*.so.*' -exec strip     {} \;
+mkdir -p $TMP/opt/Strudel/icons/
+cp IconPngs/MASSIVElogoTransparent144x144.png  $TMP/opt/Strudel/icons/MASSIVElogoTransparent144x144.png
+cp Strudel.desktop $TMP/opt/Strudel/"Strudel.desktop"
 sudo chmod a-x $TMP/opt/Strudel/icons/MASSIVElogoTransparent144x144.png
 sudo chmod a-x $TMP/opt/Strudel/"Strudel.desktop"
 
