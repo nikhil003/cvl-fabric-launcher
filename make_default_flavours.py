@@ -639,6 +639,10 @@ def getCQUStandardVNCConfig(queue):
     regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)\[.*$'
     c.execHost = siteConfig.cmdRegEx(cmd,regex)
     c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>STANDARD)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
+    c.relabel={}
+    c.relabel['label_ppn']='CPUs'
+    c.siteRanges={}
+    c.siteRanges['jobParams_ppn']=[1,64]
     return c
 
 ##### End of CQU VNC Definitions #####
