@@ -100,6 +100,18 @@ authentication for the launcher."""
         self.createNewKeyDialogNewPassphraseMismatch="Passphrases don't match!"
         self.newPassphraseTitle="Please enter a new passphrase"
 
+
+class sshKeyDistDisplayStringsCQU(siteConfig.sshKeyDistDisplayStrings):
+    def __init__(self):
+        super(sshKeyDistDisplayStringsCQU, self).__init__()
+        self.passwdPrompt="""Please enter the password for your CQU account."""
+        self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
+
+        self.persistentMessage="Would you like to leave your current session running so that you can reconnect later?"
+        self.reconnectMessage="An Existing Desktop was found. Would you like to reconnect or kill it and start a new desktop?"
+
+
+
 def getMassiveSiteConfig(loginHost):
     massivevisible={}
     massivevisible['usernamePanel']=True
@@ -385,6 +397,134 @@ def getOtherTurboVNCConfig(configName):
     c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
     return c
 
+
+##### CQU VNC Definitions #####
+
+def getCQUVNCSession():
+    import re
+    Visible={}
+    Visible['usernamePanel']=True
+    Visible['projectPanel']=False
+    Visible['loginHostPanel']=True
+    Visible['resourcePanel']=False
+    Visible['resolutionPanel']='Advanced'
+    Visible['cipherPanel']='Advanced'
+    Visible['debugCheckBoxPanel']='Advanced'
+    Visible['advancedCheckBoxPanel']=True
+    Visible['optionsDialog']=False
+    c = siteConfig.siteConfig()
+    c.visibility=Visible
+
+    s = sshKeyDistDisplayStringsCQU()
+    c.displayStrings.__dict__.update(s.__dict__)
+
+    siteConfigDict={}
+    c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
+    c.listAll=siteConfig.cmdRegEx('\'ls ~/.vnc/`hostname`*pid\'','^\S+(?P<vncDisplay>:[0-9]+).pid$',requireMatch=False)
+    c.startServer=siteConfig.cmdRegEx('\" /apps/samples/sys-files/startup-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; vncserver -geometry {resolution}\"','^.*?desktop is \S+(?P<vncDisplay>:[0-9]+)\s*$')
+    c.stop=siteConfig.cmdRegEx('\'vncserver -kill {vncDisplay}\'')
+    c.stopForRestart=siteConfig.cmdRegEx('\'vncserver -kill {vncDisplay}\'')
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    c.agent=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -l {username} {loginHost} "echo agent_hello; bash "','agent_hello',async=True)
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+
+    cmd='"export DISPLAY={vncDisplay};timeout 15 /usr/local/bin/cat_dbus_session_file.sh"'
+    regex='^DBUS_SESSION_BUS_ADDRESS=(?P<dbusSessionBusAddress>.*)$'
+    c.dbusSessionBusAddress=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='\"/usr/local/bin/get_ephemeral_port.py\"'
+    regex='^(?P<remoteWebDavPortNumber>[0-9]+)$'
+    c.webDavRemotePort=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {remoteWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {loginHost} \'echo tunnel_hello; bash\''
+    regex='tunnel_hello'
+    c.webDavTunnel=siteConfig.cmdRegEx(cmd,regex,async=True)
+
+    cmd="\"/usr/bin/ssh -oStrictHostKeyChecking=no localhost \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};echo \\\\\\\"import pexpect;child = pexpect.spawn('gvfs-mount dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}');child.expect('Password: ');child.sendline('{vncPasswd}');child.expect(pexpect.EOF);child.close();print 'gvfs-mount returned ' + str(child.exitstatus)\\\\\\\" {pipe} python\\\"\"" 
+    regex='^gvfs-mount returned (?P<webDavMountingExitCode>.*)$'
+    c.webDavMount=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd="\"/usr/bin/ssh -oStrictHostKeyChecking=no localhost \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};/usr/bin/gconftool-2 --type=Boolean --set /apps/nautilus/preferences/always_use_location_entry true {ampersand}{ampersand} DISPLAY={vncDisplay} xdg-open dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\\\"\"" 
+    c.openWebDavShareInRemoteFileBrowser=siteConfig.cmdRegEx(cmd)
+
+    cmd='"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress}; DISPLAY={vncDisplay} xwininfo -root -tree"'
+    regex= '^\s+(?P<webDavWindowID>\S+)\s+"{homeDirectoryWebDavShareName}.*Browser.*$'
+    c.webDavWindowID=siteConfig.cmdRegEx(cmd,regex)
+
+    # 1. I'm using gvfs-mount --unmount-scheme dav for now, to unmount all GVFS WebDAV mounts,
+    #    because using "gvfs-mount --unmount " on a specific mount point from a Launcher
+    #    subprocess doesn't seem to work reliably, even though it works fine outside of the 
+    #    Launcher.
+    # 2. I'm using timeout with gvfs-mount, because sometimes the process never exits
+    #    when unmounting, even though the unmounting operation is complete.
+    cmd = '"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay};timeout 1 gvfs-mount --unmount-scheme dav"'
+    c.webDavUnmount=siteConfig.cmdRegEx(cmd)
+
+    cmd = '"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay}; wmctrl -F -i -c {webDavWindowID}"'
+    c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
+    return c
+
+def getCQUGPUConfig(queue):
+    c = getCVLSiteConfig(queue)
+    s = sshKeyDistDisplayStringsCQU()
+    c.displayStrings.__dict__.update(s.__dict__)
+    c.visibility['resourcePanel']=False
+    c.visibility['ppnLabel']=False
+    c.visibility['jobParams_ppn']=False
+    c.loginHost='isaac.cqu.edu.au'
+    c.directConnect=False
+    cmd='\"qstat -f {jobidNumber} \"'
+    regex='.*job_state = R.*'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\" qdel {jobidNumber}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"qdel {jobidNumber}\"')
+    c.agent=siteConfig.cmdRegEx()
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    cmd='\" /apps/samples/sys-files/startup-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" /usr/local/bin/remove-old-vnc-pids.sh ; vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus=1,mem=8g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
+    regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+    c.startServer=siteConfig.cmdRegEx(cmd,regex)
+    c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
+    cmd='\" qstat -f {jobidNumber} | grep exec_host\"'
+    regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)\[.*$'
+    c.execHost = siteConfig.cmdRegEx(cmd,regex)
+    c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>INTERACT)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
+    return c
+
+
+def getCQUStandardVNCConfig(queue):
+    c = getCVLSiteConfig(queue)
+    s = sshKeyDistDisplayStringsCQU()
+    c.displayStrings.__dict__.update(s.__dict__)
+    c.visibility['resourcePanel']=True
+    c.visibility['label_ppn']=True
+    c.visibility['jobParams_ppn']=True
+    c.visibility['label_mem']=True
+    c.visibility['jobParams_mem']=True
+    c.loginHost='isaac.cqu.edu.au'
+    c.directConnect=False
+    cmd='\"qstat -f {jobidNumber} \"'
+    regex='.*job_state = R.*'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\" qdel {jobidNumber}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"qdel {jobidNumber}\"')
+    c.agent=siteConfig.cmdRegEx()
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    cmd='\" /apps/samples/sys-files/startup-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\"vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus={ppn},mem={mem}g -N STANDARD  -o .vnc/ -e .vnc/ \"'
+    regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+    c.startServer=siteConfig.cmdRegEx(cmd,regex)
+    c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
+    cmd='\" qstat -f {jobidNumber} | grep exec_host\"'
+    regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)\[.*$'
+    c.execHost = siteConfig.cmdRegEx(cmd,regex)
+    c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>STANDARD)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
+    return c
+
+##### End of CQU VNC Definitions #####
+
+
+
 def getGenericVNCSession():
     import re
     Visible={}
@@ -487,19 +627,27 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('other_flavour.json','w') as f:
     f.write(jsons)
 
+##### CQU Host Definitions #####
+
 defaultSites=collections.OrderedDict()
-newton=getGenericVNCSession()
+gpu=getCQUGPUConfig("")
+standard=getCQUStandardVNCConfig("")
+newton=getCQUVNCSession()
 newton.visibility['loginHostPanel']=False
 newton.loginHost="newton.cqu.edu.au"
-isaac=getGenericVNCSession()
+isaac=getCQUVNCSession()
 isaac.visibility['loginHostPanel']=False
 isaac.loginHost="isaac.cqu.edu.au"
-defaultSites['Isaac']=isaac
-defaultSites['Newton']=newton
+defaultSites['HPC Login Node - Isaac']=isaac
+defaultSites['HPC Login Node - Newton']=newton
+defaultSites['GPU Interactive Session']=gpu
+defaultSites['Standard Interactive Session']=standard
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('cqu.json','w') as f:
+with open('cqu-v2.json','w') as f:
     f.write(jsons)
+
+##### CQU Host Definitions #####
 
 defaultSites=collections.OrderedDict()
 raijinExpress=getRaijinSiteConfig('express')
