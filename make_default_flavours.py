@@ -186,37 +186,6 @@ def getMassiveSiteConfig(loginHost):
 
     return c
 
-def getCQUGPUConfig(queue):
-    c = getCVLSiteConfig(queue)
-    s = sshKeyDistDisplayStringsNCI()
-    c.displayStrings.__dict__.update(s.__dict__)
-    c.visibility['resourcePanel']=False
-    c.visibility['ppnLabel']=False
-    c.visibility['jobParams_ppn']=False
-    c.defaults['jobParams_ppn']=1
-    c.defaults['jobParams_hours']=48
-    c.defaults['jobParams_mem']=4
-    c.loginHost='isaac.cqu.edu.au'
-    c.directConnect=False
-    cmd='\"qstat -f {jobidNumber} \"'
-    regex='.*job_state = R.*'
-    c.running=siteConfig.cmdRegEx(cmd,regex)
-    c.stop=siteConfig.cmdRegEx('\" qdel {jobidNumber}\"')
-    c.stopForRestart=siteConfig.cmdRegEx('\"qdel {jobidNumber}\"')
-    c.agent=siteConfig.cmdRegEx()
-    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
-    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
-    #cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/passwdfile ; touch ~/.vnc/passwdfile ; chmod 600 ~/.vnc/passwdfile ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/passwdfile ;  echo \\\" vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus=1,mem=4g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
-
-    cmd='\" /usr/local/bin/vnc-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" vncserver -geometry {resolution} -xstartup /usr/local/bin/xstartup ; sleep 10000000000\\\" | qsub  -l ncpus=1,mem=4g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
-    regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
-    c.startServer=siteConfig.cmdRegEx(cmd,regex)
-    c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
-    cmd='\" qstat -f {jobidNumber} | grep exec_host\"'
-    regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)\[.*$'
-    c.execHost = siteConfig.cmdRegEx(cmd,regex)
-    c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>INTERACT)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
-    return c
 
 def getRaijinSiteConfig(queue):
     c = getCVLSiteConfig(queue)
