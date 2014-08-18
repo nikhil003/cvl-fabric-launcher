@@ -39,13 +39,13 @@ yum -y install gcc glibc glibc-devel libgcc  \
                fontconfig-devel \
                libcanberra-gtk2 \
                PackageKit-gtk-module \
-               make cmake rpm-build
+               make cmake rpm-build || true
 
 wget http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
 rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
 rpm -K rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
-yum -y install ./rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
-yum -y install git
+yum -y install ./rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm || true
+yum -y install git || true
 
 tar zxf modules-3.2.9c.tar.gz
 cd modules-3.2.9

@@ -260,8 +260,6 @@ class GenericJSONDecoder(json.JSONDecoder):
             try:
                 inst = class_(**args)
             except Exception as e:
-                print(class_name)
-                print(args)
                 raise e
         else:
             inst = d
@@ -322,7 +320,8 @@ class cmdRegEx():
 
 
 class siteConfig():
-        
+
+
     def __init__(self,**kwargs):
         self.loginHost=None
         self.username=None
@@ -351,6 +350,7 @@ class siteConfig():
         self.tunnel=cmdRegEx()
         self.visibility={}
         self.relabel={}
+        self.siteRanges= {'jobParams_hours':[1,336], 'jobParams_mem':[1,1024], 'jobParams_nodes':[1,10], 'jobParams_ppn':[1,12] }
         self.defaults={}
         self.displayStrings=sshKeyDistDisplayStrings()
         self.authorizedKeysFile=None
