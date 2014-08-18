@@ -5,7 +5,7 @@
 # You may have to change PYINSTALLERDIR to point to the directory where
 # pyinstaller was unpacked.
 
-PYINSTALLERDIR=`pwd`/pyinstaller-2.1
+PYINSTALLERDIR=`pwd`/pyinstaller
 
 set -o nounset
 set -e
@@ -18,10 +18,11 @@ rm -fr dist
 python create_commit_def.py
 
 # PyInstaller 2.1
-python ${PYINSTALLERDIR}/pyinstaller.py launcher.py
+PATHS=`python -c 'import appdirs ; import os ; print os.path.dirname(appdirs.__file__)'`
+python ${PYINSTALLERDIR}/pyinstaller.py --paths=$PATHS launcher.py
 
-cp "MASSIVE Launcher.desktop" 	dist/launcher/
-cp massiveLauncher.sh 		dist/launcher/
+cp "Strudel.desktop" 	dist/launcher/
+cp strudel.sh 		dist/launcher/
 
 mkdir dist/launcher/icons
 cp IconPngs/* dist/launcher/icons/
@@ -33,11 +34,12 @@ cp `python -c 'import requests; print requests.certs.where()'` dist/launcher/
 mkdir -p dist/launcher/help/helpfiles/
 cp help/helpfiles/* dist/launcher/help/helpfiles/
 cp help/README.txt dist/launcher/help/
+cp masterList.url dist/launcher/
 
 cd dist
-mv launcher MassiveLauncher-${VERSION}_${ARCHITECTURE}
-tar zcf MassiveLauncher_v${VERSION}_${ARCHITECTURE}.tar.gz MassiveLauncher-${VERSION}_${ARCHITECTURE}
+mv launcher Strudel-${VERSION}_${ARCHITECTURE}
+tar zcf Strudel_v${VERSION}_${ARCHITECTURE}.tar.gz Strudel-${VERSION}_${ARCHITECTURE}
 cd ..
 
-ls -lh dist/MassiveLauncher_v${VERSION}_${ARCHITECTURE}.tar.gz
+ls -lh dist/Strudel_v${VERSION}_${ARCHITECTURE}.tar.gz
 

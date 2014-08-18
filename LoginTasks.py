@@ -370,7 +370,10 @@ class LoginProcess():
                     logger.debug('turboVncFinishTime = ' + str(self.loginprocess.turboVncFinishTime))
 
                     self.loginprocess.turboVncElapsedTime = self.loginprocess.turboVncFinishTime - self.loginprocess.turboVncStartTime
-                    self.loginprocess.turboVncElapsedTimeInSeconds = self.loginprocess.turboVncElapsedTime.total_seconds()
+                    try:
+                        self.loginprocess.turboVncElapsedTimeInSeconds = self.loginprocess.turboVncElapsedTime.total_seconds()
+                    except:
+                        self.loginprocess.turboVncElapsedTimeInSeconds = 0
 
                     if self.loginprocess.turboVncStderr != None and self.loginprocess.turboVncStderr.strip()!="":
                         logger.debug('self.loginprocess.turboVncStderr: ' + self.loginprocess.turboVncStderr)
@@ -645,7 +648,7 @@ class LoginProcess():
             else:
                 font.SetPointSize(8)
             turboVncNotFoundHyperlink.SetFont(font)
-            turboVncNotFoundPanelSizer.Add(turboVncNotFoundHyperlink, border=10, flag=wx.LEFT|wx.RIGHT|wx.BORDER)
+            turboVncNotFoundPanelSizer.Add(turboVncNotFoundHyperlink, border=10, flag=wx.LEFT|wx.RIGHT)
             if sys.platform.startswith("darwin"):
                 from distutils.version import StrictVersion
                 if StrictVersion(platform.mac_ver()[0]) >= StrictVersion("10.8.0"):
@@ -673,13 +676,14 @@ class LoginProcess():
                     else:
                         font.SetPointSize(8)
                     appleGateKeeperSupportHyperlink.SetFont(font)
-                    turboVncNotFoundPanelSizer.Add(appleGateKeeperSupportHyperlink, border=10, flag=wx.LEFT|wx.RIGHT|wx.BORDER)
+                    turboVncNotFoundPanelSizer.Add(appleGateKeeperSupportHyperlink, border=10, flag=wx.LEFT|wx.RIGHT)
 
             turboVncNotFoundPanelSizer.Add(wx.StaticText(turboVncNotFoundPanel))
 
             turboVncNotFoundDialog.addPanel(turboVncNotFoundPanel)
             turboVncNotFoundDialog.Centre()
             showModal(turboVncNotFoundDialog,self.loginprocess)
+            logger.debug("turboVncNotFoundDialog finished, calling loginprocess.cancel()")
 
             self.loginprocess.cancel()
     
@@ -809,7 +813,13 @@ class LoginProcess():
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_DISTRIBUTE_KEY):
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_DISTRIBUTE_KEY')
                 wx.CallAfter(event.loginprocess.updateProgressDialog, 2,"Configuring authorisation")
-                event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,removeKeyOnExit=event.loginprocess.removeKeyOnExit,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags)
+                logger.debug('distributeKey: authURL set to %s'%event.loginprocess.siteConfig.authURL)
+                if event.loginprocess.siteConfig.authURL!=None:
+                    logger.debug("LoginTasks, using AAF to authorize ssh pub key")
+                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,authURL=event.loginprocess.siteConfig.authURL,jobParams=event.loginprocess.jobParams)
+                else:
+                    logger.debug("LoginTasks, using password to authorise ssh key")
+                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,jobParams=event.loginprocess.jobParams)
                 successevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK,event.loginprocess)
                 event.loginprocess.skd.distributeKey(callback_success=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),successevent),
                                                      callback_fail=event.loginprocess.cancel)
@@ -818,6 +828,9 @@ class LoginProcess():
 
         def runSanityCheck(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK):
+                # If we have completed KeyDistribution, we may have some updates to the jobParameters from the key distribution process
+                if event.loginprocess.skd!=None:
+                    event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict) 
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_RUN_SANITY_CHECK')
                 event.loginprocess.updateProgressDialog( 3, "Running the sanity check script")
                 nextevent = LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CHECK_RUNNING_SERVER,event.loginprocess)
@@ -873,6 +886,7 @@ class LoginProcess():
                 else:
                     dialog=LoginProcess.SimpleOptionDialog(event.loginprocess.notify_window,-1,"Reconnect to Existing Desktop",event.loginprocess.displayStrings.reconnectMessage,event.loginprocess.displayStrings.reconnectMessageNo,event.loginprocess.displayStrings.reconnectMessageYes,NewDesktopCallback,ReconnectCallback)
                 showModal(dialog,event.loginprocess)
+                dialog.Destroy()
             else:
                 event.Skip()
 
@@ -943,7 +957,10 @@ class LoginProcess():
                     cancelCallback=lambda x: event.loginprocess.cancel(x)
                     dlg=ListSelectionDialog(parent=event.loginprocess.notify_window, progressDialog=event.loginprocess.progressDialog, title=event.loginprocess.parentWindow.programName, headers=None, message=msg, noSelectionMessage="Please select a valid project from the list.", items=grouplist, okCallback=okCallback, cancelCallback = cancelCallback, style=wx.DEFAULT_DIALOG_STYLE, helpEmailAddress=event.loginprocess.displayStrings.helpEmailAddress)
                     showModal(dlg,event.loginprocess)
+                    logger.debug("flow control has returned to selectProject")
+                    dlg.Destroy()
                 if (not event.loginprocess.canceled()):
+                    logger.debug("posting START_SERVER event")
                     nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_START_SERVER,event.loginprocess)
                     wx.PostEvent(event.loginprocess.notify_window,nextevent)
             else:
@@ -1384,6 +1401,8 @@ class LoginProcess():
                     else:
                         dlg = LauncherMessageDialog(event.loginprocess.notify_window,title=event.loginprocess.parentWindow.programName,message=event.string,helpEmailAddress=event.loginprocess.displayStrings.helpEmailAddress)
                     showModal(dlg,event.loginprocess)
+                    dlg.Destroy()
+
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_COMPLETE,event.loginprocess)
                 event.loginprocess.shutdownThread = threading.Thread(target=event.loginprocess.shutdownReal,args=[nextevent])
                 event.loginprocess.shutdownThread.start()
@@ -1523,6 +1542,9 @@ class LoginProcess():
         def complete(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_COMPLETE):
                 event.loginprocess.shutdownThread.join() #These events aren't processed until the thread is complete anyway.
+                # Give the ssh key dist process a chance to update the jobParams
+                if event.loginprocess.skd!=None:
+                    event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict)
                 if (event.loginprocess.canceled()):
                     if event.loginprocess.skd!=None and event.loginprocess.skd.canceled():
                         logger.debug("LoginProcess.complete: sshKeyDist was canceled.")
@@ -1619,16 +1641,17 @@ class LoginProcess():
 
     myEVT_CUSTOM_LOGINPROCESS=None
     EVT_CUSTOM_LOGINPROCESS=None
-    def __init__(self,parentWindow,jobParams,keyModel,siteConfig=None,displayStrings=None,autoExit=False,completeCallback=None,cancelCallback=None,globalOptions=None,contacted_massive_website=False,removeKeyOnExit=False,shareHomeDir=False,startupinfo=None,creationflags=0):
+    def __init__(self,parentWindow,jobParams,keyModel,siteConfig=None,displayStrings=None,autoExit=False,completeCallback=None,cancelCallback=None,globalOptions=None,contacted_massive_website=False,shareHomeDir=False,startupinfo=None,creationflags=0):
         self.parentWindow = parentWindow
         LoginProcess.myEVT_CUSTOM_LOGINPROCESS=wx.NewEventType()
         LoginProcess.EVT_CUSTOM_LOGINPROCESS=wx.PyEventBinder(self.myEVT_CUSTOM_LOGINPROCESS,1)
         self.keyModel=keyModel
         self.threads=[]
+        self._eventLock=threading.Lock()
+        self._shownNetworkFault=threading.Event()
         self._canceled=threading.Event()
         self._shutdown=threading.Event()
         self.autoExit = autoExit
-        #self.sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
         self.sshTunnelProcess=None
         self.sshAgentProcess=None
         self.joblist=[]
@@ -1645,7 +1668,6 @@ class LoginProcess():
         self.jobParams = jobParams
         self.globalOptions=globalOptions
         self.contacted_massive_website=contacted_massive_website
-        self.removeKeyOnExit=removeKeyOnExit
         self.notify_window=wx.Window(parent=self.parentWindow)
         self.displayStrings=displayStrings
         self.notify_window.Hide()
@@ -1822,7 +1844,6 @@ class LoginProcess():
         wx.PostEvent(self.notify_window.GetEventHandler(),event)
 
     def shutdown(self):
-        print "posting shutdown event"
         event=self.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_SHUTDOWN,self)
         wx.PostEvent(self.notify_window.GetEventHandler(),event)
 
@@ -1830,12 +1851,9 @@ class LoginProcess():
     def getSharedSession(self,queue):
         from siteConfig import cmdRegEx
         from siteConfig import siteConfig
-        print "in get shared session"
         t = LoginProcess.runServerCommandThread(self,self.siteConfig.otp,None,"Unable to determine the one-time password for the VNC session")
         t.start()
-        print "waiting for the new otp"
         t.join()
-        print "new otp generated"
         Visible={}
         Visible['usernamePanel']=True
         Visible['loginHostPanel']=False
@@ -1889,19 +1907,38 @@ class LoginProcess():
         else:
             return False
 
+    def showModalFromThread(self,dlg,q):
+        r=dlg.ShowModal()
+        q.put(r)
+    
+    def createAndShowModalDialog(self,q,dlgclass,*args,**kwargs):
+        dlg=dlgclass(*args,**kwargs)
+        r=dlg.ShowModal()
+        q.put(r)
+
     def networkFaultShutdown(self):
         import requests
         from utilityFunctions import LAUNCHER_URL
         logger.debug("Processing networkFaultShutdown")
-        if not self._canceled.isSet() and not self._shutdown.isSet():
+        self._eventLock.acquire()
+        showDialog=False
+        if not self._shownNetworkFault.isSet():
+            if not self._canceled.isSet() and not self._shutdown.isSet():
+                self._shownNetworkFault.set()
+                showDialog=True
+        self._eventLock.release()
+
+        if showDialog:
+            msg=self.displayStrings.networkError
+            import Queue
+            q=Queue.Queue()
+            wx.CallAfter(self.createAndShowModalDialog,q,LauncherMessageDialog,self.notify_window,title=self.parentWindow.programName,message=msg,helpEmailAddress=self.displayStrings.helpEmailAddress)
+            q.get()
             try:
                 r=requests.get(LAUNCHER_URL,timeout=10)
                 self.shutdown()
             except:
                 self.cancel()
-            msg=self.displayStrings.networkError
-            dlg = LauncherMessageDialog(self.notify_window,title=self.parentWindow.programName,message=msg,helpEmailAddress=self.displayStrings.helpEmailAddress)
-            wx.CallAfter(dlg.ShowModal)
 
     def userCancel(self,error=""):
         self.userCanceled.set()

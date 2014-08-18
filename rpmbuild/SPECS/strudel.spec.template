@@ -5,8 +5,8 @@
 %define          debug_package %{nil}
 %define        __os_install_post %{_dbpath}/brp-compress
 
-Summary: MASSIVE/CVL Launcher
-Name: massive-launcher
+Summary: Strudel
+Name: strudel
 Version: VERSION
 Release: 1
 License: GPL+

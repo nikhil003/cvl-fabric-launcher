@@ -14,8 +14,14 @@ def getMasterSites(url):
         return json.loads(r.text)
     else:
         logger.debug("Master site list unavailable status code %s"%r.status_code)
-        return []
+        return "%s"%r.status_code
     
+class CancelException(Exception):
+    pass
+class TimeoutException(Exception):
+    pass
+class StatusCode(Exception):
+    pass
     
 class requestThread(Thread):
     def __init__(self,url,queue):
@@ -25,10 +31,13 @@ class requestThread(Thread):
         
     def run(self):
         import time
-        req=requests.get(self.url,verify=False)
-        if req.status_code == 200:
-            self.queue.put([self.url,req.text])
-        else:
+        try:
+            req=requests.get(self.url,verify=False)
+            if req.status_code == 200:
+                self.queue.put([self.url,req.text])
+            else:
+                self.queue.put([self.url,None])
+        except:
             self.queue.put([self.url,None])
 
 # this thread will wait until either it has pulled nthreads items of the queue, or it has pulled a None object off the queue.
@@ -40,16 +49,17 @@ class waitThread(Thread):
         self.nthreads=nthreads
 
     def run(self):
-        r=self.qin.get()
-        results=0
-        while r!=None:
-            results=results+1
-            if r[1]!=None:
-                self.res[r[0]] = r[1]
-            if results<self.nthreads:
-                r=self.qin.get()
-            else:
-                r=None
+        if self.nthreads > 0:
+            r=self.qin.get()
+            results=0
+            while r!=None:
+                results=results+1
+                if r[1]!=None:
+                    self.res[r[0]] = r[1]
+                if results<self.nthreads:
+                    r=self.qin.get()
+                else:
+                    r=None
         
 # This thread will place a none object on the queue after a specified time to terminate the wait thread above
 class timerThread(Thread):
@@ -110,7 +120,7 @@ def getSites(prefs,path):
     for site in siteList:
         requestThread(site,q).start()
         nthreads=nthreads+1
-    timerThread(q,2).start()
+    timerThread(q,10).start()
     foundSites={}
     t=waitThread(q,foundSites,nthreads)
     t.start()
@@ -250,15 +260,13 @@ class GenericJSONDecoder(json.JSONDecoder):
             try:
                 inst = class_(**args)
             except Exception as e:
-                print(class_name)
-                print(args)
                 raise e
         else:
             inst = d
         return inst
 
 class cmdRegEx():
-    def __init__(self,cmd=None,regex=None,requireMatch=True,loop=False,async=False,host='login',failFatal=True):
+    def __init__(self,cmd=None,regex=None,requireMatch=True,loop=False,async=False,host='login',failFatal=True,formatFatal=False,*args,**kwargs):
 
         self.cmd=cmd
         if (not isinstance(regex,list)):
@@ -274,6 +282,7 @@ class cmdRegEx():
         if (self.async):
             self.host='local'
         self.failFatal=failFatal
+        self.formatFatal=formatFatal
 
     def getCmd(self,jobParam={}):
         if ('exec' in self.host):
@@ -289,15 +298,34 @@ class cmdRegEx():
             escapedChars={'ampersand':'&','pipe':'|'}
         formatdict = jobParam.copy()
         formatdict.update(escapedChars)
-        string=sshCmd.format(**formatdict).encode('ascii')+cmd.format(**formatdict).encode('ascii')
+        if self.formatFatal:
+            try:
+                string=sshCmd.format(**formatdict).encode('ascii')+cmd.format(**formatdict).encode('ascii')
+            except:
+                raise Exception("I was unable to determine all the parameters in the command %s"%sshCmd)
+        else:
+            retry=True
+            while retry:
+                try:
+                    string=sshCmd.format(**formatdict).encode('ascii')+cmd.format(**formatdict).encode('ascii')
+                    retry=False
+                except KeyError as e:
+                    update={}
+                    for a in e.args:
+                        update[a]=''
+                    formatdict.update(update)
+                    retry=True
+
         return string
 
 
 class siteConfig():
-        
+
+
     def __init__(self,**kwargs):
         self.loginHost=None
         self.username=None
+        self.authURL=None
         self.listAll=cmdRegEx(failFatal=False)
         self.running=cmdRegEx()
         self.stop=cmdRegEx(failFatal=False)
@@ -321,6 +349,10 @@ class siteConfig():
         self.agent=cmdRegEx()
         self.tunnel=cmdRegEx()
         self.visibility={}
+        self.relabel={}
+        self.siteRanges= {'jobParams_hours':[1,336], 'jobParams_mem':[1,1024], 'jobParams_nodes':[1,10], 'jobParams_ppn':[1,12] }
+        self.defaults={}
         self.displayStrings=sshKeyDistDisplayStrings()
+        self.authorizedKeysFile=None
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value

@@ -12,6 +12,7 @@ class LauncherMessageDialog(wx.Dialog):
             self.Centre()
 
         self.helpEmailAddress = helpEmailAddress
+        self.ButtonLabels=['OK']
 
         self.dialogPanel = wx.Panel(self, wx.ID_ANY)
 
@@ -60,13 +61,26 @@ class LauncherMessageDialog(wx.Dialog):
         self.contactEmailHyperlink.SetPosition(hyperlinkPosition)
 
     def onClose(self, event):
+        obj=event.GetEventObject()
+        if (isinstance(obj,wx.Button)):
+            label=obj.GetLabel()
+            ln=0
+            for i in self.ButtonLabels:
+                if (label==i):
+                    self.EndModal(ln)
+                else:
+                    ln=ln+1
+        else:
+            self.EndModal(-1)
+    def onClose(self, event):
         self.Show(False) 
         self.Destroy()
+        self.EndModal(0)
 
 class MyApp(wx.App):
     def OnInit(self):
         message = "You have requested 2880 CPU hours, but you only have 455.0 CPU hours remaining in your quota for project \"Desc002\"."
-        dialog = LauncherMessageDialog(parent=None, message=message, title="MASSIVE/CVL Launcher")
+        dialog = LauncherMessageDialog(parent=None, message=message, title="Strudel")
         dialog.ShowModal()
         return True
 

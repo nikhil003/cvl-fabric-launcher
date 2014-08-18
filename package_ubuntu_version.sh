@@ -7,17 +7,18 @@ ARCHITECTURE=`uname -m | sed s/x86_64/amd64/g | sed s/i686/i386/g`
 
 TMP="tmp_debian_build"
 
+alias sudo=""
 sudo rm -fr $TMP
 sudo rm -f *.deb
 
-TARGET=$TMP/opt/MassiveLauncher
+TARGET=$TMP/opt/Strudel
 mkdir -p $TARGET
 
 mkdir -p $TMP/usr/share/applications
 
-cp massive-launcher.desktop $TMP/usr/share/applications/
+cp Strudel.desktop $TMP/usr/share/applications/
 
-cp -r dist/MassiveLauncher-${VERSION}_${ARCHITECTURE}/* $TARGET/
+cp -r dist/Strudel-${VERSION}_${ARCHITECTURE}/* $TARGET/
 mkdir $TMP/DEBIAN
 cp release/control  $TMP/DEBIAN
 # This is not necessary on Ubuntu 13.04 when building for Ubuntu
@@ -36,10 +37,10 @@ sed -i "s/XXINSTALLEDSIZE/${installedSize}/g" $TMP/DEBIAN/control
 sudo chown -R root.root $TMP
 sudo find $TMP/ -iname '*.so.*' -exec chmod a-x {} \;
 sudo find $TMP/ -iname '*.so.*' -exec strip     {} \;
-sudo chmod a-x $TMP/opt/MassiveLauncher/icons/MASSIVElogoTransparent144x144.png
-sudo chmod a-x $TMP/opt/MassiveLauncher/"MASSIVE Launcher.desktop"
+sudo chmod a-x $TMP/opt/Strudel/icons/MASSIVElogoTransparent144x144.png
+sudo chmod a-x $TMP/opt/Strudel/"Strudel.desktop"
 
-DEB=massive-launcher_UBUNTU_${VERSION}_${ARCHITECTURE}.deb
+DEB=strudel_UBUNTU_${VERSION}_${ARCHITECTURE}.deb
 sudo dpkg -b $TMP $DEB
 
 echo

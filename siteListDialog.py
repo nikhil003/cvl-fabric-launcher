@@ -66,7 +66,10 @@ class siteListDialog(wx.Dialog):
                 self.siteList.InsertStringItem(i,"%s"%s['name'])
                 self.siteList.SetStringItem(i,1,"%s"%s['url'])
                 cb=wx.CheckBox(self.siteList)
-                cb.SetValue(False)
+                if s.has_key('enabled'):
+                    cb.SetValue(s['enabled'])
+                else:
+                    cb.SetValue(False)
                 self.siteList.SetItemWindow(i,col=2,wnd=cb)
                 i=i+1
                 
@@ -82,24 +85,36 @@ class siteListDialog(wx.Dialog):
         if sys.platform.startswith('win'):
             w=w+50
         self.siteList.SetMinSize((w,200))
+        self.siteList.SetColumnWidth(1,-3)
         mainSizer.Add(self.siteList,flag=wx.EXPAND,proportion=1)
+        self.siteList.Bind(ULC.EVT_LIST_ITEM_SELECTED,self.onItemSelected)
+
 
         p=wx.Panel(self,wx.ID_ANY)
         s=wx.BoxSizer(wx.HORIZONTAL)
-        b=wx.Button(p,id=wx.ID_OK,label="OK")
-        s.Add(b)
-        b.Bind(wx.EVT_BUTTON,self.onClose)
+        s.Add((1,-1),proportion=1,flag=wx.EXPAND)
         b=wx.Button(p,id=wx.ID_NEW,label="New")
-        s.Add(b)
+        s.Add(b,flag=wx.ALL|wx.ALIGN_RIGHT,border=5)
         b.Bind(wx.EVT_BUTTON,self.onNew)
         b=wx.Button(p,id=wx.ID_DELETE,label="Delete")
-        s.Add(b)
+        s.Add(b,flag=wx.ALL|wx.ALIGN_RIGHT,border=5)
         b.Bind(wx.EVT_BUTTON,self.onDelete)
+        b=wx.Button(p,id=wx.ID_CANCEL,label="Cancel")
+        s.Add(b,flag=wx.ALL|wx.ALIGN_RIGHT,border=5)
+        b.Bind(wx.EVT_BUTTON,self.onCancel)
+        b=wx.Button(p,id=wx.ID_OK,label="OK")
+        s.Add(b,flag=wx.ALL|wx.ALIGN_RIGHT,border=5)
+        b.Bind(wx.EVT_BUTTON,self.onClose)
         p.SetSizer(s)
         mainSizer.Add(p,proportion=0,flag=wx.EXPAND)
         self.Fit()
         self.Refresh()
         self.Update()
+
+    def onItemSelected(self,evt):
+        itemNumber=self.siteList.GetFirstSelected()
+        cb=self.siteList.GetItemWindow(itemNumber,2)
+        cb.SetValue(not cb.IsChecked())
 
     def onNew(self,evt):
         dlg=newSiteDialog(parent=self)
@@ -117,6 +132,9 @@ class siteListDialog(wx.Dialog):
         if i >=0:
             self.siteList.DeleteItem(i)
     def onClose(self,evt):
+        self.EndModal(evt.GetEventObject().GetId())
+
+    def onCancel(self,evt):
         self.EndModal(evt.GetEventObject().GetId())
 
     def getList(self):

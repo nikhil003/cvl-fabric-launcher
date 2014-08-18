@@ -4,7 +4,7 @@ import sys
 import IconPys.MASSIVElogoTransparent64x64
 
 class multiButtonDialog(wx.Dialog):
-    def __init__(self, parent, message, title, ButtonLabels=['OK'],onHelp=None,helpEmailAddress="help@massive.org.au",**kw):
+    def __init__(self, parent, message, title, ButtonLabels=['OK'],onHelp=None,helpEmailAddress="help@massive.org.au",q=None,**kw):
         wx.Dialog.__init__(self, parent, style=wx.DEFAULT_DIALOG_STYLE, **kw)
        
         if parent!=None:
@@ -92,6 +92,7 @@ class multiButtonDialog(wx.Dialog):
         self.dialogPanel.GetSizer().Add(buttonPanel,flag=wx.ALL,border=15)
 
         self.Bind(wx.EVT_CLOSE, self.onClose)
+        self.q=q
 
         self.dialogPanel.Fit()
 
@@ -100,15 +101,20 @@ class multiButtonDialog(wx.Dialog):
         self.Fit()
 
     def onClose(self, event):
+        wx.Yield()
         obj=event.GetEventObject()
         if (isinstance(obj,wx.Button)):
             label=obj.GetLabel()
             ln=0
             for i in self.ButtonLabels:
                 if (label==i):
+                    if self.q!=None:
+                        self.q.put(ln)
                     self.EndModal(ln)
                 else:
                     ln=ln+1
         else:
+            if self.q!=None:
+                self.q.put(-1)
             self.EndModal(-1)
 

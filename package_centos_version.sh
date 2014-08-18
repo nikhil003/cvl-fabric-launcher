@@ -17,26 +17,26 @@ echo "%_topdir  "`pwd`     >> ~/.rpmmacros
 echo "%_tmppath "`pwd`/tmp >> ~/.rpmmacros
 
 
-sed s/VERSION/${VERSION}/g SPECS/massive-launcher.spec.template > SPECS/massive-launcher.spec
+sed s/VERSION/${VERSION}/g SPECS/strudel.spec.template > SPECS/strudel.spec
 
 if [ "$ARCHITECTURE" == "amd64" ]
 then
-    sed -i s/libc.so.6\(GLIBC_PRIVATE\)/libc.so.6\(GLIBC_PRIVATE\)\(64bit\)/g SPECS/massive-launcher.spec
+    sed -i s/libc.so.6\(GLIBC_PRIVATE\)/libc.so.6\(GLIBC_PRIVATE\)\(64bit\)/g SPECS/strudel.spec
 fi
 
-rm -fr massive-launcher-${VERSION}
+rm -fr strudel-${VERSION}
 
-mkdir -p massive-launcher-${VERSION}/opt/MassiveLauncher
-mkdir -p massive-launcher-${VERSION}/usr/share/applications
-rm -f massive-launcher-${VERSION}.tar.gz SOURCES/massive-launcher-${VERSION}.tar.gz 
+mkdir -p strudel-${VERSION}/opt/Strudel
+mkdir -p strudel-${VERSION}/usr/share/applications
+rm -f strudel-${VERSION}.tar.gz SOURCES/strudel-${VERSION}.tar.gz 
 
-cp ../massive-launcher.desktop massive-launcher-${VERSION}/usr/share/applications/
-cp -r ../dist/MassiveLauncher-${VERSION}_${ARCHITECTURE}/* massive-launcher-${VERSION}/opt/MassiveLauncher
+cp ../Strudel.desktop strudel-${VERSION}/usr/share/applications/
+cp -r ../dist/Strudel-${VERSION}_${ARCHITECTURE}/* strudel-${VERSION}/opt/Strudel
 
-tar zcf massive-launcher-${VERSION}.tar.gz massive-launcher-${VERSION}
-cp massive-launcher-${VERSION}.tar.gz SOURCES/
+tar zcf strudel-${VERSION}.tar.gz strudel-${VERSION}
+cp strudel-${VERSION}.tar.gz SOURCES/
 
-rpmbuild -ba SPECS/massive-launcher.spec
+rpmbuild -ba SPECS/strudel.spec
 cd ..
 
 find rpmbuild/ -iname '*rpm' -exec ls -lh {} \;

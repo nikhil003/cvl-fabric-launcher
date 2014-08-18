@@ -608,7 +608,7 @@ class GlobalOptionsDialog(wx.Dialog):
 
         self.globalsBottomPanel = wx.Panel(self.globalsPanel, wx.ID_ANY)
         self.globalsPanelSizer.Add(self.globalsBottomPanel, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=25)
-        self.globalsBottomPanelSizer = wx.FlexGridSizer(rows=1, cols=1, vgap=5, hgap=5)
+        self.globalsBottomPanelSizer = wx.FlexGridSizer(cols=1, vgap=5, hgap=5)
 
         self.globalsBottomBorderPanel = wx.Panel(self.globalsPanel, wx.ID_ANY)
         self.globalsPanelSizer.Add(self.globalsBottomBorderPanel, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=25)
@@ -855,6 +855,25 @@ class GlobalOptionsDialog(wx.Dialog):
             self.vncViewerLogFilenameTextField.Disable()
             self.browseButton.Disable()
 
+        self.statsPanel=wx.Panel(self.globalsBottomPanel,wx.ID_ANY)
+        self.statsPanel.SetSizer(wx.FlexGridSizer(rows=2,cols=2,vgap=5,hgap=5))
+        self.globalsBottomPanelSizer.Add(self.statsPanel)
+        t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="Send anonymous usage statistics to help make Strudel better")
+        t.SetFont(self.smallFont)
+        self.statsPanel.GetSizer().Add(t,flag=wx.ALIGN_CENTER|wx.ALL,border=5)
+        log=wx.ComboBox(self.statsPanel,wx.ID_ANY,name='logstats',choices=["Yes please","No thanks"])
+        log.SetFont(self.smallFont)
+        self.statsPanel.GetSizer().Add(log,flag=wx.CENTER|wx.ALL,border=5)
+        t=wx.StaticText(self.statsPanel,wx.ID_ANY,label="UUID")
+        t.SetFont(self.smallFont)
+        t.Hide()
+        self.statsPanel.GetSizer().Add(t)
+        uuid=wx.TextCtrl(self.statsPanel,wx.ID_ANY,name='uuid')
+        uuid.SetFont(self.smallFont)
+        self.statsPanel.GetSizer().Add(uuid)
+        uuid.Hide()
+
+
         # Globals panels
 
         self.globalsTopPanel.SetSizerAndFit(self.globalsTopPanelSizer)
@@ -866,47 +885,61 @@ class GlobalOptionsDialog(wx.Dialog):
 
         # Privacy tab
 
-        self.authPanel = wx.Panel(self.tabbedView,wx.ID_ANY)
-        self.authPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
-        self.authPanel.Fit()
-        choices=["Use an SSH key pair","Use my password"]
-        if sys.platform.startswith("darwin"):
-            self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
-        rb=wx.RadioBox(self.authPanel,wx.ID_ANY,majorDimension=1,name="auth_mode",label="Authentication Mode",choices=choices)
-        self.authPanel.GetSizer().Add(rb,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
-#        explanation = "The Launcher's preferred mode of operating (\"private mode\") involves creating a \"~/.ssh/MassiveLauncherKey\" private key file within your home directory, " + \
-#                        "and using an SSH Agent (e.g. PuTTY's Pageant) to load the private key into memory, so that you don't need to enter your password " + \
-#                        "every time you run the Launcher.\n\n" + \
-#                        "If you are running the Launcher on a shared computer (e.g. if you are using a \"Guest\") account, then you should use \"public mode\". " + \
-#                        "When running in \"public mode\", you will need to enter your password every time you run the Launcher.\n\n"
-        explanation = """
-When we communicate with the desktop, we use a cryptographic token called an RSA Key Pair. You can either generate a permanent key pair, and store it on your computer, or use your password to generate a temporary keypair each time you use the launcher.
+        explanation1 = """
+Remember me stores an access token on your computers. You will need to enter a passphrase to unlock this token each time your computer boots. This is not recomended if many people share this computer (as in a lab environment)
 
-If you use a permanent SSH key pair, you will be asked to unlock your keys the first time you use the Launcher after a reboot. Thereafter you won't be asked for a password. This method is advisable if you are the only person who uses this account to log into your computer.
-
-If you use a password to authenticate, a new keypair will be generated each time you use the launcher, and you will need to re-enter your password each time you connect. This method is advisable if multiple people share this computer (as in a computer lab).
+Don't remember me does not store this token permantly. You will need to enter a password (or some other authentication) each time you access a remote computer.
 """
 
 
- #       explanation = "The Launcher's preferred mode of operating (\"private mode\") involves creating a \"~/.ssh/MassiveLauncherKey\" private key file within your home directory, and using an SSH Agent (e.g. PuTTY's Pageant) to load the private key into memory, so that you don't need to enter your password every time you run the Launcher.\nIf you are running the Launcher on a shared computer (e.g. if you are using a \"Guest\") account, then you should use \"public mode\". When running in \"public mode\", you will need to enter your password every time you run the Launcher."
-                        #"Future versions of the Launcher may have the ability to manage multiple private key files from within a single " + \
-                        #"\"Guest\" account, so it may then be possible to run the Launcher in \"private mode\" from within a \"Guest\" " + \
-                        #"account."
-        self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation)
+
+
+        self.authPanel = wx.Panel(self.tabbedView,wx.ID_ANY)
+        self.authPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
+
+        self.authModeExplanation = wx.StaticText(self.authPanel, wx.ID_ANY, explanation1)
         self.authModeExplanation.SetFont(self.smallFont)
         # Here we hint that the size of the Static Text will not be included in calculating the size of the optionsDialog.
         # The Static text will expand and wrap anyway
-        self.authModeExplanation.SetMinSize(wx.Size(1,1))
+        self.authModeExplanation.SetMinSize(wx.Size(1,-1))
+
+
+        choices=["Remember me on this computer","Don't remember me"]
+        if sys.platform.startswith("darwin"):
+            self.authPanel.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
+        p=wx.Panel(self.authPanel)
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        t=wx.StaticText(p,wx.ID_ANY,"Authentication Mode")
+        t.SetFont(self.smallFont)
+        p.GetSizer().Add(t,flag=wx.ALIGN_CENTER)
+        cb=wx.ComboBox(p,wx.ID_ANY,name="auth_mode",choices=choices,style=wx.CB_READONLY)
+        cb.SetFont(self.smallFont)
+        p.GetSizer().Add(cb,flag=wx.ALIGN_CENTER|wx.LEFT,border=15,proportion=0)
+        self.authPanel.GetSizer().Add(p,flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,border=15)
         self.authPanel.GetSizer().Add(self.authModeExplanation, proportion=1,flag=wx.EXPAND|wx.ALL, border=15)
+
+
+
         self.authPanel.Layout()
         var='auth_mode'
+        auth_mode = self.FindWindowByName(var)
         if var in globalOptions:
-            auth_mode = self.FindWindowByName(var)
             auth_mode.SetSelection(int(globalOptions[var]))
-            # Fire the event manually, as this will control enabled/disabled of some menu items
-            nextevent = wx.CommandEvent(wx.wxEVT_COMMAND_RADIOBOX_SELECTED, auth_mode.GetId())
-            nextevent.SetEventObject(auth_mode)
-            wx.PostEvent(auth_mode.GetEventHandler(),nextevent)
+        else:
+            auth_mode.SetSelection(0)
+        var='uuid'
+        uuidtc = self.FindWindowByName(var)
+        if var in globalOptions:
+            uuidtc.SetValue(globalOptions[var])
+        else:
+            import uuid
+            uuidtc.SetValue("%s"%uuid.uuid4())
+        var='logstats'
+        logstats = self.FindWindowByName(var)
+        if var in globalOptions:
+            logstats.SetSelection(int(globalOptions[var]))
+        else:
+            logstats.SetSelection(1)
 
 #        self.privacyPanel = wx.Panel(self.tabbedView, wx.ID_ANY)
 #        self.privacyPanelSizer = wx.FlexGridSizer(rows=1, cols=3, vgap=15, hgap=25)
@@ -1067,7 +1100,7 @@ If you use a password to authenticate, a new keypair will be generated each time
         self.Show(False)
         self.EndModal(wx.CANCEL)
 
-    def onOK(self, event):
+    def saveOptions(self):
         self.okClicked = True
         self.globalOptions['jpeg_compression'] = self.jpegCompressionCheckBox.GetValue()
         self.globalOptions['jpeg_chrominance_subsampling'] = self.jpegChrominanceSubsamplingCommandLineString[self.jpegChrominanceSubsamplingSlider.GetValue()]
@@ -1100,6 +1133,11 @@ If you use a password to authenticate, a new keypair will be generated each time
             self.globalOptions['logfile'] = self.vncViewerLogFilenameTextField.GetValue()
         self.globalOptions['share_local_home_directory_on_remote_desktop'] = self.shareLocalHomeDirectoryOnRemoteDesktopCheckBox.GetValue()
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
+        self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
+        self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
+
+    def onOK(self, event):
+        self.saveOptions()
         self.Show(False)
         self.EndModal(wx.OK)
       

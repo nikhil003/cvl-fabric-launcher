@@ -17,7 +17,7 @@ from logger.Logger import logger
 
 LAUNCHER_URL = "https://www.massive.org.au/userguide/cluster-instructions/massive-launcher"
 
-TURBOVNC_BASE_URL = "http://sourceforge.net/projects/virtualgl/files/TurboVNC/"
+TURBOVNC_BASE_URL = "http://www.sourceforge.net/projects/turbovnc/files"
 
 def parseMessages(regexs,stdout,stderr):
     # compare each line of output against a list of regular expressions and build up a dictionary of messages to give the user
@@ -139,8 +139,8 @@ class ListSelectionDialog(wx.Dialog):
             font.SetPointSize(8)
         contactEmailHyperlink.SetFont(font)
 
-        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BORDER)
-        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.BORDER)
+        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT)
+        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM)
 
         contactPanelSizer.Fit(contactPanel)
 
@@ -217,7 +217,6 @@ class ListSelectionDialog(wx.Dialog):
         if headers!=None:
             col=0
             for hdr in headers:
-                print hdr
                 self.listSelectionList.InsertColumn(col,hdr,width=-1)
                 col=col+1
         for item in self.itemList:
@@ -237,6 +236,10 @@ class ListSelectionDialog(wx.Dialog):
             if self.cancelCallback != None:
                 #self.cancelCallback("User canceled from ListSelectionDialog.")
                 self.cancelCallback("")
+            try:
+                self.EndModal(e.GetId())
+            except:
+                pass
             self.Destroy()
             return
 
@@ -252,10 +255,17 @@ class ListSelectionDialog(wx.Dialog):
         itemnum=self.listSelectionList.GetFocusedItem()
         item=self.listSelectionList.GetItem(itemnum,0)
         if self.okCallback != None:
+            logger.debug("ListSelectionDialog.onClose: calling okCallback")
             self.okCallback(item)
-        self.Destroy()
+            logger.debug("ListSelectionDialog.onClose: okCallback returned, calling destroy")
+        #self.Destroy()
+        try:
+            self.EndModal(e.GetId())
+        except:
+            pass
 
         if self.closedProgressDialog:
+            logger.debug("ListSelectionDialog.onClose: Progress dialog was closed, seeing if it exists to open again")
             if self.progressDialog is not None:
                 self.progressDialog.Show(True)
 
@@ -308,8 +318,8 @@ class HelpDialog(wx.Dialog):
         contactEmailHyperlink.SetFont(font)
 
 #        contactPanelSizer.Add(wx.StaticText(contactPanel, wx.ID_ANY, ""))
-        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BORDER)
-        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.BORDER)
+        contactPanelSizer.Add(contactQueriesContactLabel, border=10, flag=wx.EXPAND|wx.LEFT|wx.RIGHT)
+        contactPanelSizer.Add(contactEmailHyperlink, border=20, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM)
 
         #contactPanelSizer.Add(wx.StaticText(contactPanel))
         contactPanelSizer.Fit(contactPanel)
@@ -335,9 +345,13 @@ class HelpDialog(wx.Dialog):
 
 
     def OnClose(self, e):
-        self.Destroy()
         if self.callback != None:
             self.callback()
+        try:
+            self.EndModal(e.GetId())
+        except:
+            pass
+        self.Destroy()
 
 
 class MyHtmlParser(HTMLParser.HTMLParser):
