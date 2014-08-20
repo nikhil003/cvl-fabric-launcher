@@ -828,10 +828,13 @@ with open('other_flavour.json','w') as f:
 defaultSites=collections.OrderedDict()
 gpu=getCQUGPUConfig("")
 standard=getCQUStandardVNCConfig("")
+standard.authURL=None
 newton=getCQUVNCSession()
+newton.authURL=None
 newton.visibility['loginHostPanel']=False
 newton.loginHost="newton.cqu.edu.au"
 isaac=getCQUVNCSession()
+isaac.authURL=None
 isaac.visibility['loginHostPanel']=False
 isaac.loginHost="isaac.cqu.edu.au"
 defaultSites['HPC Login Node - Isaac']=isaac
