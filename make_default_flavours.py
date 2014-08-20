@@ -588,9 +588,15 @@ def getCQUGPUConfig(queue):
     c = getCVLSiteConfig(queue)
     s = sshKeyDistDisplayStringsCQU()
     c.displayStrings.__dict__.update(s.__dict__)
-    c.visibility['resourcePanel']=False
-    c.visibility['ppnLabel']=False
-    c.visibility['jobParams_ppn']=False
+    c.visibility['resourcePanel']=True
+    c.visibility['label_ppn']=True
+    c.visibility['jobParams_ppn']=True
+    c.visibility['label_mem']=True
+    c.visibility['jobParams_mem']=True
+    c.visibility['label_nodes']=False
+    c.visibility['jobParams_nodes']=False
+    c.visibility['label_hours']=False
+    c.visibility['jobParams_hours']=False
     c.loginHost='isaac.cqu.edu.au'
     c.directConnect=False
     cmd='\"qstat -f {jobidNumber} \"'
@@ -601,7 +607,7 @@ def getCQUGPUConfig(queue):
     c.agent=siteConfig.cmdRegEx()
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
     c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
-    cmd='\" /apps/samples/sys-files/startup-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" /usr/local/bin/remove-old-vnc-pids.sh ; vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus=1,mem=8g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
+    cmd='\" /apps/samples/sys-files/startup-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" /apps/samples/sys-files/remove-old-vnc-pids.sh ; vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus={ppn},mem={mem}g,ngpus=1 -N INTERACT  -o .vnc/ -e .vnc/ \"'
     regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
@@ -609,6 +615,10 @@ def getCQUGPUConfig(queue):
     regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)\[.*$'
     c.execHost = siteConfig.cmdRegEx(cmd,regex)
     c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>INTERACT)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
+    c.relabel={}
+    c.relabel['label_ppn']='CPUs'
+    c.siteRanges={}
+    c.siteRanges['jobParams_ppn']=[1,16]
     return c
 
 
@@ -621,6 +631,10 @@ def getCQUStandardVNCConfig(queue):
     c.visibility['jobParams_ppn']=True
     c.visibility['label_mem']=True
     c.visibility['jobParams_mem']=True
+    c.visibility['label_nodes']=False
+    c.visibility['jobParams_nodes']=False
+    c.visibility['label_hours']=False
+    c.visibility['jobParams_hours']=False
     c.loginHost='isaac.cqu.edu.au'
     c.directConnect=False
     cmd='\"qstat -f {jobidNumber} \"'
@@ -631,7 +645,7 @@ def getCQUStandardVNCConfig(queue):
     c.agent=siteConfig.cmdRegEx()
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
     c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
-    cmd='\" /apps/samples/sys-files/startup-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\"vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus={ppn},mem={mem}g -N STANDARD  -o .vnc/ -e .vnc/ \"'
+    cmd='\" /apps/samples/sys-files/startup-checker.sh ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" /apps/samples/sys-files/remove-old-vnc-pids.sh ; vncserver -geometry {resolution} ; sleep 10000000000\\\" | qsub  -l ncpus={ppn},mem={mem}g -N STANDARD  -o .vnc/ -e .vnc/ \"'
     regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
@@ -827,6 +841,7 @@ with open('other_flavour.json','w') as f:
 
 defaultSites=collections.OrderedDict()
 gpu=getCQUGPUConfig("")
+gpu.authURL=None
 standard=getCQUStandardVNCConfig("")
 standard.authURL=None
 newton=getCQUVNCSession()
