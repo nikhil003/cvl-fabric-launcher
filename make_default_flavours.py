@@ -612,7 +612,7 @@ def getCQUGPUConfig(queue):
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
     cmd='\" qstat -f {jobidNumber} | grep exec_host\"'
-    regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)\[.*$'
+    regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)'
     c.execHost = siteConfig.cmdRegEx(cmd,regex)
     c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>INTERACT)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
     c.relabel={}
@@ -650,7 +650,7 @@ def getCQUStandardVNCConfig(queue):
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
     cmd='\" qstat -f {jobidNumber} | grep exec_host\"'
-    regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)\[.*$'
+    regex='^\s*exec_host = (?P<execHost>[a-z]+[0-9]+)'
     c.execHost = siteConfig.cmdRegEx(cmd,regex)
     c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>STANDARD)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+(?P<elapTime>\S+)\s*$',requireMatch=False)
     c.relabel={}
