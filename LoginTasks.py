@@ -67,7 +67,7 @@ class LoginProcess():
                 self.pingTunnel()
                 return True
             except:
-                logger.debug("runAsyncServerCommandThread: tunnel %s is no longer up"%(self.cmdRegex.cmd))
+                logger.info("runAsyncServerCommandThread: tunnel %s is no longer up"%(self.cmdRegex.cmd))
                 return False
 
         def run(self):
@@ -78,9 +78,8 @@ class LoginProcess():
 
                 # Not 100% sure if this is necessary on Windows vs Linux. Seems to break the
                 # Windows version of the launcher, but leaving in for Linux/OSX.
-                logger.debug("runAsyncServerCommandThread: self.cmdRegex.cmd = " + self.cmdRegex.cmd)
                 cmd=self.cmdRegex.getCmd(self.loginprocess.jobParams)
-                logger.debug("runAsyncServerCommandThread: running %s"%cmd)
+                logger.info("runAsyncServerCommandThread: running %s"%cmd)
                 if sys.platform.startswith("win"):
                     pass
                 else:
@@ -104,7 +103,7 @@ class LoginProcess():
                         for regex in self.cmdRegex.regex:
                             match = re.search(regex.format(**self.loginprocess.jobParams).encode('ascii'),line)
                             if (match and not self.stopped() and not self.loginprocess.canceled() and not self.loginprocess._shutdown.is_set()):
-                                logger.debug("runAsyncServerCommandThread: Found match for " + regex.format(**self.loginprocess.jobParams).encode('ascii'))
+                                logger.info("runAsyncServerCommandThread: Found match for " + regex.format(**self.loginprocess.jobParams).encode('ascii'))
                                 wx.PostEvent(self.loginprocess.notify_window.GetEventHandler(),self.nextevent)
                     else:
                         logger.debug("runAsyncServerCommandThread: Didn't find match for " + regex.format(**self.loginprocess.jobParams).encode('ascii'))
@@ -160,7 +159,7 @@ class LoginProcess():
                 return
             logger.debug("runServerCommandThread: self.cmd = " + self.cmdRegex.cmd)
             try:
-                logger.debug("runServerCommandThread: self.cmd.format(**self.loginprocess.jobParams) = " + self.cmdRegex.getCmd(self.loginprocess.jobParams))
+                logger.info("runServerCommandThread: self.cmd.format(**self.loginprocess.jobParams) = " + self.cmdRegex.getCmd(self.loginprocess.jobParams))
             except:
                 logger.debug("runServerCommandThread: self.cmd.format(**self.loginprocess.jobParams) gives an exception. Why wasn't this picked up earlier?")
     
@@ -207,11 +206,11 @@ class LoginProcess():
                         match=re.search(regex.format(**self.loginprocess.jobParams),line)
                         if (match):
                             oneMatchFound=True
-                            logger.debug('runServerCommand matched the regex %s %s' % (regex.format(**self.loginprocess.jobParams),line))
+                            logger.info('runServerCommand matched the regex %s %s' % (regex.format(**self.loginprocess.jobParams),line))
                             self.loginprocess.jobParams.update(match.groupdict())
                             self.loginprocess.matchlist.append(match.groupdict())
                         else:
-                            logger.debug('runServerCommand did not match the regex %s %s' % (regex.format(**self.loginprocess.jobParams),line))
+                            pass
             if (not oneMatchFound and self.requireMatch and not self.loginprocess._shutdown.is_set()):
                     for regex in self.cmdRegex.regex:
                         logger.error("no match found for the regex %s"%regex.format(**self.loginprocess.jobParams))
@@ -252,13 +251,11 @@ class LoginProcess():
         def onOK(self,event):
             self.Close()
             self.Destroy()
-            logger.debug('SimpleOptionDialog, calling OK Callback')
             self.OKCallback()
 
         def onCancel(self,event):
             self.Close()
             self.Destroy()
-            logger.debug('SimpleOptionDialog, calling Cancel Callback')
             self.CancelCallback()
 
     class startWebDavServerThread(Thread):
@@ -284,7 +281,7 @@ class LoginProcess():
             # lxml is not strictly required, but it makes WsgiDAV run faster.
             import lxml
 
-            logger.debug("startWebDavServer: WsgiDAV version = " + wsgidav.version.__version__)
+            logger.info("startWebDavServer: WsgiDAV version = " + wsgidav.version.__version__)
 
             wsgidavConfig = DEFAULT_CONFIG.copy()
             wsgidavConfig["host"] = "localhost"
@@ -317,7 +314,7 @@ class LoginProcess():
             addUser(self.loginprocess.jobParams['homeDirectoryWebDavShareName'], self.loginprocess.jobParams['localUsername'], self.loginprocess.jobParams['vncPasswd'], "", roles=[])
 
             for k, v in wsgidavConfig.iteritems():
-                logger.debug('startWebDavServer: wsgidavConfig properties: %s = %s' % (str(k), str(v),))
+                logger.info('startWebDavServer: wsgidavConfig properties: %s = %s' % (str(k), str(v),))
             wsgidavApp = wsgidav.wsgidav_app.WsgiDAVApp(wsgidavConfig)
             wsgidavServer = "cherrypy-bundled"
             # From def startWebDavServer(event):
@@ -355,10 +352,9 @@ class LoginProcess():
                         vncCommandString = "\"{vnc}\" /user {username} /autopass /nounixlogin {vncOptionsString} localhost::{localPortNumber}".format(**self.loginprocess.jobParams)
                     else:
                         vncCommandString = "{vnc} -user {username} -autopass -nounixlogin {vncOptionsString} localhost::{localPortNumber}".format(**self.loginprocess.jobParams)
-                    logger.debug('vncCommandString = ' + vncCommandString)
-                    logger.debug('vncCommandString.format(**self.loginprocess.jobParams) = ' + vncCommandString.format(**self.loginprocess.jobParams))
+                    logger.info('vncCommandString.format(**self.loginprocess.jobParams) = ' + vncCommandString.format(**self.loginprocess.jobParams))
                     self.loginprocess.turboVncStartTime = datetime.datetime.now()
-                    logger.debug('turboVncStartTime = ' + str(self.loginprocess.turboVncStartTime))
+                    logger.info('turboVncStartTime = ' + str(self.loginprocess.turboVncStartTime))
 
                     self.loginprocess.turboVncProcess = subprocess.Popen(vncCommandString,
                         stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
@@ -367,7 +363,7 @@ class LoginProcess():
                     self.loginprocess.turboVncStdout, self.loginprocess.turboVncStderr = self.loginprocess.turboVncProcess.communicate(input=self.loginprocess.jobParams['vncPasswd'] + "\n")
 
                     self.loginprocess.turboVncFinishTime = datetime.datetime.now()
-                    logger.debug('turboVncFinishTime = ' + str(self.loginprocess.turboVncFinishTime))
+                    logger.info('turboVncFinishTime = ' + str(self.loginprocess.turboVncFinishTime))
 
                     self.loginprocess.turboVncElapsedTime = self.loginprocess.turboVncFinishTime - self.loginprocess.turboVncStartTime
                     try:
@@ -429,15 +425,15 @@ class LoginProcess():
             for regex in self.cmdRegex.regex:
                 matchedDict[regex]=False
             logger.debug("runLoopServerCommandThread: self.cmd = " + self.cmdRegex.cmd)
-            logger.debug("runLoopServerCommandThread: self.cmd.format(**jobParams) = " + self.cmdRegex.cmd.format(**jobParams))
+            logger.info("runLoopServerCommandThread: self.cmd.format(**jobParams) = " + self.cmdRegex.cmd.format(**jobParams))
             while (not matched and not self.stopped()):
                 tsleep+=sleepperiod
                 if (not self.stopped()):
                     time.sleep(sleepperiod)
                 try:
                     (stdout,stderr) = run_command(self.cmdRegex.getCmd(jobParams),ignore_errors=True, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
-                    logger.debug("runLoopServerCommandThread: stderr = " + stderr)
-                    logger.debug("runLoopServerCommandThread: stdout = " + stdout)
+                    logger.info("runLoopServerCommandThread: stderr = " + stderr)
+                    logger.info("runLoopServerCommandThread: stdout = " + stdout)
                 except KeyError as e:
                     self.loginprocess.cancel("Trying to run a command but I was missing a parameter %s"%(e))
                     return
@@ -466,7 +462,7 @@ class LoginProcess():
                     if matched:
                         break
                 if (not matched and self.timeout is not None and tsleep >= self.timeout):
-                    logger.debug("runLoopServerCommandThread for " + self.cmdRegex.cmd + " was called with a timeout of %d seconds, which has been reached. So giving up on matching and posting the next event." % (self.timeout))
+                    logger.info("runLoopServerCommandThread for " + self.cmdRegex.cmd + " was called with a timeout of %d seconds, which has been reached. So giving up on matching and posting the next event." % (self.timeout))
                     wx.PostEvent(self.loginprocess.notify_window.GetEventHandler(),self.nextEvent)
                     return
                 if (not matched and tsleep > 15):
@@ -571,7 +567,7 @@ class LoginProcess():
                     except:
                         foundTurboVncInRegistry = False
 
-            logger.debug('CheckVNCVerThread: vnc = %s, turboVncVersionNumber = %s' % (str(vnc), str(turboVncVersionNumber),))
+            logger.info('CheckVNCVerThread: vnc = %s, turboVncVersionNumber = %s' % (str(vnc), str(turboVncVersionNumber),))
 
             return (vnc, turboVncVersionNumber)
 
@@ -584,12 +580,12 @@ class LoginProcess():
                 universal_newlines=True,startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
             stdout, stderr = proc.communicate(input="\n")
             if stderr != None:
-                logger.debug('turboVncFlavour stderr: ' + stderr)
+                logger.info('turboVncFlavour stderr: ' + stderr)
             if proc.returncode==0:
-                logger.debug("Java version of TurboVNC Viewer is installed.")
+                logger.info("Java version of TurboVNC Viewer is installed.")
                 turboVncFlavour = "Java"
             else:
-                logger.debug("X11 version of TurboVNC Viewer is installed.")
+                logger.info("X11 version of TurboVNC Viewer is installed.")
                 turboVncFlavour = "X11"
             
             self.turboVncVersionNumber = "0.0"
@@ -607,7 +603,7 @@ class LoginProcess():
                 universal_newlines=True,startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
             turboVncStdout, turboVncStderr = proc.communicate(input="\n")
             if turboVncStderr != None:
-                logger.debug("turboVncStderr: " + turboVncStderr)
+                logger.info("turboVncStderr: " + turboVncStderr)
             turboVncVersionNumberComponents = turboVncStdout.split(" v")
             turboVncVersionNumberComponents = turboVncVersionNumberComponents[1].split(" (build")
             turboVncVersionNumber = turboVncVersionNumberComponents[0].strip()
@@ -711,7 +707,7 @@ class LoginProcess():
                     myHtmlParser.feed(html)
                     myHtmlParser.close()
                 except Exception as e:
-                    logger.debug("Exception while checking TurboVNC version number: " + str(e))
+                    logger.info("Exception while checking TurboVNC version number: " + str(e))
 
                     def error_dialog():
                         dlg = LauncherMessageDialog(self.loginprocess.notify_window, "Error: Unable to contact MASSIVE website to check the TurboVNC version number.\n\n" +
@@ -737,7 +733,7 @@ class LoginProcess():
                 (vnc, turboVncVersionNumber) = self.getTurboVncVersionNumber_Windows()
                 if os.path.exists(vnc):
                     if not turboVncVersionNumber.startswith("0.") and not turboVncVersionNumber.startswith("1.0"):
-                        logger.debug("TurboVNC (>=1.1) was found in " + vnc)
+                        logger.info("TurboVNC (>=1.1) was found in " + vnc)
                     else:
                         wx.CallAfter(self.showTurboVncNotFoundMessageDialog,turboVncLatestVersion)
                         return
@@ -750,7 +746,7 @@ class LoginProcess():
                 if os.path.exists(vnc):
                     (vnc,turboVncVersionNumber,turboVncFlavour) = self.getTurboVncVersionNumber(vnc)
                     if not turboVncVersionNumber.startswith("0.") and not turboVncVersionNumber.startswith("1.0"):
-                        logger.debug("TurboVNC (>=1.1) was found in " + vnc)
+                        logger.info("TurboVNC (>=1.1) was found in " + vnc)
                     else:
                         wx.CallAfter(self.showTurboVncNotFoundMessageDialog,turboVncLatestVersion)
                         return
@@ -778,7 +774,7 @@ class LoginProcess():
                 return
 
 
-            logger.debug("TurboVNC viewer version number = " + turboVncVersionNumber)
+            logger.info("TurboVNC viewer version number = " + turboVncVersionNumber)
             
             self.loginprocess.jobParams['vnc'] = vnc
             self.loginprocess.jobParams['turboVncFlavour'] = turboVncFlavour
@@ -815,7 +811,7 @@ class LoginProcess():
                 wx.CallAfter(event.loginprocess.updateProgressDialog, 2,"Configuring authorisation")
                 logger.debug('distributeKey: authURL set to %s'%event.loginprocess.siteConfig.authURL)
                 if event.loginprocess.siteConfig.authURL!=None:
-                    logger.debug("LoginTasks, using AAF to authorize ssh pub key")
+                    logger.debug("LoginTasks, using authURL %s to authorize ssh pub key"%event.loginprocess.siteConfig.authURL)
                     event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,authURL=event.loginprocess.siteConfig.authURL,jobParams=event.loginprocess.jobParams)
                 else:
                     logger.debug("LoginTasks, using password to authorise ssh key")
@@ -831,11 +827,10 @@ class LoginProcess():
                 # If we have completed KeyDistribution, we may have some updates to the jobParameters from the key distribution process
                 if event.loginprocess.skd!=None:
                     event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict) 
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_RUN_SANITY_CHECK')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_RUN_SANITY_CHECK')
                 event.loginprocess.updateProgressDialog( 3, "Running the sanity check script")
                 nextevent = LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CHECK_RUNNING_SERVER,event.loginprocess)
 
-                logger.debug('Running server-side sanity check.')
                 t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.runSanityCheck,nextevent,'Error reported by server-side sanity check.')
                 t.setDaemon(False)
                 t.start()
@@ -845,7 +840,7 @@ class LoginProcess():
 
         def checkRunningServer(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_CHECK_RUNNING_SERVER):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_CHECK_RUNNING_SERVER')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_CHECK_RUNNING_SERVER')
                 wx.CallAfter(event.loginprocess.updateProgressDialog, 3,"Looking for an existing desktop to connect to")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RECONNECT_DIALOG,event.loginprocess)
                 t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.listAll,nextevent,"Error determining if you have any existing jobs running")
@@ -857,7 +852,7 @@ class LoginProcess():
 
         def showReconnectDialog(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_RECONNECT_DIALOG):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_RECONNECT_DIALOG')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_RECONNECT_DIALOG')
                 if (len(event.loginprocess.matchlist)<1):
                     if (not event.loginprocess.canceled()):
                         wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_GET_PROJECTS,event.loginprocess))
@@ -867,7 +862,7 @@ class LoginProcess():
                 ReconnectCallback=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_WAIT_FOR_SERVER,event.loginprocess))
                 NewDesktopCallback=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RESTART_SERVER,event.loginprocess))
                 timeRemaining=event.loginprocess.timeRemaining()
-                logger.debug('loginProcessEvent: timeRemaining = ' + str(timeRemaining))
+                logger.info('loginProcessEvent: timeRemaining = ' + str(timeRemaining))
 
                 if (timeRemaining != None):
                     hours, remainder = divmod(timeRemaining, 3600)
@@ -892,7 +887,7 @@ class LoginProcess():
 
         def getProjects(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_PROJECTS):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_PROJECTS')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_PROJECTS')
 
                 event.loginprocess.updateProgressDialog( 5,"Getting a list of your valid projects")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_SELECT_PROJECT,event.loginprocess)
@@ -905,7 +900,7 @@ class LoginProcess():
 
         def selectProject(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_SELECT_PROJECT):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_SELECT_PROJECT')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_SELECT_PROJECT')
 
                 event.loginprocess.updateProgressDialog( 5,"Getting a list of your valid projects")
                 grouplist=[]
@@ -916,13 +911,13 @@ class LoginProcess():
                     grouplist = grouplist + match.values()
                     groups.append(match.values())
                 
-                logger.debug('selectProject: groups = ' + str(groups))
+                logger.info('selectProject: groups = ' + str(groups))
 
                 if event.loginprocess.siteConfig.startServer.cmd!=None:
                     try:
                         event.loginprocess.siteConfig.startServer.cmd.format(**event.loginprocess.jobParams) # check if we actually need the project to format the startServerCmd
                         if (event.loginprocess.jobParams.has_key('project') and not (event.loginprocess.jobParams['project'] in grouplist)):
-                            logger.debug("we have a value for project, but the user is not a member of that project")
+                            logger.info("we have a value for project, but the user is not a member of that project")
                             msg='You don\'t appear to be a member of the project {project}.\n\nPlease select from one of the following:'.format(**event.loginprocess.jobParams)
                             event.loginprocess.jobParams.pop('project',None)
                             try: # check again if we really need the project field.
@@ -946,9 +941,9 @@ class LoginProcess():
                             msg="Please select your project"
                             showDialog=True
                 if (not showDialog):
-                    logger.debug("don't need to show the dialog, either the project was set correctly, or it was not set, but also not required")
+                    logger.info("don't need to show the dialog, either the project was set correctly, or it was not set, but also not required")
                 else:
-                    logger.debug("creating a list dialog for the user to select their project from")
+                    logger.info("creating a list dialog for the user to select their project from")
                     #okCallback=lambda x: event.loginprocess.jobParams.update([('project',"%s"%x.GetText())])
                     def okCallback(listSelectionItem):
                         project = listSelectionItem.GetText()
@@ -960,7 +955,7 @@ class LoginProcess():
                     logger.debug("flow control has returned to selectProject")
                     dlg.Destroy()
                 if (not event.loginprocess.canceled()):
-                    logger.debug("posting START_SERVER event")
+                    logger.info("posting START_SERVER event")
                     nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_START_SERVER,event.loginprocess)
                     wx.PostEvent(event.loginprocess.notify_window,nextevent)
             else:
@@ -968,7 +963,7 @@ class LoginProcess():
 
         def startServer(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_START_SERVER):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_START_SERVER')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_START_SERVER')
                 event.loginprocess.updateProgressDialog( 5,"Starting a new desktop session")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_WAIT_FOR_SERVER,event.loginprocess)
                 t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.startServer,nextevent,"Error starting the VNC server. This is probably a bug to be reported to your system administrator")
@@ -983,7 +978,7 @@ class LoginProcess():
         def waitForServer(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_WAIT_FOR_SERVER):
                 event.loginprocess.queued_job.set()
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_WAIT_FOR_SERVER')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_WAIT_FOR_SERVER')
                 event.loginprocess.updateProgressDialog( 6,"Waiting for the VNC server to start")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_GET_EXECUTION_HOST,event.loginprocess)
                 t = LoginProcess.runLoopServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.running,nextevent,"")
@@ -996,7 +991,7 @@ class LoginProcess():
         def getEstimatedStart(event):
             # runLoopServerCommand can generate GET_ESTIMATED_START events. Most other threads can only post events that were given to them when they were initialised
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_ESTIMATED_START):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_ESTIMATED_START')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_ESTIMATED_START')
                 if (event.loginprocess.siteConfig.showStart.cmd!=None):
                     logger.debug('loginProcessEvent: event.loginprocess.showStartCmd is not None, so posting EVT_LOGINPROCESS_SHOW_ESTIMATED_START')
                     nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_SHOW_ESTIMATED_START,event.loginprocess)
@@ -1015,11 +1010,11 @@ class LoginProcess():
 
         def showEstimatedStart(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_SHOW_ESTIMATED_START):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_SHOW_ESTIMATED_START')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_SHOW_ESTIMATED_START')
                 try:
                     string='Estimated start : {estimatedStart}'.format(**event.loginprocess.jobParams)
                     event.loginprocess.updateProgressDialog( 6, string )
-                    logger.debug('loginProcessEvent: showEstimatedStart: ' + string)
+                    logger.info('loginProcessEvent: showEstimatedStart: ' + string)
                 except Exception as e:
                     logger.debug('loginProcessEvent: showEstimatedStart: exception: ' + str(traceback.format_exc()))
                     pass
@@ -1030,7 +1025,7 @@ class LoginProcess():
         def getExecutionHost(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_EXECUTION_HOST):
                 event.loginprocess.started_job.set()
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_EXECUTION_HOST')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_EXECUTION_HOST')
                 event.loginprocess.updateProgressDialog( 6,"Getting execution host")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_GET_VNCDISPLAY,event.loginprocess)
                 logger.debug('loginProcessEvent: getExecutionHost: posting EVT_LOGINPROCESS_GET_VNCDISPLAY')
@@ -1043,7 +1038,7 @@ class LoginProcess():
 
         def getVNCDisplay(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_VNCDISPLAY):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_VNCDISPLAY')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_VNCDISPLAY')
                 event.loginprocess.updateProgressDialog( 6,"Getting the display number")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_START_TUNNEL,event.loginprocess)
                 logger.debug('loginProcessEvent: getVNCDisplay: posting EVT_LOGINPROCESS_START_TUNNEL')
@@ -1089,7 +1084,7 @@ class LoginProcess():
 
         def forwardAgent(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_FORWARD_AGENT):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_FORWARD_AGENT')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_FORWARD_AGENT')
                 event.loginprocess.updateProgressDialog( 8,"Setting up SSH Agent forwarding")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_GET_OTP,event.loginprocess)
                 logger.debug('loginProcessEvent: posting EVT_LOGINPROCESS_GET_OTP')
@@ -1102,7 +1097,7 @@ class LoginProcess():
 
         def getVNCPassword(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_OTP):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_OTP')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_OTP')
                 event.loginprocess.updateProgressDialog( 9,"Getting the one-time password for the VNC server")
                 #if (event.loginprocess.globalOptions.has_key('share_local_home_directory_on_remote_desktop') and event.loginprocess.globalOptions['share_local_home_directory_on_remote_desktop']):
                 if event.loginprocess.shareHomeDir:
@@ -1120,10 +1115,10 @@ class LoginProcess():
 
         def startWebDavServer(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_START_WEBDAV_SERVER):
-                logger.debug('LoginProcess.startWebDavServer: posting ON_CONNECT while we also connect the webdav server')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_START_WEBDAV_SERVER')
+                logger.info('LoginProcess.startWebDavServer: posting ON_CONNECT while we also connect the webdav server')
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CONNECTED,event.loginprocess)
                 wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),nextevent)
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_START_WEBDAV_SERVER')
                 event.loginprocess.updateProgressDialog( 10,"Sharing your home directory with the remote server")
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_GET_DBUS_SESSION_ADDRESS,event.loginprocess)
                 logger.debug('loginProcessEvent: posting EVT_LOGINPROCESS_GET_DBUS_SESSION_ADDRESS')
@@ -1147,7 +1142,7 @@ class LoginProcess():
 
         def getDbusSessionAddress(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_DBUS_SESSION_ADDRESS):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_DBUS_SESSION_ADDRESS')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_DBUS_SESSION_ADDRESS')
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_GET_WEBDAV_INTERMEDIATE_PORT,event.loginprocess)
                 logger.debug('loginProcessEvent: posting EVT_LOGINPROCESS_GET_WEBDAV_INTERMEDIATE_PORT')
                 t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.dbusSessionBusAddress,nextevent,"Unable to determine the DBUS_SESSION_BUS_ADDRESS for the VNC session",requireMatch=False)
@@ -1159,7 +1154,7 @@ class LoginProcess():
 
         def getWebDavIntermediatePort(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_WEBDAV_INTERMEDIATE_PORT):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_WEBDAV_INTERMEDIATE_PORT')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_WEBDAV_INTERMEDIATE_PORT')
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_GET_WEBDAV_REMOTE_PORT,event.loginprocess)
                 logger.debug('loginProcessEvent: posting EVT_LOGINPROCESS_GET_WEBDAV_REMOTE_PORT')
                 t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.webDavIntermediatePort,nextevent,"")
@@ -1171,7 +1166,7 @@ class LoginProcess():
 
         def getWebDavRemotePort(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_GET_WEBDAV_REMOTE_PORT):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_GET_WEBDAV_REMOTE_PORT')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_GET_WEBDAV_REMOTE_PORT')
                 nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_START_WEBDAV_TUNNEL,event.loginprocess)
                 logger.debug('loginProcessEvent: posting EVT_LOGINPROCESS_START_WEBDAV_TUNNEL')
                 t = LoginProcess.runServerCommandThread(event.loginprocess,event.loginprocess.siteConfig.webDavRemotePort,nextevent,"")
@@ -1183,7 +1178,7 @@ class LoginProcess():
 
         def startWebDavTunnel(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_START_WEBDAV_TUNNEL):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_START_WEBDAV_TUNNEL')
+                logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_START_WEBDAV_TUNNEL')
 
                 #event.loginprocess.jobParams['remoteWebDavPortNumber'] = 8080 # FIXME: Hard-coded remote WebDAV port number for now!
                 # remoteWebDavPortNumber is now determined using /usr/local/desktop/get_ephemeral_port_number.py on MASSIVE
@@ -1204,13 +1199,13 @@ class LoginProcess():
         def mountWebDav(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_MOUNT_WEBDAV):
                 if event.loginprocess.shareHomeDir:
-                    logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_MOUNT_WEBDAV')
+                    logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_MOUNT_WEBDAV')
                     nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_OPEN_WEBDAV_SHARE_IN_REMOTE_FILE_BROWSER,event.loginprocess)
                     logger.debug('loginProcessEvent: posting EVT_LOGINPROCESS_OPEN_WEBDAV_SHARE_IN_REMOTE_FILE_BROWSER')
 
                     if '{dbusSessionBusAddress}' in event.loginprocess.siteConfig.openWebDavShareInRemoteFileBrowser.cmd and 'dbusSessionBusAddress' not in event.loginprocess.jobParams.keys():
                         message = "Couldn't acquire DBUS_SESSION_BUS_ADDRESS, so unable to open shared home directory in remote file browser."
-                        logger.debug(message)
+                        logger.info(message)
                         def showMessageWindow(message):
                             if sys.platform.startswith("linux"):
                                 dlg=HelpDialog(event.loginprocess.notify_window, title=event.loginprocess.parentWindow.programName, size=(680,290),style=wx.DEFAULT_DIALOG_STYLE|wx.STAY_ON_TOP)

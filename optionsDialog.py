@@ -1051,12 +1051,41 @@ Don't remember me does not store this token permantly. You will need to enter a 
         self.fileSharingPanel.SetSizerAndFit(self.fileSharingPanelSizer)
         self.fileSharingPanel.Layout()
 
+        self.networkMonitorPanel = wx.Panel(self.tabbedView, wx.ID_ANY)
+        self.networkMonitorPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
+
+        p = wx.Panel(self.networkMonitorPanel)
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        p.GetSizer().Add(wx.StaticText(p,wx.ID_ANY,label="Monitor my network connection"),border=10)
+        p.GetSizer().Add(wx.CheckBox(p,wx.ID_ANY,name="monitor_network_checkbox"),border=10)
+        var='monitor_network_checkbox'
+        cb = self.FindWindowByName(var)
+        if var in globalOptions:
+            cb.SetValue(int(globalOptions[var]))
+        else:
+            cb.SetValue(0)
+        self.networkMonitorPanel.GetSizer().Add(p)
+        p = wx.Panel(self.networkMonitorPanel)
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        p.GetSizer().Add(wx.StaticText(p,wx.ID_ANY,label="URL to check"))
+        p.GetSizer().Add(wx.TextCtrl(p,wx.ID_ANY,name="monitor_network_url",value="http://www.google.com.au"),proportion=1)
+        self.networkMonitorPanel.GetSizer().Add(p,flag=wx.EXPAND,border=10)
+        p = wx.Panel(self.networkMonitorPanel)
+        p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        textctrl = wx.TextCtrl(p,wx.ID_ANY,  style=wx.TE_MULTILINE|wx.TE_READONLY,name="monitor_network_log")
+        p.GetSizer().Add(textctrl,flag=wx.EXPAND,proportion=1,border=10)
+        import threading
+        self.stopUpdatingNetworkLogEvent=threading.Event()
+        threading.Thread(target=self.updateNetworkLogText,args=[textctrl,self.stopUpdatingNetworkLogEvent,parent.networkLog]).start()
+        self.networkMonitorPanel.GetSizer().Add(p,flag=wx.EXPAND,proportion=1)
+
 
         # Adding Connection tab and Globals tab to tabbed view
         self.tabbedView.AddPage(self.connectionPanel, "Connection")
         self.tabbedView.AddPage(self.globalsPanel, "Globals")
         self.tabbedView.AddPage(self.authPanel, "Authentication")
         self.tabbedView.AddPage(self.fileSharingPanel, "Sharing")
+        self.tabbedView.AddPage(self.networkMonitorPanel, "Network monitoring")
 
         self.tabbedView.SetSelection(self.tabIndex)
        
@@ -1088,6 +1117,31 @@ Don't remember me does not store this token permantly. You will need to enter a 
         self.Fit()
         self.Layout()
 
+
+    def updateNetworkLogText(self,textctrl,stopEvent,log,interval=5):
+        def find_last_written(elem, deque):
+            if elem==None:
+                return -len(deque) 
+            for i in range(0,-len(deque)-1,-1):
+                if elem[0] == deque[i][0]:
+                    return i
+            return -len(deque)
+        def tryWrite(textctrl,text,stopEvent):
+            try:
+                textctrl.write(text)
+            except:
+                stopEvent.set()
+        import time
+        event=None
+        while not stopEvent.isSet():
+            n=find_last_written(event,log)
+            for i in range(len(log)+n+1,len(log)):
+                event = log[i]
+                wx.CallAfter(tryWrite,textctrl,"%s %s\n"%(event[0].strftime("%x %X"),event[1]),stopEvent)
+            time.sleep(interval)
+
+            
+
     def getOptions(self):
         return self.globalOptions
 
@@ -1095,6 +1149,7 @@ Don't remember me does not store this token permantly. You will need to enter a 
         return
 
     def onCancel(self, event):
+        self.stopUpdatingNetworkLogEvent.set()
         self.okClicked = False
         #self.Close(True)
         self.Show(False)
@@ -1135,8 +1190,11 @@ Don't remember me does not store this token permantly. You will need to enter a 
         self.globalOptions['auth_mode']=self.FindWindowByName('auth_mode').GetSelection()
         self.globalOptions['uuid']=self.FindWindowByName('uuid').GetValue()
         self.globalOptions['logstats']=self.FindWindowByName('logstats').GetSelection()
+        self.globalOptions['monitor_network_checkbox']=self.FindWindowByName('monitor_network_checkbox').GetValue()
+        self.globalOptions['monitor_network_url']=self.FindWindowByName('monitor_network_url').GetValue()
 
     def onOK(self, event):
+        self.stopUpdatingNetworkLogEvent.set()
         self.saveOptions()
         self.Show(False)
         self.EndModal(wx.OK)

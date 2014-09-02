@@ -296,7 +296,10 @@ class LauncherMainFrame(wx.Frame):
 
         self.prefs=None
         self.loginProcess=[]
-        self.logWindow = None
+        import collections
+        self.networkLog = collections.deque()
+        self.networkLogThread = None
+        self.networkLogStopEvent = threading.Event()
         self.hiddenWindow = None
         self.progressDialog = None
 
@@ -681,6 +684,14 @@ class LauncherMainFrame(wx.Frame):
         # use the Identity Menu to delete their key etc. before
         # pressing the Login button.
         self.keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=False)
+
+        if options.has_key('monitor_network_checkbox'):
+            if options['monitor_network_checkbox']:
+                self.networkLogStopEvent.clear()
+                self.networkLogThread = threading.Thread(target=self.monitorNetwork,args=[options['monitor_network_url'],self.networkLogStopEvent,self.networkLog])
+                self.networkLogThread.start()
+            else:
+                self.networkLogStopEvent.set()
 
         #self.loadPrefs()
 
@@ -1225,6 +1236,20 @@ class LauncherMainFrame(wx.Frame):
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
 
+    def monitorNetwork(self,url,stopEvent,log,interval=2,maxlogsize=1000,timeout=5):
+        import time
+        import requests
+        while not stopEvent.isSet():
+            try:
+                r=requests.get(url,verify=False,timeout=timeout)
+                log.append((datetime.datetime.now(),"network OK"))
+            except:
+                log.append((datetime.datetime.now(),"network timed out"))
+            if len(log)>maxlogsize:
+                log.pop()
+            time.sleep(interval)
+
+
     def onDebugWindowCheckBoxStateChanged(self, event):
         self.logWindow.Show(event.GetEventObject().GetValue())
 
@@ -1292,6 +1317,13 @@ class LauncherMainFrame(wx.Frame):
             auth_mode = int(options['auth_mode'])
             self.identity_menu.setRadio(auth_mode)
             self.identity_menu.disableItems(auth_mode)
+        if options.has_key('monitor_network_checkbox'):
+            if options['monitor_network_checkbox']:
+                self.networkLogStopEvent.clear()
+                self.networkLogThread = threading.Thread(target=self.monitorNetwork,args=[options['monitor_network_url'],self.networkLogStopEvent,self.networkLog])
+                self.networkLogThread.start()
+            else:
+                self.networkLogStopEvent.set()
 
     def onCut(self, event):
         textCtrl = self.FindFocus()
