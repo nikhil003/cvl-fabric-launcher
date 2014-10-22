@@ -25,6 +25,7 @@ class VMNameDialog(wx.Dialog):
         s.Add(ok)
         s.Add(cancel)
         self.GetSizer().Add(p)
+        self.Fit()
 
     def onClose(self,e):
         self.EndModal(e.GetId())
@@ -272,7 +273,7 @@ class Provision(Provision.Provision):
         return None
 
     def setKeyPair(self,keyName,pubKey):
-        self.connection.import_key_pair(keyName,pubkey)
+        self.connection.import_key_pair(keyName,pubKey)
         keypairs=self.connection.get_all_key_pairs()
         for k in keypairs:
             if k.name==keyName:
