@@ -324,9 +324,8 @@ class siteConfig():
 
     def __init__(self,**kwargs):
         self.provision=None
-        #self.imageid="ami-000020ef"
-        self.imageid="ami-00002fa3"
-        self.instanceFlavour="m1.small"
+        self.imageid=None
+        self.instanceFlavour=None
         self.loginHost=None
         self.username=None
         self.authURL=None

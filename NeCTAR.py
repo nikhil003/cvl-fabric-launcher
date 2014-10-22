@@ -25,6 +25,7 @@ class VMNameDialog(wx.Dialog):
         s.Add(ok)
         s.Add(cancel)
         self.GetSizer().Add(p)
+        self.Fit()
 
     def onClose(self,e):
         self.EndModal(e.GetId())
@@ -272,7 +273,7 @@ class Provision(Provision.Provision):
         return None
 
     def setKeyPair(self,keyName,pubKey):
-        self.connection.import_key_pair(keyName,pubkey)
+        self.connection.import_key_pair(keyName,pubKey)
         keypairs=self.connection.get_all_key_pairs()
         for k in keypairs:
             if k.name==keyName:
@@ -286,6 +287,7 @@ class Provision(Provision.Provision):
         #  ask if the user would like to start a new VM or connect to an existing one.
         done=False
         okCallback=lambda x: setattr(self,'vmName',x.GetText())
+        cancelCallback=lambda x: setattr(self,'vmName',None)
         self.vmName=None
         try:
             grouplist=[]
@@ -306,7 +308,7 @@ class Provision(Provision.Provision):
                 if r==1:
                     e.clear()
                     msg="Please select a VM to connect to"
-                    wx.CallAfter(self.createAndShowModalDialog,q,utilityFunctions.ListSelectionDialog,parent=self.notify_window, progressDialog=self.progressDialog, title=self.notify_window.GetParent().programName, headers=None, message=msg, noSelectionMessage="Please select a VM from the list or cancel.", items=grouplist, okCallback=okCallback, cancelCallback = okCallback, style=wx.DEFAULT_DIALOG_STYLE, helpEmailAddress="")
+                    wx.CallAfter(self.createAndShowModalDialog,q,utilityFunctions.ListSelectionDialog,parent=self.notify_window, progressDialog=self.progressDialog, title=self.notify_window.GetParent().programName, headers=None, message=msg, noSelectionMessage="Please select a VM from the list or cancel.", items=grouplist, okCallback=okCallback, cancelCallback = cancelCallback, style=wx.DEFAULT_DIALOG_STYLE, helpEmailAddress="")
                     (r,dlg) = q.get()
                     if self.vmName!=None:
                         done=True
