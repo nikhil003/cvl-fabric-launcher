@@ -683,7 +683,7 @@ def getGenericVNCSession():
     #c.listAll=siteConfig.cmdRegEx('\'vncserver -list\'','^(?P<vncDisplay>:[0-9]+)\s+[0-9]+\s*$',requireMatch=False)
     c.listAll=siteConfig.cmdRegEx('\'ls ~/.vnc/`hostname`*pid\'','^\S+(?P<vncDisplay>:[0-9]+).pid$',requireMatch=False)
     #c.startServer=siteConfig.cmdRegEx('\"vncserver -geometry {resolution}\"','^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$')
-    c.startServer=siteConfig.cmdRegEx('\" rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; vncserver -geometry {resolution}\"','^.*?desktop is \S+(?P<vncDisplay>:[0-9]+)\s*$')
+    c.startServer=siteConfig.cmdRegEx('\" mkdir ~/.vnc 2>/dev/null ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; vncserver -geometry {resolution}\"','^.*?desktop is \S+(?P<vncDisplay>:[0-9]+)\s*$')
     c.stop=siteConfig.cmdRegEx('\'vncserver -kill {vncDisplay}\'')
     c.stopForRestart=siteConfig.cmdRegEx('\'vncserver -kill {vncDisplay}\'')
     #c.otp= siteConfig.cmdRegEx('\'vncpasswd -o -display localhost{vncDisplay}\'','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
@@ -798,7 +798,7 @@ with open('cvl_uq_flavours_20140419.json','w') as f:
 ########################################################################################
 # BPA with password
 ########################################################################################
-cmd="\"module load pbs ; module load maui ; module load turbovnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo \' /opt/TurboVNC/bin/vncserver -geometry {resolution} -xstartup /usr/local/bin/xstartup ; /usr/local/bin/git_clone_or_pull.sh https://github.com/swcarpentry/bc.git ; cd bc/novice/python ; ipython notebook --no-browser & sleep 36000000 \' |  qsub -q %s -l nodes=1:ppn=2 -l walltime={hours}:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""%'carpentry'
+cmd="\"module load pbs ; module load maui ; module load turbovnc ; mkdir ~/.vnc/ 2>/dev/null ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo \' /opt/TurboVNC/bin/vncserver -geometry {resolution} -xstartup /usr/local/bin/xstartup ; /usr/local/bin/git_clone_or_pull.sh https://github.com/swcarpentry/bc.git ; cd bc/novice/python ; ipython notebook --no-browser & sleep 36000000 \' |  qsub -q %s -l nodes=1:ppn=2 -l walltime={hours}:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""%'carpentry'
 regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
 
 defaultSites=collections.OrderedDict()
@@ -884,4 +884,24 @@ defaultSites['CVL DesktopDev']=  getCVLSiteConfigXML("desktopdev")
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_dev_flavours.json','w') as f:
+    f.write(jsons)
+
+
+########################################################################################
+# NeCTAR VM
+########################################################################################
+defaultSites=collections.OrderedDict()
+NeCTARconfig=getGenericVNCSession()
+NeCTARconfig.loginHost=None
+NeCTARconfig.imageid='ami-00002fa3'
+NeCTARconfig.username='ec2-user'
+NeCTARconfig.instanceFlavour='m1.small'
+NeCTARconfig.provision='NeCTAR'
+NeCTARconfig.visibility['usernamePanel']=False
+NeCTARconfig.visibility['loginHostPanel']=False
+
+defaultSites['NeCTAR CentOS 6.5 VM']=NeCTARconfig
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('other_nectar.json','w') as f:
     f.write(jsons)
