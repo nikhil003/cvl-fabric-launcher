@@ -810,12 +810,18 @@ class LoginProcess():
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_DISTRIBUTE_KEY')
                 wx.CallAfter(event.loginprocess.updateProgressDialog, 2,"Configuring authorisation")
                 logger.debug('distributeKey: authURL set to %s'%event.loginprocess.siteConfig.authURL)
-                if event.loginprocess.siteConfig.authURL!=None:
-                    logger.debug("LoginTasks, using authURL %s to authorize ssh pub key"%event.loginprocess.siteConfig.authURL)
-                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,authURL=event.loginprocess.siteConfig.authURL,jobParams=event.loginprocess.jobParams)
+
+                authURL=event.loginprocess.siteConfig.authURL
+                username=event.loginprocess.jobParams['username']
+                loginHost=event.loginprocess.jobParams['loginHost']
+                logger.debug('begining to distribute key to username %s host %s'%(username,loginHost))
+                aaf_username=event.loginprocess.jobParams['aaf_username']
+                aaf_idp=event.loginprocess.jobParams['aaf_idp']
+                if authURL!=None:
+                    copymethod='aaf'
                 else:
-                    logger.debug("LoginTasks, using password to authorise ssh key")
-                    event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.jobParams['username'],event.loginprocess.jobParams['loginHost'],event.loginprocess.jobParams['configName'],event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,jobParams=event.loginprocess.jobParams)
+                    copymethod='passwordAuth'
+                event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,username=username,host=loginHost,authURL=authURL,aaf_username=aaf_username,aaf_idp=aaf_idp,copymethod=copymethod,jobParams=event.loginprocess.jobParams)
                 successevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK,event.loginprocess)
                 event.loginprocess.skd.distributeKey(callback_success=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),successevent),
                                                      callback_fail=event.loginprocess.cancel)
@@ -1617,11 +1623,15 @@ class LoginProcess():
 
 
         if (self.skd!=None): 
-                #logger.debug('loginProcessEvent: cancel: calling skd.cancel()')
-                #self.skd.shutdown()
-                # Calling shutdown() doesn't seem to work - shutdownReal never gets called.
-                logger.debug('loginProcessEvent: shutdownReal: calling skd.shutdownReal()')
-                self.skd.shutdownReal()
+           #logger.debug('loginProcessEvent: cancel: calling skd.cancel()')
+           #self.skd.shutdown()
+           # Calling shutdown() doesn't seem to work - shutdownReal never gets called.
+           logger.debug('loginProcessEvent: shutdownReal: calling skd.shutdownReal()')
+           self.skd.shutdownReal()
+        if (self.provider!=None):
+            logger.debug('A cloud provider was set')
+            self.provider.shutdown()
+                
         if (self.progressDialog != None):
             wx.CallAfter(self.progressDialog.Hide)
             wx.CallAfter(self.progressDialog.Show, False)
@@ -1669,6 +1679,7 @@ class LoginProcess():
         self.notify_window.Center()
         self.cancelCallback=cancelCallback
         self.shareHomeDir=shareHomeDir
+        self.provider=None
         if (self.globalOptions.has_key('share_local_home_directory_on_remote_desktop') and self.globalOptions['share_local_home_directory_on_remote_desktop']):
             self.shareHomeDir=True
         try:
@@ -1820,7 +1831,12 @@ class LoginProcess():
                     return (int(rhours)-int(ehours))*60*60 + (int(rmin)-int(emin))*60
             elif (job.has_key('remainingWalltime')):
                 if job['remainingWalltime']!=None:
-                    return int(job['remainingWalltime'])
+                    try:
+                        walltime=int(job['remainingWalltime'])
+                    except:
+                        walltime=None
+
+                    return walltime
             else:
                 return None
         else:
@@ -1833,10 +1849,27 @@ class LoginProcess():
             return False
 
     def doLogin(self):
-        #wx.CallAfter(self.parentWindow.SetCursor, wx.StockCursor(wx.CURSOR_WAIT))
-        wx.BeginBusyCursor()
+
         event=self.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CHECK_VNC_VER,self)
-        wx.PostEvent(self.notify_window.GetEventHandler(),event)
+        if self.siteConfig.provision!=None:
+            import NeCTAR
+            if self.siteConfig.provision == 'NeCTAR':
+                self.provider=NeCTAR.Provision(notify_window=self.notify_window,jobParams=self.jobParams,imageid=self.siteConfig.imageid,instanceFlavour=self.siteConfig.instanceFlavour,keyModel=self.keyModel,username=self.siteConfig.username)
+            else:
+                self.provider=None
+            self.progressDialog.Show(False)
+            def callback():
+                wx.PostEvent(self.notify_window.GetEventHandler(),event)
+                self.progressDialog.Show(True)
+                print "update dict contains %s"%self.provider.updateDict
+                self.jobParams.update(self.provider.updateDict)
+                print "login host is now %s"%self.jobParams['loginHost']
+            def failcallback():
+                self.shutdown()
+            threading.Thread(target=self.provider.run,args=[callback,failcallback]).start()
+        else:
+            wx.BeginBusyCursor()
+            wx.PostEvent(self.notify_window.GetEventHandler(),event)
 
     def shutdown(self):
         event=self.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_SHUTDOWN,self)

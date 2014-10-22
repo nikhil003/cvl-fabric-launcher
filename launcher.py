@@ -203,9 +203,16 @@ class LauncherMainFrame(wx.Frame):
         try:
             site=self.sites[configName]
             for key in site.defaults:
-                self.FindWindowByName(key).SetValue(int(site.defaults[key]))
-        except:
-            logger.debug("unable to set the default values for the site")
+                logger.debug("setting default value for %s"%key)
+                try:
+                    self.FindWindowByName(key).SetValue(int(site.defaults[key]))
+                except ValueError as e:
+                    try:
+                        self.FindWindowByName(key).SetValue(site.defaults[key])
+                    except Exception as e:
+                        raise e
+        except Exception as e:
+            logger.debug("unable to set the default values for the site: %s"%e)
 
 # Use this method to a) Figure out if we have a default site b) load the parameters for that site.
     def loadPrefs(self,window=None,site=None):
@@ -1231,8 +1238,6 @@ class LauncherMainFrame(wx.Frame):
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
         globalOptions = self.getPrefsSection("Global Preferences")
-        if authURL!=None:
-            self.FindWindowByName('usernamePanel').Hide()
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
 
@@ -1487,7 +1492,7 @@ class LauncherMainFrame(wx.Frame):
         configName=self.FindWindowByName('jobParams_configName').GetValue()
         jobParams = self.buildJobParams(self)
 
-        if jobParams['username'] == "" and self.sites[configName].authURL==None:
+        if self.FindWindowByName('usernamePanel').IsShownOnScreen() and (self.FindWindowByName('jobParams_username').GetValue()=="" or self.FindWindowByName('jobParams_username').GetValue()==None):
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
                     self.programName)
@@ -1527,6 +1532,8 @@ class LauncherMainFrame(wx.Frame):
         else:
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
+
+
         jobParams=self.buildJobParams(self)
         jobParams['strudel_platform']=platformstr
         jobParams['wallseconds']=int(jobParams['hours'])*60*60

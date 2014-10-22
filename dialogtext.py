@@ -23,6 +23,12 @@ class default(object):
         self.loadingSiteList=dialog()
         self.loadingSiteList.message="Loading Site List"
         self.loadingSiteList.ButtonLabels=["Cancel"]
+        self.shutdownInstance=dialog()
+        self.shutdownInstance.message="Would you like to shutdown this VM?"
+        self.shutdownInstance.ButtonLabels=["Yes","No"]
+        self.existingVM=dialog()
+        self.existingVM.message="Would you like use an existing VM or start a new one?"
+        self.existingVM.ButtonLabels=["Cancel","Existing","New"]
         self.confirmQuit=dialog()
         self.confirmQuit.message="Are you sure you want to quit?"
         self.confirmQuit.ButtonLabels=["Yes","No"]
