@@ -203,9 +203,16 @@ class LauncherMainFrame(wx.Frame):
         try:
             site=self.sites[configName]
             for key in site.defaults:
-                self.FindWindowByName(key).SetValue(int(site.defaults[key]))
-        except:
-            logger.debug("unable to set the default values for the site")
+                logger.debug("setting default value for %s"%key)
+                try:
+                    self.FindWindowByName(key).SetValue(int(site.defaults[key]))
+                except ValueError as e:
+                    try:
+                        self.FindWindowByName(key).SetValue(site.defaults[key])
+                    except Exception as e:
+                        raise e
+        except Exception as e:
+            logger.debug("unable to set the default values for the site: %s"%e)
 
 # Use this method to a) Figure out if we have a default site b) load the parameters for that site.
     def loadPrefs(self,window=None,site=None):
@@ -296,7 +303,10 @@ class LauncherMainFrame(wx.Frame):
 
         self.prefs=None
         self.loginProcess=[]
-        self.logWindow = None
+        import collections
+        self.networkLog = collections.deque()
+        self.networkLogThread = None
+        self.networkLogStopEvent = threading.Event()
         self.hiddenWindow = None
         self.progressDialog = None
 
@@ -681,6 +691,14 @@ class LauncherMainFrame(wx.Frame):
         # use the Identity Menu to delete their key etc. before
         # pressing the Login button.
         self.keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=False)
+
+        if options.has_key('monitor_network_checkbox'):
+            if options['monitor_network_checkbox']:
+                self.networkLogStopEvent.clear()
+                self.networkLogThread = threading.Thread(target=self.monitorNetwork,args=[options['monitor_network_url'],self.networkLogStopEvent,self.networkLog])
+                self.networkLogThread.start()
+            else:
+                self.networkLogStopEvent.set()
 
         #self.loadPrefs()
 
@@ -1220,10 +1238,22 @@ class LauncherMainFrame(wx.Frame):
             except:
                 pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
         globalOptions = self.getPrefsSection("Global Preferences")
-        if authURL!=None:
-            self.FindWindowByName('usernamePanel').Hide()
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
+
+    def monitorNetwork(self,url,stopEvent,log,interval=2,maxlogsize=1000,timeout=5):
+        import time
+        import requests
+        while not stopEvent.isSet():
+            try:
+                r=requests.get(url,verify=False,timeout=timeout)
+                log.append((datetime.datetime.now(),"network OK"))
+            except:
+                log.append((datetime.datetime.now(),"network timed out"))
+            if len(log)>maxlogsize:
+                log.pop()
+            time.sleep(interval)
+
 
     def onDebugWindowCheckBoxStateChanged(self, event):
         self.logWindow.Show(event.GetEventObject().GetValue())
@@ -1292,6 +1322,13 @@ class LauncherMainFrame(wx.Frame):
             auth_mode = int(options['auth_mode'])
             self.identity_menu.setRadio(auth_mode)
             self.identity_menu.disableItems(auth_mode)
+        if options.has_key('monitor_network_checkbox'):
+            if options['monitor_network_checkbox']:
+                self.networkLogStopEvent.clear()
+                self.networkLogThread = threading.Thread(target=self.monitorNetwork,args=[options['monitor_network_url'],self.networkLogStopEvent,self.networkLog])
+                self.networkLogThread.start()
+            else:
+                self.networkLogStopEvent.set()
 
     def onCut(self, event):
         textCtrl = self.FindFocus()
@@ -1455,7 +1492,7 @@ class LauncherMainFrame(wx.Frame):
         configName=self.FindWindowByName('jobParams_configName').GetValue()
         jobParams = self.buildJobParams(self)
 
-        if jobParams['username'] == "" and self.sites[configName].authURL==None:
+        if self.FindWindowByName('usernamePanel').IsShownOnScreen() and (self.FindWindowByName('jobParams_username').GetValue()=="" or self.FindWindowByName('jobParams_username').GetValue()==None):
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
                     self.programName)
@@ -1495,6 +1532,8 @@ class LauncherMainFrame(wx.Frame):
         else:
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
+
+
         jobParams=self.buildJobParams(self)
         jobParams['strudel_platform']=platformstr
         jobParams['wallseconds']=int(jobParams['hours'])*60*60

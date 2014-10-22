@@ -46,6 +46,7 @@ class Logger():
         #transport_logger.addHandler(log_window_handler)
 
     def configureLogger(self):
+        import logging
         # print "defining global logger"
         self.loggerObject = logging.getLogger(self.name)
         # print self.logger
@@ -69,7 +70,8 @@ class Logger():
 
         # Finally, send all log messages to a log file.
         from os.path import expanduser, join
-        self.loggerFileHandler = logging.FileHandler(join(expanduser("~"), '.MASSIVE_Launcher_debug_log.txt'))
+        import logging.handlers
+        self.loggerFileHandler = logging.handlers.TimedRotatingFileHandler(join(expanduser("~"), '.MASSIVE_Launcher_debug_log.txt'),when='W6',backupCount=4)
         self.loggerFileHandler.setLevel(logging.DEBUG)
         self.loggerFileHandler.setFormatter(logging.Formatter(log_format_string))
         self.loggerObject.addHandler(self.loggerFileHandler)
@@ -80,6 +82,11 @@ class Logger():
             self.loggerObject.debug(message)
         else:
             wx.CallAfter(self.loggerObject.debug, message)
+    def info(self, message):
+        if threading.current_thread().name=="MainThread":
+            self.loggerObject.info(message)
+        else:
+            wx.CallAfter(self.loggerObject.info, message)
 
     def error(self, message):
         if threading.current_thread().name=="MainThread":
