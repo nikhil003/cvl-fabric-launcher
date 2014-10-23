@@ -6,6 +6,13 @@ import wx
 import HTMLParser
 import utilityFunctions
 import boto
+# This doesn't seem to affect all versions of the boto module, but some
+# try to load endpoints.json. py2app does not include this in the 
+# resources at a meaningful location
+if boto.__dict__.has_key('ENDPOINTS_PATH'):
+    import os.path
+    if not os.path.isfile(boto.ENDPOINTS_PATH):
+        boto.ENDPOINTS_PATH='endpoints.json'
 from boto.ec2.connection import EC2Connection
 from boto.ec2.regioninfo import *
 
