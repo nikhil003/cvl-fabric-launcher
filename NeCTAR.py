@@ -131,6 +131,7 @@ class Provision(Provision.Provision):
         self.session.get(switchURL,verify=False)
     def getEC2Creds(self):
         import tempfile
+        import os
         url="https://dashboard.rc.nectar.org.au/project/access_and_security/api_access/ec2/"
         self.ec2path = tempfile.mkdtemp()
 
@@ -141,24 +142,24 @@ class Provision(Provision.Provision):
                 done=True
             except:
                 logger.debug("time out getting ec2 creds")
-        with open("%s/ec2.zip"%self.ec2path,'w') as f:
+        with open(os.path.join(self.ec2path,"ec2.zip"),'w') as f:
             for chunk in r.iter_content(chunk_size=1024): 
                 if chunk: # filter out keep-alive new chunks
                     f.write(chunk)
                     f.flush()
         import zipfile
         try:
-            with zipfile.ZipFile("%s/ec2.zip"%self.ec2path,'r') as zf:
+            with zipfile.ZipFile(os.path.join(self.ec2path,"ec2.zip"),'r') as zf:
                 for fn in zf.namelist():
                     with zf.open(fn,'r') as fin:
-                        with open("%s/%s"%(self.ec2path,fn),'w') as fout:
+                        with open(os.path.join(self.ec2path,fn),'w') as fout:
                             fout.write(fin.read())
         except Exception as e:
-            raise Exception("Couldn't open zip file %s/ec2.zip: %s"%(self.ec2path,e))
+            raise Exception("Couldn't open zip file %s: %s"%(os.path.join(self.ec2path,"ec2.zip"),e))
         try:
             import re
             import os
-            with open("%s/ec2rc.sh"%self.ec2path,'r') as f:
+            with open(os.path.join(self.ec2path,"ec2rc.sh"),'r') as f:
                 for line in f.readlines():
                     match = re.search('export (?P<varname>\S+)=(?P<value>\S+)\s|$',line)
                     if match!=None and match.groupdict()['varname']!=None:
