@@ -57,7 +57,7 @@ import os
 import pkgutil
 myname="Strudel"
 
-resource_files=["MASSIVE.icns", requests.certs.where(), "masterList.url"]
+resource_files=["MASSIVE.icns", requests.certs.where(), "masterList.url","/Library/Python/2.7/site-packages/boto/endpoints.json"]
 
 launcherVersionNumberModulePath = os.path.dirname(pkgutil.get_loader("launcher_version_number").filename)
 helpFilesDirectory = os.path.join(launcherVersionNumberModulePath, "help", "helpfiles")
