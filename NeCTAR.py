@@ -152,7 +152,7 @@ class Provision(Provision.Provision):
             with zipfile.ZipFile(os.path.join(self.ec2path,"ec2.zip"),'r') as zf:
                 for fn in zf.namelist():
                     with zf.open(fn,'r') as fin:
-                        with open(os.path.join(self.ec2path,fn),'w') as fout:
+                        with open(os.path.join(self.ec2path,fn),'wb') as fout:
                             fout.write(fin.read())
         except Exception as e:
             raise Exception("Couldn't open zip file %s: %s"%(os.path.join(self.ec2path,"ec2.zip"),e))
