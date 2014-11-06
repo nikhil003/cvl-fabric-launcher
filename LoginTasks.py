@@ -731,7 +731,7 @@ class LoginProcess():
 
             if sys.platform.startswith("win"):
                 (vnc, turboVncVersionNumber) = self.getTurboVncVersionNumber_Windows()
-                if os.path.exists(vnc):
+                if os.path.exists(vnc) and turboVncVersionNumber != None:
                     if not turboVncVersionNumber.startswith("0.") and not turboVncVersionNumber.startswith("1.0"):
                         logger.info("TurboVNC (>=1.1) was found in " + vnc)
                     else:
@@ -757,21 +757,12 @@ class LoginProcess():
             if turboVncVersionNumber is None:
                 def error_dialog():
                     dlg = wx.MessageDialog(self.loginprocess.notify_window, "Error: Could not determine TurboVNC version number.\n\n" +
-                                            "The launcher cannot continue.\n",
+                                            "The launcher will try to continue, but it migth not work.\n",
                                     title=self.loginprocess.parentWindow.programName, style=wx.OK | wx.ICON_INFORMATION)
                     showModal(dlg,self.loginprocess)
                     dlg.Destroy()
-                    logger.dump_log(self.loginprocess.notify_window)
-                    sys.exit(1)
-
-                if (self.loginprocess.progressDialog != None):
-                    wx.CallAfter(self.loginprocess.progressDialog.Hide)
-                    wx.CallAfter(self.loginprocess.progressDialog.Show, False)
-                    wx.CallAfter(self.loginprocess.progressDialog.Destroy)
-                    self.loginprocess.progressDialog = None
 
                 wx.CallAfter(error_dialog)
-                return
 
 
             logger.info("TurboVNC viewer version number = " + turboVncVersionNumber)
