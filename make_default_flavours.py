@@ -830,6 +830,20 @@ with open('bpa.json','w') as f:
 # Other
 ########################################################################################
 defaultSites=collections.OrderedDict()
+c=getOtherTurboVNCConfig("")
+c.visibility['loginHostPanel']=False
+c.loginHost='118.138.255.32'
+defaultSites['NeCTAR GPU']=c
+
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('fixed_gpu_flavour.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# Other
+########################################################################################
+defaultSites=collections.OrderedDict()
 defaultSites['Other']=getGenericVNCSession()
 defaultSites['Other TurboVNC']=getOtherTurboVNCConfig("")
 keys=defaultSites.keys()
