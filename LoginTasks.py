@@ -808,7 +808,9 @@ class LoginProcess():
                 logger.debug('begining to distribute key to username %s host %s'%(username,loginHost))
                 aaf_username=event.loginprocess.jobParams['aaf_username']
                 aaf_idp=event.loginprocess.jobParams['aaf_idp']
-                if authURL!=None:
+                if authURL!=None and 'ASync' in authURL:
+                    copymethod='ASyncAuth'
+                elif authURL!=None:
                     copymethod='aaf'
                 else:
                     copymethod='passwordAuth'
@@ -1851,7 +1853,8 @@ class LoginProcess():
             self.progressDialog.Show(False)
             def callback():
                 wx.PostEvent(self.notify_window.GetEventHandler(),event)
-                self.progressDialog.Show(True)
+                print "unhideing progress dialog"
+                wx.CallAfter(self.progressDialog.Show,True)
                 print "update dict contains %s"%self.provider.updateDict
                 self.jobParams.update(self.provider.updateDict)
                 print "login host is now %s"%self.jobParams['loginHost']
