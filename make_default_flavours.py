@@ -198,6 +198,159 @@ def getMassiveSiteConfig(loginHost):
 
     return c
 
+def getMassiveCentos6SiteConfig(loginHost):
+# usage: vis_manager.py [-h]
+#
+#                       {showstart,isrunning,vncport,newsession,stop,sanitycheck,getprojects,exechost,listall}
+#                       ...
+#
+# positional arguments:
+#   {showstart,isrunning,vncport,newsession,stop,sanitycheck,getprojects,exechost,listall}
+#     listall             lists all the users running vis jobs in the format of
+#                         "sessionid timeleft (seconds)"
+#     newsession          create a new desktop session and return an id or error
+#                         message
+#     isrunning           test if a vis session has started yet (returns "true"
+#                         if it is)
+#     exechost            return information about which node a vis session is
+#                         running on
+#     vncport             return the port on which the vnc server started
+#     stop                stop a running vis session
+#     getprojects         list the available projects for running sessions
+#     showstart           get the estimate of when the vis session will start
+#     sanitycheck         run a simple sanity check e.g. make sure the user has
+#                         enough file system space to create files
+#
+# optional arguments:
+#   -h, --help            show this help message and exit
+
+
+    massivevisible={}
+    massivevisible['usernamePanel']=True
+    massivevisible['projectPanel']=True
+    massivevisible['resourcePanel']=True
+    massivevisible['resolutionPanel']='Advanced'
+    massivevisible['cipherPanel']='Advanced'
+    massivevisible['debugCheckBoxPanel']='Advanced'
+    massivevisible['advancedCheckBoxPanel']=True
+    massivevisible['label_hours']=True
+    massivevisible['jobParams_hours']=True
+    massivevisible['label_nodes']=True
+    massivevisible['jobParams_nodes']=True
+    c = siteConfig.siteConfig()
+    c.defaults['jobParams_ppn']=12
+    c.defaults['jobParams_nodes']=1
+    c.defaults['jobParams_hours']=4
+    c.defaults['jobParams_mem']=48
+    c.visibility=massivevisible
+    displayStrings=sshKeyDistDisplayStringsMASSIVE()
+    c.displayStrings.__dict__.update(displayStrings.__dict__)
+    c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
+    c.loginHost=loginHost
+
+    # listall             lists all the users running vis jobs in the format of "sessionid timeleft (seconds)"
+    # usage: vis_manager.py listall [-h]
+    # cmd = '\"module load xmlstarlet ; qstat -x | xml sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n - 2>/dev/null\"'
+    cmd = '\"/usr/local/desktop/vis_manager.py listall\"'
+    # regex='(?P<jobid>(?P<jobidNumber>[0-9]+).\S+) (?P<remainingWalltime>.*)$'
+    regex='(?P<sessionid>[0-9]+) (?P<remainingWalltime>.*)$'
+    c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
+
+    # isrunning           test if a vis session has started yet (returns "true" if it is)
+    # usage: vis_manager.py isrunning [-h] -s SESSIONID
+    # cmd='\"module load pbs ; module load maui ; qstat -f {jobidNumber} -x\"'
+    cmd='"/usr/local/desktop/vis_manager.py isrunning -s {sessionid}"'
+    # regex='.*<job_state>R</job_state>.*'
+    regex='true'
+    c.running = siteConfig.cmdRegEx(cmd,regex)
+
+    # stop                stop a running vis session
+    # usage: vis_manager.py stop [-h] -s SESSIONID [-w WAIT]
+    # c.stop=siteConfig.cmdRegEx('\'qdel -a {jobidNumber}\'')
+    c.stop=siteConfig.cmdRegEx('/usr/local/desktop/vis_manager.py stop -s {sessionid}')
+    # c.stopForRestart=siteConfig.cmdRegEx('qdel {jobidNumber} ; sleep 5\'')
+    c.stopForRestart=siteConfig.cmdRegEx('/usr/local/desktop/vis_manager.p stop -s {sessionid} --wait 4')
+
+    # exechost            return information about which node a vis session is running on
+    # usage: vis_manager.py exechost [-h] -s SESSIONID
+    # cmd='\"module load xmlstarlet ; qstat -x -f {jobid} | xml sel -t -m \\"/Data/Job/exec_host/text()\\" -c \\".\\" -n - | cut -f 1 -d \\"/\\"\"'
+    cmd='\"/usr/local/desktop/vis_manager.py exechost -s {sessionid}\"'
+    regex='(?P<execHost>\S+)'
+    c.execHost=siteConfig.cmdRegEx(cmd,regex)
+
+    # newsession          create a new desktop session and return an id or error message
+    # usage: vis_manager.py newsession [-h] -p PROJECT -t HOURS [-f FLAVOUR] [-n NODES] [-r RESOLUTION]
+    # c.startServer=siteConfig.cmdRegEx("\'/usr/local/desktop/request_visnode.sh {project} {hours} {nodes} True False False {resolution}\'","^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$")
+    c.startServer=siteConfig.cmdRegEx("\'/usr/local/desktop/vis_manager.py newsession -p {project} -t {hours} -n {nodes} -r {resolution} \'","(?P<sessionid>[0-9]+)")
+
+    # sanitycheck         run a simple sanity check e.g. make sure the user has enough file system space to create files
+    # usage: vis_manager.py sanitycheck [-h] -l LAUNCHERVERSION
+    # c.runSanityCheck=siteConfig.cmdRegEx("\'/usr/local/desktop/sanity_check.sh {launcher_version_number}\'")
+    c.runSanityCheck=siteConfig.cmdRegEx("\'/usr/local/desktop/vis_manager.py sanitycheck -l {launcher_version_number}\'")
+
+    # getprojects         list the available projects for running sessions
+    # usage: vis_manager.py getprojects [-h]
+    #c.getProjects=siteConfig.cmdRegEx('\"glsproject -A -q | grep \',{username},\|\s{username},\|,{username}\s\|\s{username}\s\' \"','^(?P<group>\S+)\s+.*$')
+    # older c.getProjects=siteConfig.cmdRegEx('\"/usr/local/bin/glsproject_timeout -A -q | grep -P \'[,\s]{username}[,\s]\' \"','^(?P<group>\S+)\s+.*$')
+    # old c.getProjects=siteConfig.cmdRegEx('\"/usr/local/bin/glsproject_timeout -A -q | grep -P \'[,\s]{username}[,\s]\' \"','^(?P<group>\S+)\s+.*$')
+    c.getProjects=siteConfig.cmdRegEx('\"/usr/local/desktop/vis_manager.py getprojects \"','(?P<group>.*)')
+
+    # showstart           get the estimate of when the vis session will start
+    # usage: vis_manager.py showstart [-h] -s SESSIONID
+    # c.showStart=siteConfig.cmdRegEx("showstart {jobid}","Estimated Rsv based start .*?on (?P<estimatedStart>.*)")
+    c.showStart=siteConfig.cmdRegEx("/usr/local/desktop/vis_manager.py showstart -s {sessionid}","(?P<estimatedStart>.*)")
+
+    # vncport             return the port on which the vnc server started
+    # usage: vis_manager.py vncport [-h] -s SESSIONID
+    c.vncDisplay= siteConfig.cmdRegEx('"/usr/bin/ssh {execHost} \' module load turbovnc ; vncserver -list\'"','^(?P<vncDisplay>:[0-9]+)\s*(?P<vncPID>[0-9]+)\s*$')
+
+    c.otp= siteConfig.cmdRegEx('"/usr/bin/ssh {execHost} \' module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\'"','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
+
+    c.agent=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=yes -l {username} {loginHost} \"/usr/bin/ssh -A {execHost} \\"echo agent_hello; bash \\"\"','agent_hello',async=True)
+
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=yes -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+
+    cmd='"echo DBUS_SESSION_BUS_ADDRESS=dummy_dbus_session_bus_address"'
+    regex='^DBUS_SESSION_BUS_ADDRESS=(?P<dbusSessionBusAddress>.*)$'
+    c.dbusSessionBusAddress=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='\"/usr/local/desktop/get_ephemeral_port.py\"'
+    regex='^(?P<intermediateWebDavPortNumber>[0-9]+)$'
+    c.webDavIntermediatePort=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='\"/usr/bin/ssh {execHost} /usr/local/desktop/get_ephemeral_port.py\"'
+    regex='^(?P<remoteWebDavPortNumber>[0-9]+)$'
+    c.webDavRemotePort=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='echo Mounting WebDAV...' # For CentOS 5 / KDE, we are not really "mounting", just displaying the WebDAV share in Konqueror.
+    c.webDavMount=siteConfig.cmdRegEx(cmd)
+
+    cmd='"/usr/bin/ssh {execHost} \'DISPLAY={vncDisplay} /usr/bin/konqueror webdav://{localUsername}:{vncPasswd}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\'"'
+    c.openWebDavShareInRemoteFileBrowser=siteConfig.cmdRegEx(cmd)
+
+    # The Window ID is not needed for MASSIVE.  We use the server-side script: /usr/local/desktop/close_webdav_window.sh which figures out which window to close.
+    cmd='"echo DummyWebDavWindowID=-1"'
+    regex='^DummyWebDavWindowID=(?P<webDavWindowID>.*)$'
+    c.webDavWindowID=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='"/usr/bin/ssh {execHost} \'echo -e \\"You can access your local home directory in Konqueror with the URL:%sbr%s\\nwebdav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}%sbr%s\\nYour one-time password is {vncPasswd}\\" > ~/.vnc/\\$(hostname){vncDisplay}-webdav.txt;\'"'
+    c.displayWebDavInfoDialogOnRemoteDesktop = siteConfig.cmdRegEx(cmd)
+
+    # Chris trying to avoid using the intermediate port:
+    #cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {execHost}:{remoteWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"'
+
+    cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {intermediateWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {loginHost} "ssh -R {remoteWebDavPortNumber}:localhost:{intermediateWebDavPortNumber} {execHost} \'echo tunnel_hello; bash\'"'
+    regex='tunnel_hello'
+    c.webDavTunnel=siteConfig.cmdRegEx(cmd,regex,async=True)
+
+    cmd = 'echo hello'
+    regex = 'hello'
+    c.webDavUnmount=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd = '"/usr/bin/ssh {execHost} \'DISPLAY={vncDisplay} /usr/local/desktop/close_webdav_window.sh webdav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\'"'
+    c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
+
+    return c
 
 def getRaijinSiteConfig(queue):
     c = getCVLSiteConfig(queue)
@@ -740,10 +893,24 @@ defaultSites=collections.OrderedDict()
 defaultSites['Desktop on m1-login2.massive.org.au']  = getMassiveSiteConfig("m1-login2.massive.org.au") 
 defaultSites['Desktop on m2-login2.massive.org.au'] = getMassiveSiteConfig("m2-login2.massive.org.au") 
 defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
-defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au") 
+defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au")
+defaultSites['Centos 6 Desktop (For Eval Users) on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
+
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))
+with open('massive_flavours_20141203.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# MASSIVE Centos 6 (aka MASSIVE 2.5)
+########################################################################################
+
+defaultSites=collections.OrderedDict()
+defaultSites['Eval Centos 6 Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
+
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('massive_flavours_20140408.json','w') as f:
+with open('massive_centos6_flavours_20141201.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
