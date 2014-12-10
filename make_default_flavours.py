@@ -404,6 +404,116 @@ def getRaijinLoginSiteConfig(loginnode):
     c.listAll=siteConfig.cmdRegEx('\"pid=\"\'$\'\"( cat ~/.vnc/{loginHost}.log 2>/dev/null | grep pid | rev | cut -f 1 -d \\\" \\\" | rev ) ; ps -p \"\'$\'\"pid -o pid,pgrp,user --no-headers 2>/dev/null\"','(?P<pid>[0-9]+)\s+(?P<pgrp>[0-9]+)\s+{username}',requireMatch=False)
     return c
 
+def getCVLSiteConfigSlurm(partition):
+    cvlvisible={}
+    cvlvisible['usernamePanel']=True
+    cvlvisible['resourcePanel']='Advanced'
+    cvlvisible['resolutionPanel']='Advanced'
+    cvlvisible['cipherPanel']='Advanced'
+    cvlvisible['debugCheckBoxPanel']='Advanced'
+    cvlvisible['advancedCheckBoxPanel']=True
+    cvlvisible['label_hours']=True
+    cvlvisible['jobParams_hours']=True
+    cvlvisible['label_ppn']=True
+    cvlvisible['jobParams_ppn']=True
+    cvlvisible['label_nodes']=True
+    cvlvisible['jobParams_nodes']=True
+    c = siteConfig.siteConfig()
+    cvlstrings = sshKeyDistDisplayStringsCVL()
+    c.displayStrings.__dict__.update(cvlstrings.__dict__)
+    c.visibility=cvlvisible
+    c.directConnect=True
+    c.authURL=None
+    c.loginHost='118.138.233.59'
+    c.defaults['jobParams_ppn']=1
+    c.defaults['jobParams_hours']=48
+    c.defaults['jobParams_mem']=4
+
+
+    cmd = '\"module load pbs ; qstat -x | xmlstarlet sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n - 2>/dev/null\"'
+    cmd = 'squeue -u {username} -o \\"%i %L\\" | tail -n -1'
+    regex='(?P<jobid>(?P<jobidNumber>[0-9]+)) (?P<remainingWalltime>.*)$'
+    c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
+
+
+    c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
+    
+    cmd='\"squeue -j {jobidNumber} -o "%N" | tail -n -1 | cut -f 1 -d \',\' | xargs -iname getent hosts name | cut -f 1 -d \' \' \"'
+    regex='^(?P<execHost>.*)$'
+    c.execHost = siteConfig.cmdRegEx(cmd,regex)
+    cmd='\"groups | sed \'s@ @\\n@g\'\"' # '\'groups | sed \'s\/\\\\ \/\\\\\\\\n\/g\'\''
+    regex='^\s*(?P<group>\S+)\s*$'
+    c.getProjects = siteConfig.cmdRegEx(cmd,regex)
+    cmd='\"scontrol show job {jobidNumber}\"'
+    regex='JobState=RUNNING'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    cmd="\"mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
+    regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
+    c.startServer=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\"scancel {jobidNumber}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"scancel {jobidNumber}\"')
+    c.vncDisplay= siteConfig.cmdRegEx('\"cat .vnc/slurm-{jobidNumber}.out\"' ,'^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$',host='exec')
+#    cmd= '\"module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\"'
+#    regex='^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$'
+#    c.otp=siteConfig.cmdRegEx(cmd,regex,host='exec')
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    c.agent=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -l {username} {execHost} "echo agent_hello; bash "','agent_hello',async=True)
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {execHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+
+    cmd='"/usr/bin/ssh {execHost} \'export DISPLAY={vncDisplay};timeout 15 /usr/local/bin/cat_dbus_session_file.sh\'"'
+    regex='^DBUS_SESSION_BUS_ADDRESS=(?P<dbusSessionBusAddress>.*)$'
+    c.dbusSessionBusAddress=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='\"/usr/local/bin/get_ephemeral_port.py\"'
+    regex='^(?P<intermediateWebDavPortNumber>[0-9]+)$'
+    c.webDavIntermediatePort=siteConfig.cmdRegEx(cmd,regex,host='exec')
+
+    cmd='\"/usr/local/bin/get_ephemeral_port.py\"'
+    regex='^(?P<remoteWebDavPortNumber>[0-9]+)$'
+    c.webDavRemotePort=siteConfig.cmdRegEx(cmd,regex,host='exec')
+
+    # Below, I initially tried to respect the user's Nautilus setting of always_use_location_entry and change it back after launching Nautilus,
+    # but doing so changes this setting in already-running Nautilus windows, and I want the user to see Nautilus's location bar when showing 
+    # them the WebDav share.  So now, I just brutally change the user's Nautilus location-bar setting to always_use_location_entry.
+    # Note that we might end up mounting WebDAV in a completely different way (e.g. using wdfs), but for now I'm trying to make the user
+    # experience similar on MASSIVE and the CVL.  On MASSIVE, users are not automatically added to the "fuse" group, but they can still 
+    # access a WebDAV share within Konqueror.  The method below for the CVL/Nautilus does require fuse membership, but it ends up looking
+    # similar to MASSIVE/Konqueror from the user's point of view.  
+
+    cmd="\"/usr/bin/ssh {execHost} \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};echo \\\\\\\"import pexpect;child = pexpect.spawn('gvfs-mount dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}');child.expect('Password: ');child.sendline('{vncPasswd}');child.expect(pexpect.EOF);child.close();print 'gvfs-mount returned ' + str(child.exitstatus)\\\\\\\" {pipe} python\\\"\""
+    regex='^gvfs-mount returned (?P<webDavMountingExitCode>.*)$'
+    c.webDavMount=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd="\"/usr/bin/ssh {execHost} \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};/usr/bin/gconftool-2 --type=Boolean --set /apps/nautilus/preferences/always_use_location_entry true {ampersand}{ampersand} DISPLAY={vncDisplay} xdg-open dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\\\"\"" 
+    c.openWebDavShareInRemoteFileBrowser=siteConfig.cmdRegEx(cmd)
+
+    cmd='"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress}; DISPLAY={vncDisplay} xwininfo -root -tree\'"'
+    regex= '^\s+(?P<webDavWindowID>\S+)\s+"{homeDirectoryWebDavShareName}.*Browser.*$'
+    c.webDavWindowID=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd = '"/usr/bin/ssh {execHost} \'echo -e \\"You can access your local home directory in Nautilus File Browser, using the location:\\n\\ndav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\\n\\nYour one-time password is {vncPasswd}\\" > ~/.vnc/\\$(hostname){vncDisplay}-webdav.txt\'"'
+    c.displayWebDavInfoDialogOnRemoteDesktop=siteConfig.cmdRegEx(cmd)
+
+    cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {remoteWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {execHost} "echo tunnel_hello; bash"'
+    regex='tunnel_hello'
+    c.webDavTunnel=siteConfig.cmdRegEx(cmd,regex,async=True)
+
+    # 1. I'm using gvfs-mount --unmount-scheme dav for now, to unmount all GVFS WebDAV mounts,
+    #    because using "gvfs-mount --unmount " on a specific mount point from a Launcher
+    #    subprocess doesn't seem to work reliably, even though it works fine outside of the 
+    #    Launcher.
+    # 2. I'm using timeout with gvfs-mount, because sometimes the process never exits
+    #    when unmounting, even though the unmounting operation is complete.
+    #cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};DISPLAY={vncDisplay} timeout 3 gvfs-mount -u \".gvfs/WebDAV on localhost\"\'"'
+    cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay};timeout 1 gvfs-mount --unmount-scheme dav\'"'
+    c.webDavUnmount=siteConfig.cmdRegEx(cmd)
+
+    cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay}; wmctrl -F -i -c {webDavWindowID}\'"'
+    c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
+    cmd = '"/usr/bin/ssh {execHost} \'module load keyutility ; mountUtility.py\'"'
+    c.onConnectScript = siteConfig.cmdRegEx(cmd)
+    return c
+
 def getCVLSiteConfigXML(queue):
     cvlvisible={}
     cvlvisible['usernamePanel']=True
@@ -1065,6 +1175,16 @@ defaultSites['CVL DesktopDev']=  getCVLSiteConfigXML("desktopdev")
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_dev_flavours.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# CVL Slurm
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['CVL 2']=  getCVLSiteConfigSlurm("batch")
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('cvl_slurm_flavours.json','w') as f:
     f.write(jsons)
 
 
