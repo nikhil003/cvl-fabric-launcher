@@ -357,5 +357,7 @@ class siteConfig():
         self.defaults={}
         self.displayStrings=sshKeyDistDisplayStrings()
         self.authorizedKeysFile=None
+        self.oauthclient=None
+        self.oauthclientpasswd=None
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value

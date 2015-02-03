@@ -183,7 +183,7 @@ class LoginProcess():
                 concat=concat+messages[key]
             event=None
             oneMatchFound=False
-            if (messages.has_key('error')):
+            if (messages.has_key('error') and not self.stopped()):
                 logger.error("canceling the loginprocess due to errors in the output of the command: %s %s"%(self.cmdRegex.cmd.format(**self.loginprocess.jobParams),messages))
                 self.loginprocess.cancel(concat)
             elif (messages.has_key('warn') or messages.has_key('info')):
@@ -426,9 +426,9 @@ class LoginProcess():
                 matchedDict[regex]=False
             logger.debug("runLoopServerCommandThread: self.cmd = " + self.cmdRegex.cmd)
             logger.info("runLoopServerCommandThread: self.cmd.format(**jobParams) = " + self.cmdRegex.cmd.format(**jobParams))
-            while (not matched and not self.stopped()):
+            while (not matched and not self.stopped() and not self.loginprocess.canceled()):
                 tsleep+=sleepperiod
-                if (not self.stopped()):
+                if (not self.stopped() and not self.loginprocess.canceled()):
                     time.sleep(sleepperiod)
                 try:
                     (stdout,stderr) = run_command(self.cmdRegex.getCmd(jobParams),ignore_errors=True, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
@@ -808,11 +808,19 @@ class LoginProcess():
                 logger.debug('begining to distribute key to username %s host %s'%(username,loginHost))
                 aaf_username=event.loginprocess.jobParams['aaf_username']
                 aaf_idp=event.loginprocess.jobParams['aaf_idp']
-                if authURL!=None:
+                extraParams={}
+                if authURL!=None and 'ASync' in authURL:
+                    copymethod='ASyncAuth'
+                    try:
+                        extraParams['oauthclient']=event.loginprocess.siteConfig.oauthclient
+                        extraParams['oauthclientpasswd']=event.loginprocess.siteConfig.oauthclientpasswd
+                    except:
+                        pass
+                elif authURL!=None:
                     copymethod='aaf'
                 else:
                     copymethod='passwordAuth'
-                event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,username=username,host=loginHost,authURL=authURL,aaf_username=aaf_username,aaf_idp=aaf_idp,copymethod=copymethod,jobParams=event.loginprocess.jobParams)
+                event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,username=username,host=loginHost,authURL=authURL,aaf_username=aaf_username,aaf_idp=aaf_idp,copymethod=copymethod,jobParams=event.loginprocess.jobParams,extraParams=extraParams)
                 successevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK,event.loginprocess)
                 event.loginprocess.skd.distributeKey(callback_success=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),successevent),
                                                      callback_fail=event.loginprocess.cancel)
@@ -1792,6 +1800,7 @@ class LoginProcess():
     def timeRemaining(self):
         # The time fields returned by qstat can either contain HH:MM or --. -- occurs if the job has only just started etc
         # If -- is present, unpacking after split will fail, hence the try: except: combos.
+        walltime=None
         job=self.job
         if job != None:
             if (job.has_key('reqTime') and job.has_key('elapTime') and job.has_key('state')):
@@ -1822,11 +1831,36 @@ class LoginProcess():
                     return (int(rhours)-int(ehours))*60*60 + (int(rmin)-int(emin))*60
             elif (job.has_key('remainingWalltime')):
                 if job['remainingWalltime']!=None:
-                    try:
-                        walltime=int(job['remainingWalltime'])
-                    except:
-                        walltime=None
-
+                    # Possibly walltime is already a number of seconds
+                    if walltime==None:
+                        try:
+                            walltime=int(job['remainingWalltime'])
+                        except:
+                            pass
+                    # Possibly walltime is of the form days-hours:minutes:seconds (may or may not be missing the days part)
+                    if walltime==None:
+                        # possibly there is a days field
+                        try:
+                            (days,hms) = job['remainingWalltime'].split('-')
+                        except:
+                            days=0
+                            hms=job['remainingWalltime']
+                        try:
+                            a=hms.split(':')
+                            # possibly there is an hours:minutes but no seconds
+                            if len(a)==2:
+                                try:
+                                    walltime=int(days)*24*60*60+int(a[0])*60*60+int(a[1])*60
+                                except:
+                                    pass
+                            # possible there is hours:minutes:seconds
+                            else:
+                                try:
+                                    walltime=int(days)*24*60*60+int(a[0])*60*60+int(a[1])*60+int(a[2])
+                                except:
+                                    pass
+                        except:
+                            pass
                     return walltime
             else:
                 return None
@@ -1851,10 +1885,8 @@ class LoginProcess():
             self.progressDialog.Show(False)
             def callback():
                 wx.PostEvent(self.notify_window.GetEventHandler(),event)
-                self.progressDialog.Show(True)
-                print "update dict contains %s"%self.provider.updateDict
+                wx.CallAfter(self.progressDialog.Show,True)
                 self.jobParams.update(self.provider.updateDict)
-                print "login host is now %s"%self.jobParams['loginHost']
             def failcallback():
                 self.shutdown()
             threading.Thread(target=self.provider.run,args=[callback,failcallback]).start()

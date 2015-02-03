@@ -891,12 +891,13 @@ class LauncherMainFrame(wx.Frame):
         f.close()
 
     def loadSession(self,f,path=None):
+        import collections
         import json
         if path!=None:
             f=open(path,'r')
         saved=siteConfig.GenericJSONDecoder().decode(f.read())
         if isinstance(saved,list):
-            self.sites={}
+            self.sites=collections.OrderedDict()
             keyorder=saved[0]
             for key in keyorder:
                     nk = key
