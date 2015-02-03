@@ -447,7 +447,7 @@ def getCVLSiteConfigSlurm(partition):
     cmd='\"scontrol show job {jobidNumber}\"'
     regex='JobState=RUNNING'
     c.running=siteConfig.cmdRegEx(cmd,regex)
-    cmd="\"mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
+    cmd="\"mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; module load turbovnc ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
     regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\"scancel {jobidNumber}\"')
@@ -1012,6 +1012,25 @@ with open('massive_flavours_20141203.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
+# MASSIVE using AS Portal
+########################################################################################
+
+defaultSites=collections.OrderedDict()
+defaultSites['Desktop on m1-login2.massive.org.au']  = getMassiveSiteConfig("m1-login2.massive.org.au") 
+defaultSites['Desktop on m2-login2.massive.org.au'] = getMassiveSiteConfig("m2-login2.massive.org.au") 
+defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
+defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au")
+defaultSites['Centos 6 Desktop (For Eval Users) on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
+
+for s in defaultSites.keys():
+    defaultSites[s].authURL='https://autht.massive.org.au/ASync'
+
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))
+with open('massive_as_portal_flavours_20141203.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
 # MASSIVE Centos 6 (aka MASSIVE 2.5)
 ########################################################################################
 
@@ -1185,6 +1204,17 @@ defaultSites['CVL 2']=  getCVLSiteConfigSlurm("batch")
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('cvl_slurm_flavours.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# Generic Slurm
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['GenericDesktops']=  getCVLSiteConfigSlurm("batch")
+defaultSites['GenericDesktops'].loginHost="{{ loginNode }}"
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('generic_slurm_flavours.json','w') as f:
     f.write(jsons)
 
 
