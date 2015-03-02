@@ -424,7 +424,7 @@ def getCVLSiteConfigSlurm(partition):
     c.visibility=cvlvisible
     c.directConnect=True
     c.authURL=None
-    c.loginHost='118.138.233.59'
+    c.loginHost='118.138.234.17'
     c.defaults['jobParams_ppn']=1
     c.defaults['jobParams_hours']=48
     c.defaults['jobParams_mem']=4
@@ -447,16 +447,17 @@ def getCVLSiteConfigSlurm(partition):
     cmd='\"scontrol show job {jobidNumber}\"'
     regex='JobState=RUNNING'
     c.running=siteConfig.cmdRegEx(cmd,regex)
-    cmd="\"mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; module load turbovnc ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
+ #   cmd="\"mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; module load turbovnc ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
+    cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
     regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\"scancel {jobidNumber}\"')
     c.stopForRestart=siteConfig.cmdRegEx('\"scancel {jobidNumber}\"')
     c.vncDisplay= siteConfig.cmdRegEx('\"cat .vnc/slurm-{jobidNumber}.out\"' ,'^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$',host='exec')
-#    cmd= '\"module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\"'
-#    regex='^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$'
-#    c.otp=siteConfig.cmdRegEx(cmd,regex,host='exec')
-    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    cmd= '\"module load turbovnc ; vncpasswd -o -display localhost{vncDisplay}\"'
+    regex='^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$'
+    c.otp=siteConfig.cmdRegEx(cmd,regex,host='exec')
+#    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
     c.agent=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -l {username} {execHost} "echo agent_hello; bash "','agent_hello',async=True)
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {execHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
 
@@ -511,7 +512,7 @@ def getCVLSiteConfigSlurm(partition):
     cmd = '"/usr/bin/ssh {execHost} \'export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay}; wmctrl -F -i -c {webDavWindowID}\'"'
     c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
     cmd = '"/usr/bin/ssh {execHost} \'module load keyutility ; mountUtility.py\'"'
-    c.onConnectScript = siteConfig.cmdRegEx(cmd)
+    #c.onConnectScript = siteConfig.cmdRegEx(cmd)
     return c
 
 def getCVLSiteConfigXML(queue):
@@ -1200,10 +1201,12 @@ with open('cvl_dev_flavours.json','w') as f:
 # CVL Slurm
 ########################################################################################
 defaultSites=collections.OrderedDict()
-defaultSites['CVL 2']=  getCVLSiteConfigSlurm("batch")
+defaultSites['CVL Default']=  getCVLSiteConfigSlurm("batch")
+defaultSites['CVL Large Node']=  getCVLSiteConfigSlurm("64cpu")
+defaultSites['CVL Vis Node']=  getCVLSiteConfigSlurm("vis")
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('cvl_slurm_flavours.json','w') as f:
+with open('m2cvl.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
