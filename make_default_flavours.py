@@ -448,7 +448,7 @@ def getCVLSiteConfigSlurm(partition):
     regex='JobState=RUNNING'
     c.running=siteConfig.cmdRegEx(cmd,regex)
  #   cmd="\"mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; module load turbovnc ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
-    cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
+    cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
     regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\"scancel {jobidNumber}\"')
@@ -1204,6 +1204,10 @@ defaultSites=collections.OrderedDict()
 defaultSites['CVL Default']=  getCVLSiteConfigSlurm("batch")
 defaultSites['CVL Large Node']=  getCVLSiteConfigSlurm("64cpu")
 defaultSites['CVL Vis Node']=  getCVLSiteConfigSlurm("vis")
+defaultSites['CVL Vis Node (20CPU)']=  getCVLSiteConfigSlurm("vis")
+cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n 20 --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%"vis"
+regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
+defaultSites['CVL Vis Node (20CPU)'].startServer=siteConfig.cmdRegEx(cmd,regex)
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('m2cvl.json','w') as f:
