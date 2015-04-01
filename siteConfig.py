@@ -351,6 +351,8 @@ class siteConfig():
         self.onConnectScript=cmdRegEx(failFatal=False)
         self.agent=cmdRegEx()
         self.tunnel=cmdRegEx()
+        self.listReservations = cmdRegEx(cmd="sudo scontrol show reservations")
+        self.createReservation = cmdRegEx(cmd="sudo scontrol reservation reservations starttime={starttime} duration={duration} users={username} account=cvl")
         self.visibility={}
         self.relabel={}
         self.siteRanges= {'jobParams_hours':[1,336], 'jobParams_mem':[1,1024], 'jobParams_nodes':[1,10], 'jobParams_ppn':[1,12] }

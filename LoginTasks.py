@@ -798,32 +798,9 @@ class LoginProcess():
 
         def distributeKey(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_DISTRIBUTE_KEY):
-                logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_DISTRIBUTE_KEY')
-                wx.CallAfter(event.loginprocess.updateProgressDialog, 2,"Configuring authorisation")
-                logger.debug('distributeKey: authURL set to %s'%event.loginprocess.siteConfig.authURL)
 
-                authURL=event.loginprocess.siteConfig.authURL
-                username=event.loginprocess.jobParams['username']
-                loginHost=event.loginprocess.jobParams['loginHost']
-                logger.debug('begining to distribute key to username %s host %s'%(username,loginHost))
-                aaf_username=event.loginprocess.jobParams['aaf_username']
-                aaf_idp=event.loginprocess.jobParams['aaf_idp']
-                extraParams={}
-                if authURL!=None and 'ASync' in authURL:
-                    copymethod='ASyncAuth'
-                    try:
-                        extraParams['oauthclient']=event.loginprocess.siteConfig.oauthclient
-                        extraParams['oauthclientpasswd']=event.loginprocess.siteConfig.oauthclientpasswd
-                    except:
-                        pass
-                elif authURL!=None:
-                    copymethod='aaf'
-                else:
-                    copymethod='passwordAuth'
-                event.loginprocess.skd = cvlsshutils.sshKeyDist.KeyDist(event.loginprocess.parentWindow,event.loginprocess.progressDialog,event.loginprocess.notify_window,event.loginprocess.keyModel,event.loginprocess.displayStrings,startupinfo=event.loginprocess.startupinfo,creationflags=event.loginprocess.creationflags,username=username,host=loginHost,authURL=authURL,aaf_username=aaf_username,aaf_idp=aaf_idp,copymethod=copymethod,jobParams=event.loginprocess.jobParams,extraParams=extraParams)
                 successevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK,event.loginprocess)
-                event.loginprocess.skd.distributeKey(callback_success=lambda: wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),successevent),
-                                                     callback_fail=event.loginprocess.cancel)
+                wx.PostEvent(event.loginprocess.notify_window.GetEventHandler(),successevent)
             else:
                 event.Skip()
 

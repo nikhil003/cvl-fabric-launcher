@@ -571,6 +571,10 @@ class LauncherMainFrame(wx.Frame):
         #self.buttonsPanel.SetSizer(wx.FlexGridSizer(rows=1, cols=4, vgap=5, hgap=10))
         self.buttonsPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
 
+        self.manageResButton = wx.Button(self.buttonsPanel,wx.ID_ANY,'Manage Reservations',name='manageResButton')
+        self.buttonsPanel.GetSizer().Add(self.manageResButton, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_LEFT,border=10)
+        self.manageResButton.Bind(wx.EVT_BUTTON, self.onManageReservations)
+
         self.exitButton = wx.Button(self.buttonsPanel, wx.ID_ANY, 'Exit')
         self.buttonsPanel.GetSizer().Add(self.exitButton, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT, border=10)
         self.Bind(wx.EVT_BUTTON, self.onExit,  id=self.exitButton.GetId())
@@ -1462,17 +1466,26 @@ class LauncherMainFrame(wx.Frame):
         self.cvlLoginDialogPanel.Refresh()
         self.loginButton.Enable()
 
-    def onLogin(self, event):
-
-        logger.debug("launcher.py: onLogin: Disabling login button.")
-        self.loginButton.Disable()
-
-        configName=self.FindWindowByName('jobParams_configName').GetValue()
-        if configName=="" or configName==None:
-            dlg=LauncherMessageDialog(self,"Please select a site to log into first","Please select a site")
-            dlg.ShowModal()
-            return
-        jobParams={}
+    def authAndLogin(self,nextSub):
+        try:
+            print "running skd.authorise"
+            self.skd.authorise()
+            print "skd authorise completed"
+            if not self.skd.canceled():
+                print "running nextSub"
+                self.progressDialog=None
+                nextSub()
+            else:
+                print "skd canceled"
+                pass
+        except Exception as e:
+            print e
+            import traceback
+            print traceback.format_exc()
+            print "skd exception"
+            pass
+        
+    def logStartup(self):
         import platform
         platformstr="\""
         platformstr=platformstr+'platform.machine: '       + str(platform.machine())
@@ -1483,16 +1496,14 @@ class LauncherMainFrame(wx.Frame):
         platformstr=platformstr+' platform.system: '        + str(platform.system())
         platformstr=platformstr+' platform.version: '       + str(platform.version())
         platformstr=platformstr+"\""
+        logging.debug(platformstr)
 
-        options=self.getPrefsSection('Global Preferences')
-        while not options.has_key('auth_mode'):
-            self.queryAuthMode()
-            options=self.getPrefsSection('Global Preferences')
-
-
+    def sanityCheck(self):
         configName=self.FindWindowByName('jobParams_configName').GetValue()
-        jobParams = self.buildJobParams(self)
-
+        if configName=="" or configName==None:
+            dlg=LauncherMessageDialog(self,"Please select a site to log into first","Please select a site")
+            dlg.ShowModal()
+            return False
         if self.FindWindowByName('usernamePanel').IsShownOnScreen() and (self.FindWindowByName('jobParams_username').GetValue()=="" or self.FindWindowByName('jobParams_username').GetValue()==None):
             dlg = LauncherMessageDialog(self,
                     "Please enter your username.",
@@ -1501,24 +1512,17 @@ class LauncherMainFrame(wx.Frame):
             self.loginButton.Enable()
             usernamefield = self.FindWindowByName('jobParams_username')
             usernamefield.SetFocus()
-            return
+            return False
+        return True
 
-
-        logger.debug("Username: " + jobParams['username'])
-        logger.debug("Config: " + configName)
-
-        userCanAbort=True
-        maximumProgressBarValue = 10
-
+    def buildKeyModel(self):
         dotSshDir = os.path.join(os.path.expanduser('~'), '.ssh')
         if not os.path.exists(dotSshDir):
             os.makedirs(dotSshDir)
-
-        # project hours and nodes will be ignored for the CVL login, but they will be used for Massive.
-        configName=self.FindWindowByName('jobParams_configName').GetValue()
-        self.savePrefs(section="Global Preferences")
-        jobParams=self.buildJobParams(self)
-        jobParams['wallseconds']=int(jobParams['hours'])*60*60
+        options=self.getPrefsSection('Global Preferences')
+        while not options.has_key('auth_mode'):
+            self.queryAuthMode()
+            options=self.getPrefsSection('Global Preferences')
         if int(options['auth_mode'])==LauncherMainFrame.TEMP_SSH_KEY:
             logger.debug("launcherMainFrame.onLogin: using a temporary Key pair")
             try:
@@ -1535,18 +1539,80 @@ class LauncherMainFrame(wx.Frame):
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
 
 
+    def generateParameters(self):
         jobParams=self.buildJobParams(self)
-        jobParams['strudel_platform']=platformstr
         jobParams['wallseconds']=int(jobParams['hours'])*60*60
+        configName=self.FindWindowByName('jobParams_configName').GetValue()
+        siteConfig=self.sites[configName]
+        update={}
+        update['sshBinary']=self.keyModel.getsshBinary()
+        update['launcher_version_number']=launcher_version_number.version_number
+        if siteConfig.loginHost!=None:
+            update['loginHost']=siteConfig.loginHost
+        if siteConfig.username!=None:
+            update['username']=siteConfig.username
+        jobParams.update(update)
+        return (jobParams,siteConfig)
+
+    def raiseException(self):
+        raise Exception("user canceled login")
+
+    def onManageReservations(self,event):
+        self.manageResButton.Disable()
+        import cvlsshutils.skd_thread
+#        if not self.sanityCheck():
+#            return
+        self.logStartup()
+        self.buildKeyModel()
+        (jobParams,siteConfig) = self.generateParameters()
+#        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.raiseException)
+#        self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
+#        print "created skd"
+#        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.showReservationDialog,jobParams,siteConfig)])
+#        t.start()
+        wx.CallAfter(self.showReservationDialog,jobParams,siteConfig)
+        event.Skip()
+
+
+    def onLogin(self, event):
+        self.loginButton.Disable()
+        import cvlsshutils.skd_thread
+        if not self.sanityCheck():
+            print "sanitycheckFailed"
+            return
+        self.logStartup()
+        self.buildKeyModel()
+        (jobParams,siteConfig) = self.generateParameters()
+        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.raiseException)
+        self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
+        print "created skd"
+        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.launchVNC,jobParams,siteConfig)])
+        t.start()
+        event.Skip()
+
+    def showReservationDialog(self,jobParams,siteConfig):
+        import reservationDialog
+        q=Queue.Queue()
+        dlg=reservationDialog.reservationsDialog(rqueue=q,parent=self,siteConfig=siteConfig,jobParams=jobParams,buttons=['New','Delete','OK','Cancel'],startupinfo=self.startupinfo,creationflags=self.creationflags)
+        res=dlg.ShowModal()
+        self.manageResButton.Enable()
+
+    def launchVNC(self,jobParams,siteConfig):
+
+        print "attempting to start a vnc server"
+        logger.debug("attempting to start a vnc server")
+
+        userCanAbort=True
+        maximumProgressBarValue = 10
+        self.savePrefs(section="Global Preferences")
         autoExit=False
         globalOptions = self.getPrefsSection("Global Preferences")
-        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig=self.sites[configName],displayStrings=self.sites[configName].displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo)
+        lp=LoginTasks.LoginProcess(self,jobParams,self.keyModel,siteConfig,displayStrings=siteConfig.displayStrings,autoExit=autoExit,globalOptions=globalOptions,startupinfo=self.startupinfo)
         oldParams  = jobParams.copy()
         lp.setCallback(lambda jobParams: self.loginComplete(lp,oldParams,jobParams))
         lp.setCancelCallback(lambda jobParams: self.loginCancel(lp,oldParams,jobParams))
         self.loginProcess.append(lp)
         lp.doLogin()
-        event.Skip()
 
 class LauncherStatusBar(wx.StatusBar):
     def __init__(self, parent):
