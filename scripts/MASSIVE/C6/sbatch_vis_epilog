@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "Cleaning up vis session..."
+module load massive
+module load turbovnc
+
+vncserver -kill :1

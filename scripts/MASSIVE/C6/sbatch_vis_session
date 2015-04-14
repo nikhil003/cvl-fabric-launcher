@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --job-name=desktop
+# SBATCH --reservation=centos601
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=12
+# SBATCH --gres=gpu:m2070:2
+#SBATCH --gres=gpu:2
+# SBATCH --constraint="m2070"
+#SBATCH --partition=vis
+#SBATCH --time=10:00:00
+env | grep SLURM
+echo " Starting MASSIVE desktop..."
+echo " Setting up the system environment..."
+# source /etc/profile.d/modules.sh
+module purge
+module load massive
+module load turbovnc
+module list
+
+echo " Starting VNC..."
+vncserver :1
+vncserver -list
+
+echo " Starting XServer on the following nodes..."
+srun --ntasks $SLURM_NNODES --ntasks-per-node=1 hostname
+#srun --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 xinit /usr/bin/xterm &
+srun --overcommit --share --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 --gres=gpu:0 xinit /usr/bin/xterm &
+# Now wait till the above prcoess terminates
+wait
