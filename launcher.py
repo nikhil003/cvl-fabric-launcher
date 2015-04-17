@@ -1573,7 +1573,7 @@ class MyApp(wx.App):
             os.environ['CYGWIN'] = "nodosfilewarning"
 
         logger.setGlobalLauncherPreferencesFilePath(launcherPreferencesFilePath)
-        sys.modules[__name__].launcherMainFrame = LauncherMainFrame(None, wx.ID_ANY, 'Strudel Beta')
+        sys.modules[__name__].launcherMainFrame = LauncherMainFrame(None, wx.ID_ANY, 'Strudel')
         launcherMainFrame = sys.modules[__name__].launcherMainFrame
         launcherMainFrame.SetStatusBar(launcherMainFrame.loginDialogStatusBar)
         launcherMainFrame.SetMenuBar(launcherMainFrame.menu_bar)
