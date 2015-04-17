@@ -351,8 +351,9 @@ class siteConfig():
         self.onConnectScript=cmdRegEx(failFatal=False)
         self.agent=cmdRegEx()
         self.tunnel=cmdRegEx()
-        self.listReservations = cmdRegEx(cmd="sudo scontrol show reservations")
-        self.createReservation = cmdRegEx(cmd="sudo scontrol reservation reservations starttime={starttime} duration={duration} users={username} account=cvl")
+        regex="^ReservationName=(?P<name>\S+) (?P<desc>.*)$"
+        self.listReservations = cmdRegEx(cmd="scontrol show res | grep -B 2 {username} | tr '\\n' ' '",regex=[regex])
+        self.createReservation = cmdRegEx(cmd="sudo scontrol create reservation starttime={starttime} duration={duration} users={username} account=cvl NodeCnt={nodes}")
         self.visibility={}
         self.relabel={}
         self.siteRanges= {'jobParams_hours':[1,336], 'jobParams_mem':[1,1024], 'jobParams_nodes':[1,10], 'jobParams_ppn':[1,12] }
@@ -361,5 +362,6 @@ class siteConfig():
         self.authorizedKeysFile=None
         self.oauthclient=None
         self.oauthclientpasswd=None
+        self.sitetz="Australia/Melbourne"
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value
