@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Simple GUI which shows remaining walltime of desktop
 
 import Tkinter as tk
