@@ -11,7 +11,6 @@ class DesktopCountdownApp(tk.Tk):
         tk.Tk.__init__(self)
         self.label = tk.Label(self, text="", width=40)
         self.label.pack()
-        self.remaining = 0
         self.countdown()
         self.wm_title("Desktop Walltime Remaining")
 
@@ -25,7 +24,6 @@ class DesktopCountdownApp(tk.Tk):
             timeleft = line
 
         self.label.configure(text="Time Left: " + timeleft)
-        self.remaining = self.remaining - 1
         self.after(10000, self.countdown)
 
 if __name__ == "__main__":
