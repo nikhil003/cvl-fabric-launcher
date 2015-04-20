@@ -1001,15 +1001,13 @@ import json
 ########################################################################################
 
 defaultSites=collections.OrderedDict()
-defaultSites['Desktop on m1-login2.massive.org.au']  = getMassiveSiteConfig("m1-login2.massive.org.au") 
-defaultSites['Desktop on m2-login2.massive.org.au'] = getMassiveSiteConfig("m2-login2.massive.org.au") 
 defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
 defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au")
-defaultSites['Centos 6 Desktop (For Eval Users) on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
+defaultSites['Centos 6 Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))
-with open('massive_flavours_20141203.json','w') as f:
+with open('massive_flavours_20150417.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
