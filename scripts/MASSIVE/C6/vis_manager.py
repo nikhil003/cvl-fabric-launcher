@@ -7,7 +7,7 @@ from subprocess import call
 
 def listAll(args):
     username=os.path.expandvars('$USER')
-    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=vis_2", "-o" , "%i %L"]
+    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=m2-vis-c6", "-o" , "%i %L"]
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         if not 'JOBID TIME_LEFT' in line:
@@ -61,7 +61,7 @@ def newSession(args):
         sbatch_vis_session = "/usr/local/desktop/sbatch_vis_session"
 
     slurm_out=os.path.expandvars('$HOME/.vnc/slurm-%j.out')
-    cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=vis_2", "--account=" + args.project , "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
+    cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=m2-vis-c6", "--account=" + args.project , "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
         "--output=" + slurm_out , "--error=" + slurm_out , sbatch_vis_session]
     # print cmd
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
