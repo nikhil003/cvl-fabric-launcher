@@ -843,16 +843,18 @@ class LauncherMainFrame(wx.Frame):
         q=Queue.Queue()
 
         import copy
+        import re
         for newsite in newlist:
             if newsite.has_key('replaces'):
                 replaced=False
                 urls=newsite['replaces']
                 siteListCopy=copy.copy(origSiteList)
                 for site in siteListCopy:
-                    if site['url'] in urls:
-                        if not newsite.has_key('enabled'):
-                            newsite['enabled']=site['enabled']
-                        origSiteList.remove(site)
+                    for rurl in urls:
+                        if re.search(rurl,site['url']):
+                            if not newsite.has_key('enabled'):
+                                newsite['enabled']=site['enabled']
+                            origSiteList.remove(site)
 
         wx.CallAfter(self.showSiteListDialog,origSiteList,newlist,q)
         r=q.get()
