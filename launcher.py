@@ -324,10 +324,10 @@ class LauncherMainFrame(wx.Frame):
 
         self.file_menu = wx.Menu()
         self.menu_bar.Append(self.file_menu, "&File")
-        shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Save a shared session")
+        shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Share my desktop")
         self.file_menu.AppendItem(shareDesktop)
         self.Bind(wx.EVT_MENU, self.saveSessionEvent, id=shareDesktop.GetId())
-        loadSession=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load a shared session")
+        loadSession=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Connect to a collaborator")
         self.file_menu.AppendItem(loadSession)
         self.Bind(wx.EVT_MENU, self.loadSessionEvent, id=loadSession.GetId())
         loadDefaultSessions=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load defaults")
@@ -793,8 +793,10 @@ class LauncherMainFrame(wx.Frame):
             retry=False
             q=Queue.Queue()
             wx.CallAfter(wx.EndBusyCursor)
-            wx.CallAfter(self.createAndShowModalDialog,e,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=q)
-            e.wait()
+            event=threading.Event()
+            event.clear()
+            wx.CallAfter(self.createAndShowModalDialog,event,dlgclass=LauncherOptionsDialog.multiButtonDialog,parent=self,title="",message=dialogs.siteListOtherException.message,ButtonLabels=dialogs.siteListOtherException.ButtonLabels,q=q)
+            event.wait()
             button=q.get()
             wx.CallAfter(wx.BeginBusyCursor)
 
@@ -884,13 +886,21 @@ class LauncherMainFrame(wx.Frame):
                     launcherMainFrame.loadDefaultSessions(True)
 
     def loadSessionEvent(self,event):
-        dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)
-        status=dlg.ShowModal()
-        if status==wx.ID_CANCEL:
-            logger.debug('loadSession cancelled')
-        f=open(dlg.GetPath(),'r')
-        self.loadSession(f)
-        f.close()
+        import SharedSessions
+        idp=self.FindWindowByName('jobParams_aaf_idp').GetValue()
+        username=self.FindWindowByName('jobParams_aaf_username').GetValue()
+        print "idp is %s"%idp
+        print "username is %s"%username
+        s=SharedSessions.SharedSessions(self,idp=idp,username=username)
+        t=threading.Thread(target=s.retrieveSession)
+        t.start()
+#        dlg=wx.FileDialog(self,"Load a session",style=wx.FD_OPEN)
+#        status=dlg.ShowModal()
+#        if status==wx.ID_CANCEL:
+#            logger.debug('loadSession cancelled')
+#        f=open(dlg.GetPath(),'r')
+#        self.loadSession(f)
+#        f.close()
 
     def loadSession(self,f,path=None):
         import collections
@@ -1014,49 +1024,16 @@ class LauncherMainFrame(wx.Frame):
         t.start()
 
     def saveSessionEvent(self,event):
-        self.saveSession()
-
-
-    def saveSessionThreadTarget(self,q):
-        filename = q.get(block=True)
-        sc = q.get(block=True)
-        if sc!=None and filename!=None:
-            try:
-                f=open(filename,'w')
-                logger.debug('opened file %s to save the session to'%filename)
-            except Exception as e:
-                logger.debug('error opening file for saving')
-                raise e
-            logger.debug('retrieved the session configuration from the loginProcess')
-        if sc==None:
-            sc=q.get()
-        if sc==None:
-            return
-        mydict={}
-        mydict['Saved Session']=sc
-        import json
-        s=json.dumps(mydict,f,cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',',': '))
-        f.write(s)
-        f.close()
-
-        
-
-
-    def saveSession(self):
-        import Queue
-        q=Queue.Queue()
-        dlg=wx.FileDialog(self,"Save your desktop session",style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
-        status=dlg.ShowModal()
-        if status==wx.ID_CANCEL:
-            logger.debug('saveSession cancelled')
-            return
-        filename=dlg.GetPath()
-        q.put(filename)
-        # Abuse of queue.get as a flow control mechanism.
-        t=threading.Thread(target=self.loginProcess[0].getSharedSession,args=[q])
+        import SharedSessions
+        idp=self.FindWindowByName('jobParams_aaf_idp').GetValue()
+        username=self.FindWindowByName('jobParams_aaf_username').GetValue()
+        print "idp is %s"%idp
+        print "username is %s"%username
+        s=SharedSessions.SharedSessions(self,idp=idp,username=username)
+        t=threading.Thread(target=s.shareSession,kwargs={'loginProcess':self.loginProcess})
         t.start()
-        t=threading.Thread(target=self.saveSessionThreadTarget,args=[q])
-        t.start()
+
+
 
     def checkVersionNumber(self):
         # Check for the latest version of the launcher:
