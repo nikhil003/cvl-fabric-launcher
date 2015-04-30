@@ -580,6 +580,7 @@ class LauncherMainFrame(wx.Frame):
         self.loginButton.Bind(wx.EVT_BUTTON, self.savePrefsEventHandler)
         self.loginButton.Bind(wx.EVT_BUTTON, self.onLogin)
         self.loginButton.SetDefault()
+        self.buttonsPanel.SetMinSize((-1,100))
 
 
         #self.preferencesButton.Show(False)
