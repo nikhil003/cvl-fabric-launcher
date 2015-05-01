@@ -351,9 +351,10 @@ class siteConfig():
         self.onConnectScript=cmdRegEx(failFatal=False)
         self.agent=cmdRegEx()
         self.tunnel=cmdRegEx()
-        regex="^ReservationName=(?P<name>\S+) (?P<desc>.*)$"
-        self.listReservations = cmdRegEx(cmd="scontrol show res | grep -B 2 {username} | tr '\\n' ' '",regex=[regex])
-        self.createReservation = cmdRegEx(cmd="sudo scontrol create reservation starttime={starttime} duration={duration} users={username} account=cvl NodeCnt={nodes}")
+        regex="^\s*ReservationName=(?P<name>\S+) (?P<desc>.*)$"
+        self.listReservations = cmdRegEx(cmd="/opt/slurm-14.11.1/bin/scontrol show res | grep -B 2 {username} |   sed 's/--/BBBBBBB/' | tr '\\n' ' ' | sed 's/BBBBBBB/\\n/'",regex=[regex])
+        self.createReservation = cmdRegEx(cmd="sudo /opt/slurm-14.11.1/bin/scontrol create reservation starttime={starttime} duration={duration} users={username} account=cvl NodeCnt={nodes}")
+        self.deleteReservation = cmdRegEx(cmd="sudo /opt/slurm-14.11.1/bin/scontrol delete reservation ReservationName={ReservationName}")
         self.visibility={}
         self.relabel={}
         self.siteRanges= {'jobParams_hours':[1,336], 'jobParams_mem':[1,1024], 'jobParams_nodes':[1,10], 'jobParams_ppn':[1,12] }
