@@ -15,15 +15,25 @@ echo " Setting up the system environment..."
 module purge
 module load massive
 module load turbovnc
+module load openmpi
 module list
 
 echo " Starting VNC..."
 vncserver :1
 vncserver -list
+# note: shutdown in system epilog with
+# pkill -u $USER Xvnc
 
 echo " Starting XServer on the following nodes..."
 srun --ntasks $SLURM_NNODES --ntasks-per-node=1 hostname
-#srun --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 xinit /usr/bin/xterm &
+
+# 04/2015 - this does not allow desktops to use srun for GPUs (--gres=gpu:0 required to remove GPU resoutce)
+#   srun --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 xinit /usr/bin/xterm &
+# 01/05/2015 - this does not work with cgroups enabled
 srun --overcommit --share --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 --gres=gpu:0 xinit /usr/bin/xterm &
+# mpirun --pernode xinit /usr/bin/xterm &
+# note: shutdown in system epilog with
+# pkill -u $USER Xvnc
+
 # Now wait till the above prcoess terminates
 wait
