@@ -145,6 +145,8 @@ def showStart(args):
 def sanityCheck(args):
     print "Running with launcher version: " + args.launcherversion
     # print "INFO: Friday 13th Feb - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
+    # if int(args.launcherversion) < 20150418:
+    #      print "INFO: " + args.launcherversion
 
 def main():
     import argparse
