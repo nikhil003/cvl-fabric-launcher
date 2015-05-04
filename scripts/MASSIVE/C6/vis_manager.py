@@ -129,7 +129,10 @@ def getProjects(args):
         user = line.split('|')[1]
         if userid == user:
             project =  line.split('|')[0]
-            print project.lstrip(' ') 
+            if project.lstrip(' ') == "cvl":
+                pass
+            else:
+                print project.lstrip(' ')
     retval = p.wait()
 
 def showStart(args):
