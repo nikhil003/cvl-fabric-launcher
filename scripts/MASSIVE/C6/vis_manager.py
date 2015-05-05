@@ -54,6 +54,9 @@ def newSession(args):
         for line in p.stdout.readlines():
             print line
         retval = p.wait()
+    # let user know that multinode sessions are for particular tasks
+    if args.nodes > 1:
+        print "INFO: You have requested more than one vis node. This should only be used for parallel vis jobs e.g. ParaView and XLI Workflow."
     # start session
     # check if user has a custom sbatch_vis_session script (used for reservations etc)
     if os.path.isfile(os.path.expandvars('$HOME/.vnc/sbatch_vis_session')):
