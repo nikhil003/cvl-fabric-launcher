@@ -4,6 +4,7 @@ import datetime
 import os
 import time
 from subprocess import call
+import re
 
 def listAll(args):
     username=os.path.expandvars('$USER')
@@ -100,7 +101,8 @@ def execHost(args):
         if 'NODELIST' in line:
             continue
         nodelist = line.translate(None, '[]')
-        print nodelist.split('-')[0],
+        firstnode = re.split(r'-|,',nodelist)[0]
+        print firstnode
     retval = p.wait()
 
 def vncPort(args):
