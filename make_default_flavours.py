@@ -424,7 +424,7 @@ def getCVLSiteConfigSlurm(partition):
     c.visibility=cvlvisible
     c.directConnect=True
     c.authURL=None
-    c.loginHost='118.138.234.17'
+    c.loginHost='118.138.233.195'
     c.defaults['jobParams_ppn']=1
     c.defaults['jobParams_hours']=48
     c.defaults['jobParams_mem']=4
@@ -1209,6 +1209,27 @@ defaultSites['CVL Vis Node (20CPU)'].startServer=siteConfig.cmdRegEx(cmd,regex)
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('m2cvl.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# CVL Reservations
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['CVL Default']=  getCVLSiteConfigSlurm("batch")
+regex="^\s*ReservationName=(?P<name>\S+) (?P<desc>.*)$"
+defaultSites['CVL Default'].listReservations = siteConfig.cmdRegEx(cmd="/opt/slurm-14.11.1/bin/scontrol show res | grep -B 2 Users={username} |   sed 's/--/BBBBBBB/' | tr '\\n' ' ' | sed 's/BBBBBBB/\\n/'",regex=[regex])
+defaultSites['CVL Default'].createReservation = siteConfig.cmdRegEx(cmd="sudo /opt/slurm-14.11.1/bin/scontrol create reservation starttime={starttime} duration={duration} users={username} account=cvl NodeCnt={nodes} ReservationName={resname}")
+defaultSites['CVL Default'].deleteReservation = siteConfig.cmdRegEx(cmd="sudo /opt/slurm-14.11.1/bin/scontrol delete ReservationName={ReservationName}")
+defaultSites['CVL Default'].visibility['manageResButton'] = True
+defaultSites['CVL Default'].sitetz="UTC"
+partition="batch"
+cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out --reservation={resname}\""%partition
+regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
+defaultSites['CVL Default'].startServer=siteConfig.cmdRegEx(cmd,regex)
+
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('m2cvl_reservations.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
