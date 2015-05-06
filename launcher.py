@@ -1181,6 +1181,7 @@ class LauncherMainFrame(wx.Frame):
         visible['jobParams_nodes']=False
         visible['label_hours']=False
         visible['jobParams_hours']=False
+        visible['manageResButton']=False
         for k in visible.keys():
             try: 
                 window=self.FindWindowByName(k)
@@ -1596,7 +1597,7 @@ class LauncherMainFrame(wx.Frame):
     def showReservationDialog(self,jobParams,siteConfig):
         import reservationDialog
         q=Queue.Queue()
-        dlg=reservationDialog.reservationsDialog(rqueue=q,parent=self,siteConfig=siteConfig,jobParams=jobParams,buttons=['New','Delete','OK','Cancel'],startupinfo=self.startupinfo,creationflags=self.creationflags)
+        dlg=reservationDialog.reservationsDialog(rqueue=q,parent=self,siteConfig=siteConfig,jobParams=jobParams,buttons=['New','Delete','Cancel'],startupinfo=self.startupinfo,creationflags=self.creationflags)
         res=dlg.ShowModal()
         self.manageResButton.Enable()
 
