@@ -888,6 +888,7 @@ class LoginProcess():
                 grouplist=[]
                 groups=[]
                 showDialog=False
+                showResDialog=False
                 msg=""
                 for match in event.loginprocess.matchlist:
                     grouplist = grouplist + match.values()
@@ -898,6 +899,11 @@ class LoginProcess():
                 if event.loginprocess.siteConfig.startServer.cmd!=None:
                     try:
                         event.loginprocess.siteConfig.startServer.cmd.format(**event.loginprocess.jobParams) # check if we actually need the project to format the startServerCmd
+                        logger.debug("startServer formated correctly")
+                        if event.loginprocess.jobParams.has_key('resname'):
+                            logger.debug("jobparams has a value for resname %s"%event.loginprocess.jobParams['resname'])
+                        else:
+                            logger.debug("jobparams does not have a value for resname")
                         if (event.loginprocess.jobParams.has_key('project') and not (event.loginprocess.jobParams['project'] in grouplist)):
                             logger.info("we have a value for project, but the user is not a member of that project")
                             msg='You don\'t appear to be a member of the project {project}.\n\nPlease select from one of the following:'.format(**event.loginprocess.jobParams)
@@ -911,6 +917,9 @@ class LoginProcess():
                                 if ('project' in e.__str__()):
                                     logger.debug("trying to format the startServerCmd, project is necessary")
                                     showDialog=True
+                                elif ('resname' in e.__str__()):
+                                    logger.debug("trying to format the startServerCmd, resname is necessary")
+                                    showResDialog=True
                                 else:
                                     logger.debug("trying to format the startServerCmd, some other key is missing %s"%e)
                         elif (event.loginprocess.jobParams.has_key('project') and (event.loginprocess.jobParams['project'] in grouplist)):
@@ -918,13 +927,22 @@ class LoginProcess():
                         else:
                             logger.debug("we don't have a value for project, but it isn't needed to start the VNC server")
                     except KeyError as e:
-                        if e.args == 'project':
+                        if 'project' in e.args:
                             logger.debug("we need a value for project but it isn't set yet")
                             msg="Please select your project"
                             showDialog=True
+                        elif 'resname' in e.args:
+                            logger.debug("we need a value for resname but it isn't set yet")
+                            showResDialog=True
+                        else:
+                            import traceback
+                            logger.debug("some unknown exception")
+                            logger.debug(e)
+                            logger.debug(e.args)
+                            logger.debug(traceback.format_exc())
                 if (not showDialog):
                     logger.info("don't need to show the dialog, either the project was set correctly, or it was not set, but also not required")
-                else:
+                if showDialog:
                     logger.info("creating a list dialog for the user to select their project from")
                     #okCallback=lambda x: event.loginprocess.jobParams.update([('project',"%s"%x.GetText())])
                     def okCallback(listSelectionItem):
@@ -936,6 +954,18 @@ class LoginProcess():
                     showModal(dlg,event.loginprocess)
                     logger.debug("flow control has returned to selectProject")
                     dlg.Destroy()
+                if (not showResDialog):
+                    logger.info("don't need to show the res dialog, either the reservation was set correctly, or it was not set, but also not required")
+                if showResDialog:
+                    logger.info("getting a list of reservations")
+                    import Queue
+                    q=Queue.Queue()
+                    event.loginprocess.reservationPrompt(q)
+                    resname=q.get()
+                    if resname == None:
+                        event.loginprocess.shutdown()
+                    else:
+                        event.loginprocess.jobParams.update([('resname',"%s"%resname)])
                 if (not event.loginprocess.canceled()):
                     logger.info("posting START_SERVER event")
                     nextevent=LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_START_SERVER,event.loginprocess)
@@ -1554,6 +1584,20 @@ class LoginProcess():
                 #wx.CallAfter(event.loginprocess.parentWindow.SetCursor, wx.StockCursor(wx.CURSOR_ARROW))
             else:
                 event.Skip()
+
+    def reservationPrompt(self,q):
+        import reservationDialog
+        import Queue
+        r=Queue.Queue()
+        dlg=reservationDialog.reservationsDialog(rqueue=r,parent=self.notify_window,siteConfig=self.siteConfig,jobParams=self.jobParams,buttons=['OK','Cancel'],startupinfo=self.startupinfo,creationflags=self.creationflags)
+        res=dlg.ShowModal()
+        if res == wx.ID_OK:
+            reservation=r.get()
+            q.put(reservation.name)
+        else:
+            q.put(None)
+        
+
 
     def shutdownReal(self,nextevent=None):
         # First stop all the threads, then (optionally) create a new thread to qdel the job. Finally shutdown the sshKeyDist object (which may shutdown the agent)
