@@ -4,10 +4,11 @@ import datetime
 import os
 import time
 from subprocess import call
+import re
 
 def listAll(args):
     username=os.path.expandvars('$USER')
-    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=vis_2", "-o" , "%i %L"]
+    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=m2-vis-c6", "-o" , "%i %L"]
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         if not 'JOBID TIME_LEFT' in line:
@@ -53,6 +54,9 @@ def newSession(args):
         for line in p.stdout.readlines():
             print line
         retval = p.wait()
+    # let user know that multinode sessions are for particular tasks
+    if args.nodes > 1:
+        print "INFO: You have requested more than one vis node. This should only be used for parallel vis jobs e.g. ParaView and XLI Workflow."
     # start session
     # check if user has a custom sbatch_vis_session script (used for reservations etc)
     if os.path.isfile(os.path.expandvars('$HOME/.vnc/sbatch_vis_session')):
@@ -61,7 +65,7 @@ def newSession(args):
         sbatch_vis_session = "/usr/local/desktop/sbatch_vis_session"
 
     slurm_out=os.path.expandvars('$HOME/.vnc/slurm-%j.out')
-    cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=vis_2", "--account=" + args.project , "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
+    cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=m2-vis-c6", "--account=" + args.project , "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
         "--output=" + slurm_out , "--error=" + slurm_out , sbatch_vis_session]
     # print cmd
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -100,7 +104,8 @@ def execHost(args):
         if 'NODELIST' in line:
             continue
         nodelist = line.translate(None, '[]')
-        print nodelist.split('-')[0],
+        firstnode = re.split(r'-|,',nodelist)[0]
+        print firstnode
     retval = p.wait()
 
 def vncPort(args):
@@ -129,7 +134,10 @@ def getProjects(args):
         user = line.split('|')[1]
         if userid == user:
             project =  line.split('|')[0]
-            print project.lstrip(' ') 
+            if project.lstrip(' ') == "cvl":
+                pass
+            else:
+                print project.lstrip(' ')
     retval = p.wait()
 
 def showStart(args):
@@ -145,6 +153,8 @@ def showStart(args):
 def sanityCheck(args):
     print "Running with launcher version: " + args.launcherversion
     # print "INFO: Friday 13th Feb - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
+    # if int(args.launcherversion) < 20150418:
+    #      print "INFO: " + args.launcherversion
 
 def main():
     import argparse

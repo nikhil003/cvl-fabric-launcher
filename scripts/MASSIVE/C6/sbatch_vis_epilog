@@ -2,5 +2,7 @@
 echo "Cleaning up vis session..."
 module load massive
 module load turbovnc
-
+echo "Cleaning up vncserver session..."
 vncserver -kill :1
+echo "Cleaning up xterms and xserver..."
+killall xterm

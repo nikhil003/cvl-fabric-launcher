@@ -10,26 +10,16 @@ tmp=`mktemp`
 
 find /opt/launcher_crash_reports/ -type f -mmin -5 | while read filename
 do
-    emailBody=""
-
-    emailBody="${emailBody}"
-
-    echo -e "$emailBody" > $tmp
-    cat $filename >> $tmp
-
-    recipients="james.wettenhall@monash.edu,paul.mcintosh@monash.edu,jupiter.hu@monash.edu,chris.hines@monash.edu"
-    originalRecipients=$recipients
-    grep -q "Contact me? Yes" $filename && grep -q "^Config: login.cvl.massive.org.au" $filename && recipients="cvl-help@monash.edu,${recipients}"
-    grep -q "Contact me? Yes" $filename && grep -q "^Config: Huygens" $filename && recipients="cvl-help@monash.edu,${recipients}"
-    grep -q "Contact me? Yes" $filename && grep -q "^Config: 115.146" $filename && recipients="cvl-help@monash.edu,${recipients}"
-    grep -q "Contact me? Yes" $filename && grep -q "^Config: 118.138" $filename && recipients="cvl-help@monash.edu,${recipients}"
-    if [ $recipients == $originalRecipients ]
-    then
-        grep -q "Contact me? Yes" $filename && recipients="help@massive.org.au,${recipients}"
+    if [ ! -z "$(grep 'Contact me? Yes' $filename)" ]; then
+        recipients="help@massive.org.au"
+        sender=$( cat $filename | grep Email: | sed 's/Email://' )
+        export REPLYTO="$sender"
+        export EMAIL="$sender"
+        config=$( cat $filename | grep 'DEBUG - Config' | sed 's/.*DEBUG - Config: //' )
+        nametag=$(echo $sender | sed 's/@.*//')
+        mutt -s "Strudel Debug Log: $nametag - $config " $recipients < $filename
+        echo "$(date): Sent launcher crash report $sender $recipients $filename" >> email.log
     fi
-    mutt -s "Launcher crash report: $filename" $recipients < $tmp
-
 done
 
 rm -f $tmp
-
