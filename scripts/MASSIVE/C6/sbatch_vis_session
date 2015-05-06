@@ -28,10 +28,21 @@ srun --ntasks $SLURM_NNODES --ntasks-per-node=1 hostname
 # 04/2015 - this does not allow desktops to use srun for GPUs (--gres=gpu:0 required to remove GPU resoutce)
 #   srun --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 xinit /usr/bin/xterm &
 # 01/05/2015 - this does not work with cgroups enabled
-srun --overcommit --share --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 --gres=gpu:0 xinit /usr/bin/xterm &
+# srun --overcommit --share --task-epilog=/usr/local/desktop/sbatch_vis_epilog --ntasks $SLURM_NNODES --ntasks-per-node=1 --gres=gpu:0 xinit /usr/bin/xterm &
+# note: vncserver -kill :1 in system epilog but also fails with cgroups and multiple nodes
 # mpirun --pernode xinit /usr/bin/xterm &
-# note: shutdown in system epilog with
-# pkill -u $USER Xvnc
+# best to avoid mpirun/srun all together
+# TODO: 06/05/2015 - this still does not work for getting xserver on remote nodes! 
+echo " Starting Xservers on nodes $SLURM_JOB_NODELIST..."
+for node in $(scontrol show hostname $SLURM_JOB_NODELIST);
+do
+    # Run with -f so Xservers stay running on nodes
+    echo "ssh -f $node \"xinit /usr/bin/xterm\""
+    ssh -f $node "xinit /usr/bin/xterm"
+done
+# wait for things to die
+while true;
+do
+    sleep 30;
+done
 
-# Now wait till the above prcoess terminates
-wait
