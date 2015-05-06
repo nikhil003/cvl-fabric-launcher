@@ -1564,17 +1564,13 @@ class LauncherMainFrame(wx.Frame):
     def onManageReservations(self,event):
         self.manageResButton.Disable()
         import cvlsshutils.skd_thread
-#        if not self.sanityCheck():
-#            return
         self.logStartup()
         self.buildKeyModel()
         (jobParams,siteConfig) = self.generateParameters()
-#        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.raiseException)
-#        self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
-#        print "created skd"
-#        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.showReservationDialog,jobParams,siteConfig)])
-#        t.start()
-        wx.CallAfter(self.showReservationDialog,jobParams,siteConfig)
+        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.raiseException)
+        self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
+        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.showReservationDialog,jobParams,siteConfig)])
+        t.start()
         event.Skip()
 
 
