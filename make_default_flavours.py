@@ -269,7 +269,7 @@ def getMassiveCentos6SiteConfig(loginHost):
     # c.stop=siteConfig.cmdRegEx('\'qdel -a {jobidNumber}\'')
     c.stop=siteConfig.cmdRegEx('/usr/local/desktop/vis_manager.py stop -s {sessionid}')
     # c.stopForRestart=siteConfig.cmdRegEx('qdel {jobidNumber} ; sleep 5\'')
-    c.stopForRestart=siteConfig.cmdRegEx('/usr/local/desktop/vis_manager.p stop -s {sessionid} --wait 4')
+    c.stopForRestart=siteConfig.cmdRegEx('/usr/local/desktop/vis_manager.py stop -s {sessionid} --wait 4')
 
     # exechost            return information about which node a vis session is running on
     # usage: vis_manager.py exechost [-h] -s SESSIONID
