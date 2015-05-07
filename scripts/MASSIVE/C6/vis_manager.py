@@ -57,6 +57,13 @@ def newSession(args):
     # let user know that multinode sessions are for particular tasks
     if args.nodes > 1:
         print "INFO: You have requested more than one vis node. This should only be used for parallel vis jobs e.g. ParaView and XLI Workflow."
+
+    # TODO: things that will help the user
+    #       - if system reserved for outage adjust walltime if too long and inform user
+    #       - if high mem busy suggest low mem
+    #       = warning if not enough allocation or low allcoation
+    #       - warning if overquota
+
     # start session
     # check if user has a custom sbatch_vis_session script (used for reservations etc)
     if os.path.isfile(os.path.expandvars('$HOME/.vnc/sbatch_vis_session')):
