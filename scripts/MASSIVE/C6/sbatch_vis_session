@@ -9,7 +9,8 @@
 env | grep SLURM
 echo " Starting MASSIVE desktop..."
 echo " Setting up the system environment..."
-# source /etc/profile.d/modules.sh
+# This is required for tcsh desktops to work
+source /etc/profile.d/modules.sh
 module purge
 module load massive
 module load openmpi
