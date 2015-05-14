@@ -3,12 +3,16 @@ import subprocess
 import datetime
 import os
 import time
+import socket
 from subprocess import call
 import re
 
 def listAll(args):
+    submithost=socket.gethostname()
+    mX = submithost[:2]
+    partition=mX + "-vis-c6"
     username=os.path.expandvars('$USER')
-    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=m2-vis-c6", "-o" , "%i %L"]
+    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=" + partition, "-o" , "%i %L"]
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         if not 'JOBID TIME_LEFT' in line:
@@ -35,6 +39,9 @@ def listAll(args):
     retval = p.wait()
 
 def newSession(args):
+    submithost=socket.gethostname()
+    mX = submithost[:2]
+    partition=mX + "-vis-c6"
     vncdir=os.path.expandvars('$HOME/.vnc/')
     cmd=["mkdir","-p",vncdir]
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -75,11 +82,11 @@ def newSession(args):
 
     # set up the cmmand based on flavour requested
     if args.flavour ==  "any":
-        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=m2-vis-c6", "--account=" + args.project , \
+        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=" + partition, "--account=" + args.project , \
             "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
                 "--output=" + slurm_out , "--error=" + slurm_out , sbatch_vis_session]
     elif args.flavour == "highmem":
-        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=m2-vis-c6", "--account=" + args.project , \
+        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=" + partition, "--account=" + args.project , \
             "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
             "--output=" + slurm_out , "--error=" + slurm_out , "--mem=192000" , sbatch_vis_session]
     
@@ -168,7 +175,7 @@ def showStart(args):
 
 def sanityCheck(args):
     print "Running with launcher version: " + args.launcherversion
-    # print "INFO: Friday 13th Feb - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
+#    print "INFO: Tuesday 12th Mar - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
     # if int(args.launcherversion) < 20150418:
     #      print "INFO: " + args.launcherversion
 
