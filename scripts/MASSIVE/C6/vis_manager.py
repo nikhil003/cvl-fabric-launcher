@@ -168,9 +168,13 @@ def showStart(args):
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         if 'StartTime' in line:
-            StartTime = line.split(' ')[3]
-            StartTime = StartTime.split('=')[1]
-            print "StartTime " + StartTime.split('T')[1] + " " + StartTime.split('T')[0] 
+            if 'StartTime=Unknown' in line:
+                StartTime = "Unknown"
+            else:
+                StartTime = line.split(' ')[3]
+                StartTime = StartTime.split('=')[1]
+                StartTime = StartTime.split('T')[1] + " " + StartTime.split('T')[0]
+            print "StartTime " + StartTime 
     retval = p.wait()
 
 def sanityCheck(args):
