@@ -64,7 +64,7 @@ class LauncherMessageDialog(wx.Dialog):
         rightPanel.GetSizer().Add(bottomPanel,proportion=0,flag=wx.EXPAND|wx.ALL,border=5)
         self.GetSizer().Add(leftPanel)
         self.GetSizer().Add(rightPanel,flag=wx.EXPAND,proportion=1)
-        self.Fit()
+        self.GetSizer().Fit(self)
 
     def onClose(self, event):
         obj=event.GetEventObject()

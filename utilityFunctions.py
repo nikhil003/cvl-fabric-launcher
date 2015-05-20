@@ -194,7 +194,7 @@ class ListSelectionDialog(wx.Dialog):
         # Bottom border of 5 is a workaround for an OS X bug where bottom of button can be clipped.
         self.buttonsPanelSizer.Add(self.okButton, flag=wx.BOTTOM, border=5)
 
-        self.buttonsPanel.Fit()
+        self.buttonsPanel.GetSizer().Fit(self.buttonsPanel)
 
         #self.listSelectionList.Bind(wx.EVT_LIST_ITEM_SELECTED,self.onFocus)
         self.listSelectionList.Bind(wx.EVT_LIST_ITEM_ACTIVATED,self.onClose)
@@ -208,7 +208,7 @@ class ListSelectionDialog(wx.Dialog):
         sizer.Add(rcSizer,proportion=1,flag=wx.EXPAND)
         listSelectionDialogPanel.SetSizer(sizer)
         sizer.Fit(listSelectionDialogPanel)
-        self.Fit()
+        self.GetSizer().Fit(self)
 
         self.listSelectionList.SetFocus()
 

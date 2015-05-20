@@ -68,7 +68,7 @@ class multiButtonDialog(wx.Dialog):
         #hyperlinkPosition = wx.Point(self.contactQueriesContactLabel.GetPosition().x+self.contactQueriesContactLabel.GetSize().width,buttonPosition.y)
         #self.contactEmailHyperlink.SetPosition(hyperlinkPosition)
         contactPanel.GetSizer().Add(contactEmailHyperlink)
-        contactPanel.Fit()
+        contactPanel.GetSizer().Fit(contactPanel)
 
         buttonPanel = wx.Panel(self.dialogPanel,wx.ID_ANY)
         buttonPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
@@ -81,7 +81,7 @@ class multiButtonDialog(wx.Dialog):
             b = wx.Button(buttonPanel, wx.ID_ANY, 'Help')
             b.Bind(wx.EVT_BUTTON,self.onHelp)
             buttonPanel.GetSizer().Add(b,flag=wx.ALL,border=5)
-        buttonPanel.Fit()
+        buttonPanel.GetSizer().Fit(buttonPanel)
 
 
 
@@ -94,7 +94,7 @@ class multiButtonDialog(wx.Dialog):
         self.Bind(wx.EVT_CLOSE, self.onClose)
         self.q=q
 
-        self.dialogPanel.Fit()
+        self.dialogPanel.GetSizer().Fit(self.dialogPanel)
 
         #self.SetClientSize(wx.Size(dialogPanelWidth,dialogPanelHeight))
         self.Layout()
