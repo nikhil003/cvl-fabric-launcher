@@ -39,7 +39,7 @@ class sshKeyDistDisplayStringsCVL(siteConfig.sshKeyDistDisplayStrings):
         super(sshKeyDistDisplayStringsCVL, self).__init__()
         self.passwdPrompt="""Please enter the password for your CVL account.
 This is the password you entered when you requested an account
-at the website https://web.cvl.massive.org.au/users"""
+at the website https://m2-web.massive.org.au/users"""
         self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
         self.passphrasePrompt="Please enter the passphrase for your SSH key"
         self.passphrasePromptIncorrect="""Sorry, that passphrase was incorrect.
@@ -431,7 +431,7 @@ def getCVLSiteConfigSlurm(partition):
 
 
     cmd = '\"module load pbs ; qstat -x | xmlstarlet sel -t -m \\"/Data/Job[starts-with(Job_Owner/text(),\'{username}@\') and starts-with(Job_Name/text(),\'desktop\') and job_state/text()!=\'C\']\\" -v \\" concat(./Job_Id/text(),\' \',./Walltime/Remaining/text())  \\" -n - 2>/dev/null\"'
-    cmd = 'squeue -u {username} -o \\"%i %L\\" | tail -n -1'
+    cmd = '\"squeue -u {username} -o \\"%i %L\\" | tail -n -1\"'
     regex='(?P<jobid>(?P<jobidNumber>[0-9]+)) (?P<remainingWalltime>.*)$'
     c.listAll=siteConfig.cmdRegEx(cmd,regex,requireMatch=False)
 
@@ -448,7 +448,7 @@ def getCVLSiteConfigSlurm(partition):
     regex='JobState=RUNNING'
     c.running=siteConfig.cmdRegEx(cmd,regex)
  #   cmd="\"mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; module load turbovnc ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
-    cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
+    cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n {ppn} --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%partition
     regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.stop=siteConfig.cmdRegEx('\"scancel {jobidNumber}\"')
@@ -1202,13 +1202,30 @@ defaultSites=collections.OrderedDict()
 defaultSites['CVL Default']=  getCVLSiteConfigSlurm("batch")
 defaultSites['CVL Large Node']=  getCVLSiteConfigSlurm("64cpu")
 defaultSites['CVL Vis Node']=  getCVLSiteConfigSlurm("vis")
-defaultSites['CVL Vis Node (20CPU)']=  getCVLSiteConfigSlurm("vis")
-cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n 20 --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%"vis"
-regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
-defaultSites['CVL Vis Node (20CPU)'].startServer=siteConfig.cmdRegEx(cmd,regex)
+defaultSites['CVL Huygens']=  getCVLSiteConfigSlurm("huygens")
+defaultSites['CVL Large Node'].defaults['jobParams_ppn']=16
+for s in defaultSites.keys():
+    defaultSites[s].authURL=None
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('m2cvl.json','w') as f:
+    f.write(jsons)
+########################################################################################
+# CVL Slurm AAF
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['CVL Default']=  getCVLSiteConfigSlurm("batch")
+defaultSites['CVL Large Node']=  getCVLSiteConfigSlurm("64cpu")
+defaultSites['CVL Vis Node']=  getCVLSiteConfigSlurm("vis")
+defaultSites['CVL Huygens']=  getCVLSiteConfigSlurm("huygens")
+cmd="\" echo -e \'#!/bin/bash\\n/usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  sbatch -p %s -N {nodes} -n 20 --time={hours}:00:00 -J desktop_{username} -o .vnc/slurm-%%j.out \""%"vis"
+regex="^Submitted batch job (?P<jobid>(?P<jobidNumber>[0-9]+))$"
+#defaultSites['CVL Vis Node (20CPU)'].startServer=siteConfig.cmdRegEx(cmd,regex)
+for s in defaultSites.keys():
+    defaultSites[s].authURL="https://autht.massive.org.au/cvl/"
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('m2cvl_aaf.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
