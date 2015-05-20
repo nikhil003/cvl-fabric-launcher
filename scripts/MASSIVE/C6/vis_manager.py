@@ -42,6 +42,7 @@ def newSession(args):
     submithost=socket.gethostname()
     mX = submithost[:2]
     partition=mX + "-vis-c6"
+    qos="vis_" + mX
     vncdir=os.path.expandvars('$HOME/.vnc/')
     cmd=["mkdir","-p",vncdir]
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -82,11 +83,11 @@ def newSession(args):
 
     # set up the cmmand based on flavour requested
     if args.flavour ==  "any":
-        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=" + partition, "--account=" + args.project , \
+        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=" + qos, "--partition=" + partition, "--account=" + args.project , \
             "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
                 "--output=" + slurm_out , "--error=" + slurm_out , sbatch_vis_session]
     elif args.flavour == "highmem":
-        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=" + partition, "--account=" + args.project , \
+        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=" + qos, "--partition=" + partition, "--account=" + args.project , \
             "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
             "--output=" + slurm_out , "--error=" + slurm_out , "--mem=192000" , sbatch_vis_session]
     
