@@ -17,7 +17,6 @@ class SharedSessions:
         self.idp=idp
         self.username=username
         
-
     def getPassphrase(self,queue):
         import cvlsshutils.PassphraseDialog
         dlg=cvlsshutils.PassphraseDialog.passphraseDialog(self.parent,None,wx.ID_ANY,"title","text","OK","Cancel")
@@ -29,6 +28,12 @@ class SharedSessions:
 
     def showShareFailedMessage(self,q):
         dlg = LauncherMessageDialog(self.parent, dialogs.shareFailedMessage.message, self.parent.programName, helpEmailAddress="help@massive.org.au" )
+        dlg.ShowModal()
+        dlg.Destroy()
+        q.put(None)
+
+    def showShareKey(self,key,q):
+        dlg=LauncherMessageDialog(self.parent,dialogs.shareKeyMessage.message.format(key=key),self.parent.programName,helpEmailAddress="help@massive.org.au")
         dlg.ShowModal()
         dlg.Destroy()
         q.put(None)
@@ -47,13 +52,15 @@ class SharedSessions:
     def shareSession(self,loginProcess):
         import cvlsshutils.RequestsSessionSingleton
         import cvlsshutils.AAF_Auth
+        import threading
         if len(self.parent.loginProcess)<1:
             q=Queue.Queue()
             wx.CallAfter(lambda:self.showShareFailedMessage(q))
             q.get()
             return
         q=Queue.Queue()
-        self.parent.loginProcess[0].getSharedSession(q)
+        t=threading.Thread(target=lambda: self.parent.loginProcess[0].getSharedSession(q))
+        t.start()
             
         wx.CallAfter(self.beginBusyCursor)
         self.session=cvlsshutils.RequestsSessionSingleton.RequestsSessionSingleton().GetSession()
@@ -64,22 +71,32 @@ class SharedSessions:
         if self.idp!=None:
             kwargs['aaf_idp']=self.idp
         auth=cvlsshutils.AAF_Auth.AAF_Auth(self.session,baseURL+'login',parent=self.parent,**kwargs)
-        auth.auth_cycle()
+        try:
+            auth.auth_cycle()
+        except: # Exception raised probably means cancled
+            wx.CallAfter(self.endBusyCursor)
+            return
         sc=q.get()
+        t.join()
         wx.CallAfter(self.endBusyCursor)
         mydict={}
         mydict['Saved Session']=sc
         import json
         sessionData=json.dumps(mydict,cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',',': '))
         r = self.session.post(baseURL+'login',data={'username':'test','password':'mysupersecret'},verify=False)
+        print "posting to login"
         print r.status_code
         print r.text
         data={'data':sessionData}
         r = self.session.post(baseURL+'save_config',data=data,verify=False)
+        print "posting to save"
         print r.status_code
         print r.text
         key = json.loads(r.text)['key']
         print "saved s sharedSesion with key %s"%key
+        q=Queue.Queue()
+        wx.CallAfter(lambda:self.showShareKey(key,q))
+        q.get()
 
     def retrieveSession(self):
         import cvlsshutils.RequestsSessionSingleton
@@ -94,7 +111,7 @@ class SharedSessions:
             kwargs['aaf_idp']=self.idp
         auth=cvlsshutils.AAF_Auth.AAF_Auth(self.session,baseURL,parent=self.parent,**kwargs)
         auth.auth_cycle()
-        r = self.session.post(baseURL+'login',data={'username':'test','password':'mysupersecret'},verify=False)
+        r = self.session.post(baseURL+'login',verify=False)
         print r.status_code
         print r.text
         success=False

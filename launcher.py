@@ -584,7 +584,7 @@ class LauncherMainFrame(wx.Frame):
         self.loginButton.Bind(wx.EVT_BUTTON, self.savePrefsEventHandler)
         self.loginButton.Bind(wx.EVT_BUTTON, self.onLogin)
         self.loginButton.SetDefault()
-        self.buttonsPanel.SetMinSize((-1,100))
+        #self.buttonsPanel.SetMinSize((-1,100))
 
 
         #self.preferencesButton.Show(False)
@@ -600,7 +600,8 @@ class LauncherMainFrame(wx.Frame):
 
         #self.Centre()
 
-        self.hiddenWindow=wx.Frame(self)
+        self.hiddenWindow=wx.Frame(self,name='hidden_window')
+        self.GetSizer().Add(self.hiddenWindow)
         self.hiddenWindow.SetSizer(wx.BoxSizer(wx.VERTICAL))
         t=wx.TextCtrl(self.hiddenWindow,wx.ID_ANY,name='jobParams_aaf_idp')
         self.hiddenWindow.GetSizer().Add(t)
@@ -890,12 +891,27 @@ class LauncherMainFrame(wx.Frame):
                 if loadDefaultSessions:
                     launcherMainFrame.loadDefaultSessions(True)
 
+    def walkChildren(self,window=None,i=0,name=''):
+        if window==None:
+            window=self
+        for item in window.GetChildren():
+            if item.GetName() == name:
+                return item
+            else:
+                r = self.walkChildren(item,i+1,name=name)
+                if r!=None:
+                    return r
+        return None
+
+
     def loadSessionEvent(self,event):
         import SharedSessions
-        idp=self.FindWindowByName('jobParams_aaf_idp').GetValue()
-        username=self.FindWindowByName('jobParams_aaf_username').GetValue()
-        print "idp is %s"%idp
-        print "username is %s"%username
+#        idpwindow=self.FindWindowByName(name='jobParams_aaf_idp')
+#        print idpwindow
+#        idp=self.FindWindowByName('jobParams_aaf_idp').GetValue()
+        idp = self.walkChildren(name='jobParams_aaf_idp').GetValue()
+        username = self.walkChildren(name='jobParams_aaf_username').GetValue()
+#        username=self.FindWindowByName('jobParams_aaf_username').GetValue()
         s=SharedSessions.SharedSessions(self,idp=idp,username=username)
         t=threading.Thread(target=s.retrieveSession)
         t.start()
@@ -1030,8 +1046,8 @@ class LauncherMainFrame(wx.Frame):
 
     def saveSessionEvent(self,event):
         import SharedSessions
-        idp=self.FindWindowByName('jobParams_aaf_idp').GetValue()
-        username=self.FindWindowByName('jobParams_aaf_username').GetValue()
+        idp = self.walkChildren(name='jobParams_aaf_idp').GetValue()
+        username = self.walkChildren(name='jobParams_aaf_username').GetValue()
         print "idp is %s"%idp
         print "username is %s"%username
         s=SharedSessions.SharedSessions(self,idp=idp,username=username)
@@ -1455,6 +1471,10 @@ class LauncherMainFrame(wx.Frame):
             if not self.skd.canceled():
                 print "running nextSub"
                 self.progressDialog=None
+                try:
+                    self.loginButton.Enable()
+                except:
+                    pass
                 nextSub()
             else:
                 print "skd canceled"
@@ -1620,7 +1640,7 @@ class MyApp(wx.App):
         launcherMainFrame = sys.modules[__name__].launcherMainFrame
         launcherMainFrame.SetStatusBar(launcherMainFrame.loginDialogStatusBar)
         launcherMainFrame.SetMenuBar(launcherMainFrame.menu_bar)
-        launcherMainFrame.Fit()
+        launcherMainFrame.GetSizer().Fit(launcherMainFrame)
         launcherMainFrame.Layout()
         launcherMainFrame.Center()
         launcherMainFrame.Show(True)

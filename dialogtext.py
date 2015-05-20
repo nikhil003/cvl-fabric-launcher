@@ -64,6 +64,9 @@ If this computer is not shared, then an SSH key pair will give you advanced feat
         msg="You must start a desktop (i.e. Login) before you can share it with a collaborator"
         self.shareFailedMessage=dialog()
         self.shareFailedMessage.message=msg
+        msg="Ask your collaborator to enter the words:\n \"{key}\"\n and login with their account"
+        self.shareKeyMessage=dialog()
+        self.shareKeyMessage.message=msg
 
 
     

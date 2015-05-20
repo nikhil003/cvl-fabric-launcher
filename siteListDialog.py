@@ -24,7 +24,7 @@ class newSiteDialog(wx.Dialog):
         b=wx.Button(p,wx.ID_CANCEL,label='Cancel')
         b.Bind(wx.EVT_BUTTON,self.onClose)
         s.Add(b,flag=wx.ALL,border=5)
-        self.Fit()
+        self.GetSizer().Fit(self)
 
     def getSite(self):
         return self.urltctrl.GetValue()
@@ -107,7 +107,7 @@ class siteListDialog(wx.Dialog):
         b.Bind(wx.EVT_BUTTON,self.onClose)
         p.SetSizer(s)
         mainSizer.Add(p,proportion=0,flag=wx.EXPAND)
-        self.Fit()
+        self.GetSizer().Fit(self)
         self.Refresh()
         self.Update()
 
