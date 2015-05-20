@@ -1029,17 +1029,6 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('massive_as_portal_flavours_20141203.json','w') as f:
     f.write(jsons)
 
-########################################################################################
-# MASSIVE Centos 6 (aka MASSIVE 2.5)
-########################################################################################
-
-defaultSites=collections.OrderedDict()
-defaultSites['Eval Centos 6 Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
-
-keys=defaultSites.keys()
-jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('massive_centos6_flavours_20141201.json','w') as f:
-    f.write(jsons)
 
 ########################################################################################
 # CVL with AAF 
@@ -1058,37 +1047,6 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('cvl_aaf_flavours_20140419.json','w') as f:
     f.write(jsons)
 
-########################################################################################
-# CVL with password
-########################################################################################
-defaultSites=collections.OrderedDict()
-defaultSites['CVL Desktop']=  getCVLSiteConfigXML("batch")
-defaultSites['Huygens on the CVL']= getCVLSiteConfigXML("huygens")
-defaultSites['CVL GPU node']= getCVLSiteConfigXML("vis")
-defaultSites['CVL Desktop'].authURL=None
-defaultSites['Huygens on the CVL'].authURL=None
-defaultSites['CVL GPU node'].authURL=None
-multicpu=getCVLSiteConfigXML("multicpu")
-cmd="\"module load pbs ; module load maui ; echo \'module load pbs ; /usr/local/bin/vncsession --vnc turbovnc --geometry {resolution} ; sleep 36000000 \' |  qsub -q multicpu -l nodes=1:ppn=16 -l walltime={hours}:00:00 -N desktop_{username} -o .vnc/ -e .vnc/ \""
-regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
-multicpu.startServer=siteConfig.cmdRegEx(cmd,regex)
-defaultSites['CVL 16 core node']=multicpu
-keys=defaultSites.keys()
-jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('cvl_flavours_20140419.json','w') as f:
-    f.write(jsons)
-
-########################################################################################
-# CVL UQ with password
-########################################################################################
-defaultSites=collections.OrderedDict()
-defaultSites['CVL Desktop at UQ']=  getCVLSiteConfigXML("batch")
-defaultSites['CVL Desktop at UQ'].authURL=None
-defaultSites['CVL Desktop at UQ'].loginHost='uq.login.cvl.massive.org.au'
-keys=defaultSites.keys()
-jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('cvl_uq_flavours_20140419.json','w') as f:
-    f.write(jsons)
     
 ########################################################################################
 # BPA with password
@@ -1204,8 +1162,11 @@ defaultSites['CVL Large Node']=  getCVLSiteConfigSlurm("64cpu")
 defaultSites['CVL Vis Node']=  getCVLSiteConfigSlurm("vis")
 defaultSites['CVL Huygens']=  getCVLSiteConfigSlurm("huygens")
 defaultSites['CVL Large Node'].defaults['jobParams_ppn']=16
+defaultSites['CVL Large Node'].siteRanges={}
+defaultSites['CVL Large Node'].siteRanges['jobParams_ppn']=[1,64]
 for s in defaultSites.keys():
     defaultSites[s].authURL=None
+
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('m2cvl.json','w') as f:
