@@ -1158,11 +1158,10 @@ with open('cvl_dev_flavours.json','w') as f:
 ########################################################################################
 defaultSites=collections.OrderedDict()
 defaultSites['CVL Default']=  getCVLSiteConfigSlurm("batch")
-defaultSites['CVL Large Node']=  getCVLSiteConfigSlurm("64cpu")
+defaultSites['CVL Large Node']=  getCVLSiteConfigSlurm("compute")
 defaultSites['CVL Vis Node']=  getCVLSiteConfigSlurm("vis")
 defaultSites['CVL Huygens']=  getCVLSiteConfigSlurm("huygens")
 defaultSites['CVL Large Node'].defaults['jobParams_ppn']=16
-defaultSites['CVL Large Node'].siteRanges={}
 defaultSites['CVL Large Node'].siteRanges['jobParams_ppn']=[1,64]
 for s in defaultSites.keys():
     defaultSites[s].authURL=None
