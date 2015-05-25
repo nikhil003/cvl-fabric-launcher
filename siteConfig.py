@@ -351,6 +351,9 @@ class siteConfig():
         self.onConnectScript=cmdRegEx(failFatal=False)
         self.agent=cmdRegEx()
         self.tunnel=cmdRegEx()
+        self.listReservations = cmdRegEx(failFatal=False)
+        self.createReservation = cmdRegEx(failFatal=False)
+        self.deleteReservation = cmdRegEx(failFatal=False)
         self.visibility={}
         self.relabel={}
         self.siteRanges= {'jobParams_hours':[1,336], 'jobParams_mem':[1,1024], 'jobParams_nodes':[1,10], 'jobParams_ppn':[1,12] }
@@ -359,5 +362,6 @@ class siteConfig():
         self.authorizedKeysFile=None
         self.oauthclient=None
         self.oauthclientpasswd=None
+        self.sitetz="Australia/Melbourne"
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value
