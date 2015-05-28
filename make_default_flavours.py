@@ -198,7 +198,7 @@ def getMassiveSiteConfig(loginHost):
 
     return c
 
-def getMassiveCentos6SiteConfig(loginHost):
+def getMassiveCentos6SiteConfig(loginHost,flavour=None):
 # usage: vis_manager.py [-h]
 #
 #                       {showstart,isrunning,vncport,newsession,stop,sanitycheck,getprojects,exechost,listall}
@@ -281,8 +281,11 @@ def getMassiveCentos6SiteConfig(loginHost):
     # newsession          create a new desktop session and return an id or error message
     # usage: vis_manager.py newsession [-h] -p PROJECT -t HOURS [-f FLAVOUR] [-n NODES] [-r RESOLUTION]
     # c.startServer=siteConfig.cmdRegEx("\'/usr/local/desktop/request_visnode.sh {project} {hours} {nodes} True False False {resolution}\'","^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$")
-    c.startServer=siteConfig.cmdRegEx("\'/usr/local/desktop/vis_manager.py newsession -p {project} -t {hours} -n {nodes} -r {resolution} \'","(?P<sessionid>[0-9]+)")
-
+    if flavour:
+        c.startServer=siteConfig.cmdRegEx("\'/usr/local/desktop/vis_manager.py newsession -p {project} -t {hours} -n {nodes} -r {resolution} -f %s\'"%flavour,"(?P<sessionid>[0-9]+)")
+    else:
+        c.startServer=siteConfig.cmdRegEx("\'/usr/local/desktop/vis_manager.py newsession -p {project} -t {hours} -n {nodes} -r {resolution} \'","(?P<sessionid>[0-9]+)")
+ 
     # sanitycheck         run a simple sanity check e.g. make sure the user has enough file system space to create files
     # usage: vis_manager.py sanitycheck [-h] -l LAUNCHERVERSION
     # c.runSanityCheck=siteConfig.cmdRegEx("\'/usr/local/desktop/sanity_check.sh {launcher_version_number}\'")
@@ -1003,6 +1006,7 @@ defaultSites=collections.OrderedDict()
 defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
 defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au")
 defaultSites['Centos 6 Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
+defaultSites['Centos 6 Highmem Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au","highmem")
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))

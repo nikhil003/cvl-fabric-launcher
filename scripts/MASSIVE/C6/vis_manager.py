@@ -3,12 +3,16 @@ import subprocess
 import datetime
 import os
 import time
+import socket
 from subprocess import call
 import re
 
 def listAll(args):
+    submithost=socket.gethostname()
+    mX = submithost[:2]
+    partition=mX + "-vis-c6"
     username=os.path.expandvars('$USER')
-    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=m2-vis-c6", "-o" , "%i %L"]
+    cmd=["/usr/local/slurm/latest/bin/squeue" , "--user=" + username, "--partition=" + partition, "-o" , "%i %L"]
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         if not 'JOBID TIME_LEFT' in line:
@@ -35,6 +39,10 @@ def listAll(args):
     retval = p.wait()
 
 def newSession(args):
+    submithost=socket.gethostname()
+    mX = submithost[:2]
+    partition=mX + "-vis-c6"
+    qos="vis_" + mX
     vncdir=os.path.expandvars('$HOME/.vnc/')
     cmd=["mkdir","-p",vncdir]
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -57,6 +65,13 @@ def newSession(args):
     # let user know that multinode sessions are for particular tasks
     if args.nodes > 1:
         print "INFO: You have requested more than one vis node. This should only be used for parallel vis jobs e.g. ParaView and XLI Workflow."
+
+    # TODO: things that will help the user
+    #       - if system reserved for outage adjust walltime if too long and inform user
+    #       - if high mem busy suggest low mem
+    #       = warning if not enough allocation or low allcoation
+    #       - warning if overquota
+
     # start session
     # check if user has a custom sbatch_vis_session script (used for reservations etc)
     if os.path.isfile(os.path.expandvars('$HOME/.vnc/sbatch_vis_session')):
@@ -65,8 +80,17 @@ def newSession(args):
         sbatch_vis_session = "/usr/local/desktop/sbatch_vis_session"
 
     slurm_out=os.path.expandvars('$HOME/.vnc/slurm-%j.out')
-    cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=vis", "--partition=m2-vis-c6", "--account=" + args.project , "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
-        "--output=" + slurm_out , "--error=" + slurm_out , sbatch_vis_session]
+
+    # set up the cmmand based on flavour requested
+    if args.flavour ==  "any":
+        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=" + qos, "--partition=" + partition, "--account=" + args.project , \
+            "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
+                "--output=" + slurm_out , "--error=" + slurm_out , sbatch_vis_session]
+    elif args.flavour == "highmem":
+        cmd=["/usr/local/slurm/latest/bin/sbatch" , "--qos=" + qos, "--partition=" + partition, "--account=" + args.project , \
+            "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes) , \
+            "--output=" + slurm_out , "--error=" + slurm_out , "--mem=192000" , sbatch_vis_session]
+    
     # print cmd
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
@@ -145,14 +169,18 @@ def showStart(args):
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         if 'StartTime' in line:
-            StartTime = line.split(' ')[3]
-            StartTime = StartTime.split('=')[1]
-            print "StartTime " + StartTime.split('T')[1] + " " + StartTime.split('T')[0] 
+            if 'StartTime=Unknown' in line:
+                StartTime = "Unknown"
+            else:
+                StartTime = line.split(' ')[3]
+                StartTime = StartTime.split('=')[1]
+                StartTime = StartTime.split('T')[1] + " " + StartTime.split('T')[0]
+            print "StartTime " + StartTime 
     retval = p.wait()
 
 def sanityCheck(args):
     print "Running with launcher version: " + args.launcherversion
-    # print "INFO: Friday 13th Feb - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
+#    print "INFO: Tuesday 12th Mar - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
     # if int(args.launcherversion) < 20150418:
     #      print "INFO: " + args.launcherversion
 
@@ -169,7 +197,7 @@ def main():
     newsessionSP.set_defaults(func=newSession)
     newsessionSP.add_argument("-p","--project", required=True, help='the project allocation to run the session against')
     newsessionSP.add_argument("-t","--hours", type=int, required=True, help='the number of hours the session is to run for')
-    newsessionSP.add_argument("-f","--flavour", default="any", help='the preferred type of session required (default any, available any,lowmem,highmem)')
+    newsessionSP.add_argument("-f","--flavour", default="any", choices=['any','highmem'], help='the preferred type of session required (default any, available any,lowmem,highmem)')
     newsessionSP.add_argument("-n","--nodes", type=int, default=1, help='the number of nodes (default 1)')
     newsessionSP.add_argument("-r","--resolution", help='sets the display resolution (e.g. 1024x768)')
 
