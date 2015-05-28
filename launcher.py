@@ -1477,6 +1477,18 @@ class LauncherMainFrame(wx.Frame):
                     pass
                 nextSub()
             else:
+                try:
+                    self.loginButton.Enable()
+                except:
+                    pass
+                try:
+                    wx.EndBusyCursor()
+                except:
+                    pass
+
+                logger.debug(self.skd.cancelMessage)
+                print self.skd.cancelMessage
+
                 print "skd canceled"
                 pass
         except Exception as e:
@@ -1484,6 +1496,7 @@ class LauncherMainFrame(wx.Frame):
             import traceback
             print traceback.format_exc()
             print "skd exception"
+
             pass
         
     def logStartup(self):
