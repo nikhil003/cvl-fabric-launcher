@@ -156,7 +156,7 @@ def getProjects(args):
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
         user = line.split('|')[1]
-        if userid == user:
+        if userid.lower() == user:
             project =  line.split('|')[0]
             if project.lstrip(' ') == "cvl":
                 pass
