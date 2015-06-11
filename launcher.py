@@ -1594,6 +1594,18 @@ class LauncherMainFrame(wx.Frame):
         self.buildKeyModel()
         (jobParams,siteConfig) = self.generateParameters()
         progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.raiseException)
+        if siteConfig.provision!=None:
+            import NeCTAR
+            if siteConfig.provision == 'NeCTAR':
+                self.provider=NeCTAR.Provision(notify_window=progressDialog,jobParams=jobParams,imageid=siteConfig.imageid,instanceFlavour=siteConfig.instanceFlavour,keyModel=self.keyModel,username=siteConfig.username)
+            else:
+                self.provider=None
+            def callback():
+                wx.PostEvent(self.notify_window.GetEventHandler(),event)
+                self.jobParams.update(self.provider.updateDict)
+            def failcallback():
+                self.shutdown()
+            threading.Thread(target=self.provider.run,args=[callback,failcallback]).start()
         self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
         print "created skd"
         t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.launchVNC,jobParams,siteConfig)])
