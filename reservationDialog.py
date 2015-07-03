@@ -206,7 +206,7 @@ class reservationsDialog(wx.Dialog):
     def deleteReservation(self,reservation):
         cmdRegex = self.siteConfig.deleteReservation
         params=self.jobParams.copy()
-        params['ReservationName']=reservation.name
+        params['resname']=reservation.name
         (stdout, stderr) = utilityFunctions.run_command(cmdRegex.getCmd(params),ignore_errors=True, callback=lambda: wx.CallAfter(self.failureDialog), startupinfo=self.startupinfo, creationflags=self.creationflags) 
         self.updateReservationList()
 
