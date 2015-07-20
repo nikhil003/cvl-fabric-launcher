@@ -1672,15 +1672,36 @@ class LauncherMainFrame(wx.Frame):
 
     def launchSFTP(self,jobParams,siteConfig):
         try:
-            logger.debug('attempting to launch filezilla')
+            logger.debug('attempting to launch sftp')
             import subprocess
-            subprocess.call(['filezilla','sftp://%s@%s'%(jobParams['username'],siteConfig.loginHost)])
+            if sys.platform.startswith("darwin"):
+                opener="open"
+            elif sys.platform.startswith("win"):
+                opener="start"
+            elif sys.platform.startswith("linux"):
+                opener="filezilla"
+            rv=subprocess.call([opener,'sftp://%s@%s'%(jobParams['username'],siteConfig.loginHost)])
+            if rv!=0:
+                queue=Queue.Queue()
+                wx.CallAfter(self.missingHandler(),queue=queue)
+                queue.get()
         except Exception as e:
             logger.debug('caught exception %s'%e)
             logger.debug(traceback.format_exc())
             queue=Queue.Queue()
             wx.CallAfter(self.showThankyou(),queue=queue)
             queue.get()
+
+    def missingHandler(self):
+        msg="""
+Thanks for your interest in the new file transfer feature of Strudel
+In order to transfer files to your desktop you need to install an sftp client. 
+FileZilla would be a good choice on all platforms (https://filezilla-project.org/)
+On Windows this could also be winscp or Cyberduck. Mac's can use Cyberduck
+"""
+        dlg = LauncherMessageDialog(self, msg, self.programName, helpEmailAddress="help@massive.org.au" )
+
+
 
     def showThankyou(self):
         msg="""
