@@ -324,6 +324,9 @@ class LauncherMainFrame(wx.Frame):
 
         self.file_menu = wx.Menu()
         self.menu_bar.Append(self.file_menu, "&File")
+        transferFiles=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Transfer Files")
+        self.file_menu.AppendItem(transferFiles)
+        self.Bind(wx.EVT_MENU, self.transferFilesEvent, id=transferFiles.GetId())
         shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Share my desktop")
         self.file_menu.AppendItem(shareDesktop)
         self.Bind(wx.EVT_MENU, self.saveSessionEvent, id=shareDesktop.GetId())
@@ -697,6 +700,8 @@ class LauncherMainFrame(wx.Frame):
         # use the Identity Menu to delete their key etc. before
         # pressing the Login button.
         self.keyModel = KeyModel(startupinfo=self.startupinfo,creationflags=self.creationflags,temporaryKey=False)
+        self.keyModelCreated=threading.Event()
+        self.keyModelCreated.clear()
 
         if options.has_key('monitor_network_checkbox'):
             if options['monitor_network_checkbox']:
@@ -1053,6 +1058,34 @@ class LauncherMainFrame(wx.Frame):
         s=SharedSessions.SharedSessions(self,idp=idp,username=username)
         t=threading.Thread(target=s.shareSession,kwargs={'loginProcess':self.loginProcess})
         t.start()
+
+    def transferFilesEvent(self,event):
+        self.loginButton.Disable()
+        import cvlsshutils.skd_thread
+        if not self.sanityCheck():
+            print "sanitycheckFailed"
+            return
+        self.logStartup()
+        self.buildKeyModel()
+        (jobParams,siteConfig) = self.generateParameters()
+        if siteConfig.provision!=None:
+            progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Creating VM ...", "", 2, True,self.raiseException)
+            import NeCTAR
+            if siteConfig.provision == 'NeCTAR':
+                self.provider=NeCTAR.Provision(notify_window=progressDialog,jobParams=jobParams,imageid=siteConfig.imageid,instanceFlavour=siteConfig.instanceFlavour,keyModel=self.keyModel,username=siteConfig.username)
+            else:
+                self.provider=None
+            def callback():
+                wx.PostEvent(self.notify_window.GetEventHandler(),event)
+                self.jobParams.update(self.provider.updateDict)
+            def failcallback():
+                self.shutdown()
+            threading.Thread(target=self.provider.run,args=[callback,failcallback]).start()
+        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.shutdown_skd_thread)
+        self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
+        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.launchSFTP,jobParams,siteConfig)])
+        t.start()
+        event.Skip()
 
 
 
@@ -1475,6 +1508,10 @@ class LauncherMainFrame(wx.Frame):
                     self.loginButton.Enable()
                 except:
                     pass
+                try:
+                    wx.EndBusyCursor()
+                except:
+                    pass
                 nextSub()
             else:
                 try:
@@ -1530,6 +1567,8 @@ class LauncherMainFrame(wx.Frame):
         return True
 
     def buildKeyModel(self):
+        if self.keyModelCreated.is_set():
+            return
         dotSshDir = os.path.join(os.path.expanduser('~'), '.ssh')
         if not os.path.exists(dotSshDir):
             os.makedirs(dotSshDir)
@@ -1551,6 +1590,7 @@ class LauncherMainFrame(wx.Frame):
         else:
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
+        self.keyModelCreated.set()
 
 
     def generateParameters(self):
@@ -1570,6 +1610,16 @@ class LauncherMainFrame(wx.Frame):
 
     def raiseException(self):
         raise Exception("user canceled login")
+
+    def shutdown_skd_thread(self):
+        try:
+            self.skd._stopped.set()
+            self.skd._exit.set()
+        except:
+            pass
+        self.skd.progressDialog.Hide()
+        self.loginButton.Enable()
+
 
     def onManageReservations(self,event):
         self.manageResButton.Disable()
@@ -1593,8 +1643,8 @@ class LauncherMainFrame(wx.Frame):
         self.logStartup()
         self.buildKeyModel()
         (jobParams,siteConfig) = self.generateParameters()
-        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.raiseException)
         if siteConfig.provision!=None:
+            progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Creating VM ...", "", 2, True,self.raiseException)
             import NeCTAR
             if siteConfig.provision == 'NeCTAR':
                 self.provider=NeCTAR.Provision(notify_window=progressDialog,jobParams=jobParams,imageid=siteConfig.imageid,instanceFlavour=siteConfig.instanceFlavour,keyModel=self.keyModel,username=siteConfig.username)
@@ -1606,6 +1656,7 @@ class LauncherMainFrame(wx.Frame):
             def failcallback():
                 self.shutdown()
             threading.Thread(target=self.provider.run,args=[callback,failcallback]).start()
+        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.shutdown_skd_thread)
         self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
         print "created skd"
         t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.launchVNC,jobParams,siteConfig)])
@@ -1618,6 +1669,28 @@ class LauncherMainFrame(wx.Frame):
         dlg=reservationDialog.reservationsDialog(rqueue=q,parent=self,siteConfig=siteConfig,jobParams=jobParams,buttons=['New','Delete','Cancel'],startupinfo=self.startupinfo,creationflags=self.creationflags)
         res=dlg.ShowModal()
         self.manageResButton.Enable()
+
+    def launchSFTP(self,jobParams,siteConfig):
+        try:
+            logger.debug('attempting to launch filezilla')
+            import subprocess
+            subprocess.call(['filezilla','sftp://%s@%s'%(jobParams['username'],siteConfig.loginHost)])
+        except Exception as e:
+            logger.debug('caught exception %s'%e)
+            logger.debug(traceback.format_exc())
+            queue=Queue.Queue()
+            wx.CallAfter(self.showThankyou(),queue=queue)
+            queue.get()
+
+    def showThankyou(self):
+        msg="""
+Thanks for your interest in the new file transfer feature of Strudel
+At the moment this feature isn't expected to work except maybe on Linux and Mac systems (if you're very lucky and the moon is in the correct phase and the stars all align)
+But we'd still appreciate hearing about your experience. We just might not be able to make it work for you right now.
+"""
+        dlg = LauncherMessageDialog(self, msg, self.programName, helpEmailAddress="help@massive.org.au" )
+
+
 
     def launchVNC(self,jobParams,siteConfig):
 
