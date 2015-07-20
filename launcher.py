@@ -1676,11 +1676,14 @@ class LauncherMainFrame(wx.Frame):
             import subprocess
             if sys.platform.startswith("darwin"):
                 opener="open"
+                shell=False
             elif sys.platform.startswith("win"):
                 opener="start"
+                shell=True
             elif sys.platform.startswith("linux"):
                 opener="filezilla"
-            rv=subprocess.call([opener,'sftp://%s@%s'%(jobParams['username'],siteConfig.loginHost)])
+                shell=False
+            rv=subprocess.call([opener,'sftp://%s@%s'%(jobParams['username'],siteConfig.loginHost)],shell=shell,startupinfo=self.startupinfo,creationflags=self.creationflags)
             if rv!=0:
                 queue=Queue.Queue()
                 wx.CallAfter(self.missingHandler(),queue=queue)
