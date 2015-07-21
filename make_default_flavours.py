@@ -959,7 +959,7 @@ def getBMRIVNCConfig(queue):
     c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {execHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
     #c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
     c.otp= siteConfig.cmdRegEx('"/usr/bin/ssh {execHost} \' /opt/TurboVNC/bin/vncpasswd -o -display localhost{vncDisplay}\'"','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
-    cmd='\"  echo \\\"/opt/TurboVNC/bin//vncserver -geometry {resolution} -rfbwait 120000 -otpauth -deferupdate 1 ; sleep 1000000 \\\" | qsub  -l ncpus={ppn},mem={mem}g,walltime={hours}:00 -N desktop -q %s  -o .vnc/ -e .vnc/ \"'%queue
+    cmd='\" /usr/local/bin/check_cache.py; echo \\\"/opt/TurboVNC/bin//vncserver -geometry {resolution} -rfbwait 120000 -otpauth -deferupdate 1 ; sleep 1000000 \\\" | qsub  -l ncpus={ppn},mem={mem}g,walltime={hours}:00:00 -N desktop -q %s  -o .vnc/ -e .vnc/ \"'%queue
     regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
     c.startServer=siteConfig.cmdRegEx(cmd,regex)
     c.vncDisplay= siteConfig.cmdRegEx('\"/usr/bin/ssh {execHost} \' /opt/TurboVNC/bin/vncserver -list\'\"','^(?P<vncDisplay>:[0-9]+)\s*(?P<vncPID>[0-9]+)\s*$')
@@ -973,6 +973,7 @@ def getBMRIVNCConfig(queue):
     c.relabel['label_ppn']='CPUs'
     c.siteRanges={}
     c.siteRanges['jobParams_ppn']=[1,64]
+    c.onFirstLogin="/usr/local/bin/check_cache.py"
     c.onConnectScript=siteConfig.cmdRegEx()
     return c
 
