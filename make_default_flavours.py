@@ -110,6 +110,16 @@ class sshKeyDistDisplayStringsCQU(siteConfig.sshKeyDistDisplayStrings):
         self.persistentMessage="Would you like to leave your current session running so that you can reconnect later?"
         self.reconnectMessage="An Existing Desktop was found. Would you like to reconnect or kill it and start a new desktop?"
 
+class sshKeyDistDisplayStringsBMRI(siteConfig.sshKeyDistDisplayStrings):
+    def __init__(self):
+        super(sshKeyDistDisplayStringsBMRI, self).__init__()
+        self.passwdPrompt="""Please enter the password for your BMRI account."""
+        self.passwdPromptIncorrect="Sorry, that password was incorrect.\n"+self.passwdPrompt
+
+        self.persistentMessage="Would you like to leave your current session running so that you can reconnect later?"
+        self.reconnectMessage="An Existing Desktop was found. Would you like to reconnect or kill it and start a new desktop?"
+
+
 
 
 def getMassiveSiteConfig(loginHost):
@@ -925,6 +935,47 @@ def getCQUStandardVNCConfig(queue):
     c.siteRanges['jobParams_ppn']=[1,64]
     return c
 
+def getBMRIVNCConfig(queue):
+    c = getCVLSiteConfig(queue)
+    s = sshKeyDistDisplayStringsBMRI()
+    c.displayStrings.__dict__.update(s.__dict__)
+    c.visibility['resourcePanel']=True
+    c.visibility['label_ppn']=False
+    c.visibility['jobParams_ppn']=False
+    c.visibility['label_mem']=False
+    c.visibility['jobParams_mem']=False
+    c.visibility['label_nodes']=False
+    c.visibility['jobParams_nodes']=False
+    c.visibility['label_hours']=True
+    c.visibility['jobParams_hours']=True
+    c.loginHost='172.18.30.64'
+    c.directConnect=False
+    cmd='\"qstat -f {jobidNumber} \"'
+    regex='.*job_state = R.*'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\" qdel {jobidNumber}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"qdel {jobidNumber}\"')
+    c.agent=siteConfig.cmdRegEx()
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {execHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+    #c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    c.otp= siteConfig.cmdRegEx('"/usr/bin/ssh {execHost} \' /opt/TurboVNC/bin/vncpasswd -o -display localhost{vncDisplay}\'"','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
+    cmd='\"  echo \\\"/opt/TurboVNC/bin//vncserver -geometry {resolution} -rfbwait 120000 -otpauth -deferupdate 1 ; sleep 1000000 \\\" | qsub  -l ncpus={ppn},mem={mem}g,walltime={hours}:00 -N desktop -q %s  -o .vnc/ -e .vnc/ \"'%queue
+    regex="^(?P<jobid>(?P<jobidNumber>[0-9]+)\.\S+)\s*$"
+    c.startServer=siteConfig.cmdRegEx(cmd,regex)
+    c.vncDisplay= siteConfig.cmdRegEx('\"/usr/bin/ssh {execHost} \' /opt/TurboVNC/bin/vncserver -list\'\"','^(?P<vncDisplay>:[0-9]+)\s*(?P<vncPID>[0-9]+)\s*$')
+    #c.vncDisplay= siteConfig.cmdRegEx('\"/usr/bin/ssh {execHost} \'cat ~/.vnc/\\`hostname\\`*.log\'\"','port 59(?P<vncDisplay>[0-9]+)')
+    #c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
+    cmd = '\" qstat -f {jobidNumber} | grep exec_host | sed \'s/\ \ */\ /g\' | cut -f 4 -d \' \' | cut -f 1 -d \'/\' | xargs -iname hostn name | grep address | sed \'s/\ \ */\ /g\' | cut -f 3 -d \' \' | xargs -iip echo execHost ip; qstat -f {jobidNumber}\"'
+    regex='^\s*execHost (?P<execHost>.*)'
+    c.execHost = siteConfig.cmdRegEx(cmd,regex)
+    c.listAll=siteConfig.cmdRegEx('\"qstat -u {username} | tail -n +6\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+).\S+)\s+\S+\s+\S+\s+(?P<jobname>desktop)\s+(?P<sessionID>\S+)\s+(?P<nodes>\S+)\s+(?P<tasks>\S+)\s+(?P<mem>\S+)\s+(?P<reqTime>\S+)\s+(?P<state>[^C])\s+\S+\s*$',requireMatch=False)
+    c.relabel={}
+    c.relabel['label_ppn']='CPUs'
+    c.siteRanges={}
+    c.siteRanges['jobParams_ppn']=[1,64]
+    c.onConnectScript=siteConfig.cmdRegEx()
+    return c
+
 ##### End of CQU VNC Definitions #####
 
 
@@ -1015,6 +1066,26 @@ with open('massive_flavours_20150417.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
+# MASSIVE using AS
+########################################################################################
+
+defaultSites=collections.OrderedDict()
+defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
+defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au")
+defaultSites['Centos 6 Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
+defaultSites['Centos 6 Desktop on m1-login2.massive.org.au']  = getMassiveCentos6SiteConfig("m1-login2.massive.org.au")
+defaultSites['Centos 6 Highmem Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au","highmem")
+
+for s in defaultSites.keys():
+    defaultSites[s].authURL='https://autht.massive.org.au/ASync'
+    defaultSites[s].oauthclient='massive_imbl'
+    defaultSites[s].oauthclientpasswd='m1mo4MedicBL'
+
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))
+with open('massive_as_flavours_20150417.json','w') as f:
+    f.write(jsons)
+########################################################################################
 # MASSIVE using AS Portal
 ########################################################################################
 
@@ -1027,6 +1098,8 @@ defaultSites['Centos 6 Desktop (For Eval Users) on m2-login3.massive.org.au']  =
 
 for s in defaultSites.keys():
     defaultSites[s].authURL='https://autht.massive.org.au/ASync'
+    defaultSites[s].oauthclient='massive_imbl'
+    defaultSites[s].oauthclientpasswd='m1mo4MedicBL'
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))
@@ -1106,6 +1179,20 @@ defaultSites['Other TurboVNC']=getOtherTurboVNCConfig("")
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('other_flavour.json','w') as f:
+    f.write(jsons)
+
+
+##### BMRI Host Definitions ####
+defaultSites=collections.OrderedDict()
+standard=getBMRIVNCConfig("batch")
+standard.authURL=None
+gpu=getBMRIVNCConfig("viznode")
+gpu.authURL=None
+defaultSites['BMRI Viznode']=gpu
+defaultSites['BMRI Standard']=standard
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('bmri.json','w') as f:
     f.write(jsons)
 
 ##### CQU Host Definitions #####
