@@ -220,6 +220,7 @@ Do you want me to delete the job or leave it in the queue so you can reconnect l
         self.createNewKeyDialogNewPassphraseMismatch="Passphrases don't match"
         self.networkError="It looks like a network error has occured. You may be able to resume your work by logging in again."
         self.helpEmailAddress="help@massive.org.au"
+        self.onFirstLoginFailure="An unknown error occured. Please contact your site help desk."
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value
 
@@ -362,6 +363,7 @@ class siteConfig():
         self.authorizedKeysFile=None
         self.oauthclient=None
         self.oauthclientpasswd=None
+        self.onFirstLogin=None
         self.sitetz="Australia/Melbourne"
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value
