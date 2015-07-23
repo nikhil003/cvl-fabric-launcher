@@ -1055,11 +1055,15 @@ import json
 ########################################################################################
 
 defaultSites=collections.OrderedDict()
-defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
-defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au")
-defaultSites['Centos 6 Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
-defaultSites['Centos 6 Desktop on m1-login2.massive.org.au']  = getMassiveCentos6SiteConfig("m1-login2.massive.org.au")
-defaultSites['Centos 6 Highmem Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au","highmem")
+
+defaultSites['m2 Centos 6 Desktop on m2-login1.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login1.massive.org.au")
+defaultSites['m2 Centos 6 Highmem Desktop on m2-login1.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login1.massive.org.au","highmem")
+defaultSites['m2 Centos 6 Desktop on m2-login2.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login2.massive.org.au")
+defaultSites['m2 Centos 6 Highmem Desktop on m2-login2.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login2.massive.org.au","highmem")
+defaultSites['m1 Centos 6 Desktop on m1-login2.massive.org.au']  = getMassiveCentos6SiteConfig("m1-login2.massive.org.au")
+defaultSites['m1 Old Centos 5 Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au")
+
+# defaultSites['Centos 6 Desktop on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))
