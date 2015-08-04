@@ -96,6 +96,20 @@ def newSession(args):
                "--time=" + str(args.hours) + ":00:00", "--nodes=" + str(args.nodes), \
                "--output=" + slurm_out, "--error=" + slurm_out, "--mem=192000", sbatch_vis_session]
 
+    # additional options
+    # if account is listed in the beamline reservation use that reservation
+    reservationname="beamline"
+    reservation_cmd=["/usr/local/slurm/latest/bin/scontrol","show","--oneliner","reservation=" + reservationname]
+    p = subprocess.Popen(reservation_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    line =  p.stdout.readline()
+    reservation_dict = dict( (n,v) for n,v in (a.split('=') for a in line.split() ) )
+    retval = p.wait()
+    if args.project in reservation_dict['Accounts']:
+        # print "account found in reservation - inserting reservationname before sbatch script"
+        sbatch_vis_session = cmd.pop()
+        cmd.append("--reservation=" + reservationname)
+        cmd.append(sbatch_vis_session)
+
     # print cmd
     p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in p.stdout.readlines():
