@@ -104,7 +104,7 @@ def newSession(args):
     line =  p.stdout.readline()
     reservation_dict = dict( (n,v) for n,v in (a.split('=') for a in line.split() ) )
     retval = p.wait()
-    if args.project in reservation_dict['Accounts']:
+    if partition == "m1-vis-c6" and args.project in reservation_dict['Accounts']:
         # print "account found in reservation - inserting reservationname before sbatch script"
         sbatch_vis_session = cmd.pop()
         cmd.append("--reservation=" + reservationname)
