@@ -40,7 +40,7 @@ class newReservationDialog(wx.Dialog):
         #b.SetMinSize((-1,42))
         b.Bind(wx.EVT_BUTTON,self.onOK)
         p.GetSizer().Add(b)
-        b = wx.Button(p,wx.ID_CANCEL,"Cancel")
+        b = wx.Button(p,wx.ID_CANCEL,"Done")
         #b.SetMinSize((-1,42))
         b.Bind(wx.EVT_BUTTON,self.onClose)
         p.GetSizer().Add(b)
