@@ -529,10 +529,10 @@ class LauncherMainFrame(wx.Frame):
 
         if sys.platform.startswith("win"):
             defaultCipher = "arcfour"
-            sshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour"]
+            sshTunnelCiphers = ["3des-cbc", "aes128-ctr", "blowfish-cbc", "arcfour"]
         else:
             defaultCipher = "arcfour128"
-            sshTunnelCiphers = ["3des-cbc", "aes128-cbc", "blowfish-cbc", "arcfour128"]
+            sshTunnelCiphers = ["3des-cbc", "aes128-ctr", "blowfish-cbc", "arcfour128"]
         self.sshTunnelCipherComboBox = wx.ComboBox(self.cipherPanel, wx.ID_ANY, value=defaultCipher, choices=sshTunnelCiphers, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_cipher')
         self.cipherPanel.GetSizer().Add(self.sshTunnelCipherComboBox, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.cipherPanel,proportion=0,flag=wx.EXPAND)
@@ -1337,6 +1337,12 @@ class LauncherMainFrame(wx.Frame):
                 logger.debug("launcher.py: onExit: Didn't find a login process to shut down.")
 
             logger.dump_log(launcherMainFrame)
+            if self.skd!=None:
+                try:
+                    logger.debug("launcher.py: onExit: Calling self.skd.shutdownReal().")
+                    self.skd.shutdownReal()
+                except:
+                    pass
         finally:
             os._exit(0)
 
@@ -1496,7 +1502,7 @@ class LauncherMainFrame(wx.Frame):
         self.cvlLoginDialogPanel.Refresh()
         self.loginButton.Enable()
 
-    def authAndLogin(self,nextSub):
+    def authAndLogin(self,nextSub,button=None):
         try:
             print "running skd.authorise"
             self.skd.authorise()
@@ -1505,7 +1511,10 @@ class LauncherMainFrame(wx.Frame):
                 print "running nextSub"
                 self.progressDialog=None
                 try:
-                    self.loginButton.Enable()
+                    if button!=None:
+                        button.Enable()
+                    self.shutdown_skd_thread()
+                    #self.loginButton.Enable()
                 except:
                     pass
                 try:
@@ -1515,7 +1524,10 @@ class LauncherMainFrame(wx.Frame):
                 nextSub()
             else:
                 try:
-                    self.loginButton.Enable()
+                    if button!=None:
+                        button.Enable()
+                    self.shutdown_skd_thread()
+                    #self.loginButton.Enable()
                 except:
                     pass
                 try:
@@ -1568,6 +1580,7 @@ class LauncherMainFrame(wx.Frame):
 
     def buildKeyModel(self):
         if self.keyModelCreated.is_set():
+            logger.debug("keyModel is already created, returning existing model")
             return
         dotSshDir = os.path.join(os.path.expanduser('~'), '.ssh')
         if not os.path.exists(dotSshDir):
@@ -1586,8 +1599,10 @@ class LauncherMainFrame(wx.Frame):
             except:
                 logger.debug("launcherMainFrame.onLogin: spawning an ssh-agent (no existing agent found)")
                 pass
+            logger.debug("creating a temporary keymodel")
             self.keyModel=KeyModel(temporaryKey=True,startupinfo=self.startupinfo)
         else:
+            logger.debug("creating a long term keymodel")
             logger.debug("launcherMainFrame.onLogin: using a permanent Key pair")
             self.keyModel=KeyModel(temporaryKey=False,startupinfo=self.startupinfo)
         self.keyModelCreated.set()
@@ -1617,6 +1632,8 @@ class LauncherMainFrame(wx.Frame):
             self.skd._exit.set()
         except:
             pass
+        logger.debug("resetting the keymodel")
+        self.keyModelCreated.clear()
         self.skd.progressDialog.Hide()
         self.loginButton.Enable()
 
@@ -1625,11 +1642,12 @@ class LauncherMainFrame(wx.Frame):
         self.manageResButton.Disable()
         import cvlsshutils.skd_thread
         self.logStartup()
+        logger.debug("building a new keymodel")
         self.buildKeyModel()
         (jobParams,siteConfig) = self.generateParameters()
-        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.raiseException)
+        progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,cancelCallback=self.shutdown_skd_thread)
         self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
-        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.showReservationDialog,jobParams,siteConfig)])
+        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.showReservationDialog,jobParams,siteConfig),self.manageResButton])
         t.start()
         event.Skip()
 
@@ -1659,7 +1677,7 @@ class LauncherMainFrame(wx.Frame):
         progressDialog=launcher_progress_dialog.LauncherProgressDialog(self, wx.ID_ANY, "Authorising login ...", "", 2, True,self.shutdown_skd_thread)
         self.skd = cvlsshutils.skd_thread.KeyDist(keyModel=self.keyModel,parentWindow=self,progressDialog=progressDialog,jobParams=jobParams,siteConfig=siteConfig,startupinfo=self.startupinfo,creationflags=self.creationflags)
         print "created skd"
-        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.launchVNC,jobParams,siteConfig)])
+        t=threading.Thread(target=self.authAndLogin,args=[lambda:wx.CallAfter(self.launchVNC,jobParams,siteConfig),self.loginButton])
         t.start()
         event.Skip()
 
