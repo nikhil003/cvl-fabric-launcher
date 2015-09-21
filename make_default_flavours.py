@@ -1095,6 +1095,8 @@ for s in defaultSites.keys():
     defaultSites[s].authURL='https://autht.massive.org.au/ASync'
     defaultSites[s].oauthclient='massive_imbl'
     defaultSites[s].oauthclientpasswd='m1mo4MedicBL'
+    defaultSites[s].visibility['usernamePanel']=False
+    defaultSites[s].visibility['projectPanel']=False
 
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=False,indent=4,separators=(',', ': '))
@@ -1110,6 +1112,7 @@ defaultSites['Desktop on m2-login2.massive.org.au'] = getMassiveSiteConfig("m2-l
 defaultSites['Desktop on m1-login1.massive.org.au']  = getMassiveSiteConfig("m1-login1.massive.org.au") 
 defaultSites['Desktop on m2-login1.massive.org.au'] = getMassiveSiteConfig("m2-login1.massive.org.au")
 defaultSites['Centos 6 Desktop (For Eval Users) on m2-login3.massive.org.au']  = getMassiveCentos6SiteConfig("m2-login3.massive.org.au")
+
 
 for s in defaultSites.keys():
     defaultSites[s].authURL='https://autht.massive.org.au/ASync'
