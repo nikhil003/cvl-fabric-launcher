@@ -450,7 +450,9 @@ def getCVLSiteConfigSlurm(partition):
 
     c.messageRegexs=[re.compile("^INFO:(?P<info>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^WARN:(?P<warn>.*(?:\n|\r\n?))",re.MULTILINE),re.compile("^ERROR:(?P<error>.*(?:\n|\r\n?))",re.MULTILINE)]
     
-    cmd='\"squeue -j {jobidNumber} -o "%N" | tail -n -1 | cut -f 1 -d \',\' | xargs -iname getent hosts name | cut -f 1 -d \' \' \"'
+    #cmd='\"squeue -j {jobidNumber} -o "%N" | tail -n -1 | cut -f 1 -d \',\' | xargs -iname getent hosts name | cut -f 1 -d \' \' \"'
+    cmd='\"scontrol show job {jobidNumber} | grep BatchHost | cut -f 2 -d \'=\' | xargs -iname getent hosts name | cut -f 1 -d \' \' \"'
+
     regex='^(?P<execHost>.*)$'
     c.execHost = siteConfig.cmdRegEx(cmd,regex)
     cmd='\"groups | sed \'s@ @\\n@g\'\"' # '\'groups | sed \'s\/\\\\ \/\\\\\\\\n\/g\'\''
