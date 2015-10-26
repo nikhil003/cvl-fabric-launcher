@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python -E
 import subprocess
 import datetime
 import os
@@ -209,6 +209,7 @@ def sanityCheck(args):
 
 
 #    print "INFO: Tuesday 12th Mar - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
+    # print "INFO: m2-login1 is experiencing issues. If you are unable to login in using m2-login1 please use m2-login2 instead"
 # if int(args.launcherversion) < 20150418:
 #      print "INFO: " + args.launcherversion
 
