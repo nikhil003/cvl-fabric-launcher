@@ -1371,6 +1371,7 @@ with open('generic_slurm_flavours.json','w') as f:
 ########################################################################################
 defaultSites=collections.OrderedDict()
 defaultSites['Indy Desktop']=  getEPCCSiteConfig("")
+defaultSites['Indy Desktop'].authURL=None
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('epcc_flavours.json','w') as f:
