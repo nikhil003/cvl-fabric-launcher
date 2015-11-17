@@ -796,6 +796,44 @@ def getOtherTurboVNCConfig(configName):
     return c
 
 
+##### EPCC VNC Defnitions (LFS Scheduler) ######
+def getEPCCSiteConfig(queue):
+    c = getCVLSiteConfig(queue)
+    s = sshKeyDistDisplayStringsCQU()
+    c.displayStrings.__dict__.update(s.__dict__)
+    c.visibility['resourcePanel']=True
+    c.visibility['label_ppn']=True
+    c.visibility['jobParams_ppn']=True
+    c.visibility['label_mem']=True
+    c.visibility['jobParams_mem']=True
+    c.visibility['label_nodes']=False
+    c.visibility['jobParams_nodes']=False
+    c.visibility['label_hours']=False
+    c.visibility['jobParams_hours']=False
+    c.loginHost='indy0.epcc.ed.ac.uk'
+    c.directConnect=False
+    cmd='\"bjobs {jobidNumber} \"'
+    regex='.*RUN.*'
+    c.running=siteConfig.cmdRegEx(cmd,regex)
+    c.stop=siteConfig.cmdRegEx('\" bkill {jobidNumber}\"')
+    c.stopForRestart=siteConfig.cmdRegEx('\"bkill {jobidNumber} ; sleep 5\"')
+    c.agent=siteConfig.cmdRegEx()
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:{execHost}:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
+    c.otp= siteConfig.cmdRegEx('\'cat ~/.vnc/clearpass\'','^(?P<vncPasswd>\S+)$')
+    cmd='\" mkdir ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=\"\'$\'\"( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo \"\'$\'\"passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ;  echo \\\" vncserver -geometry {resolution} ; sleep 10000000000\\\" | bsub  -n {ppn} -J INTERACT  -o ~/.vnc/ -e ~/.vnc/\"'
+    regex="^Job <(?P<jobid>(?P<jobidNumber>[0-9]+))>.*$"
+    c.startServer=siteConfig.cmdRegEx(cmd,regex)
+    c.vncDisplay=siteConfig.cmdRegEx('\'cat ~/.vnc/{execHost}*.log\'','port 59(?P<vncDisplay>[0-9]+)')
+    cmd='\" bjobs -l {jobidNumber} | grep Started\"'
+    regex='^.*Started on <(?P<execHost>[a-z]+[0-9]+)>.*'
+    c.execHost = siteConfig.cmdRegEx(cmd,regex)
+    c.listAll=siteConfig.cmdRegEx('\"bjobs -u {username} | tail -n +2\"','^\s*(?P<jobid>(?P<jobidNumber>[0-9]+))\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+(?P<jobname>INTERACT)\s+.*$',requireMatch=False)
+    c.relabel={}
+    c.relabel['label_ppn']='CPUs'
+    c.siteRanges={}
+    c.siteRanges['jobParams_ppn']=[1,16]
+    return c
+
 ##### CQU VNC Definitions #####
 
 def getCQUVNCSession():
@@ -1326,6 +1364,16 @@ defaultSites['GenericDesktops'].loginHost="{{ loginNode }}"
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
 with open('generic_slurm_flavours.json','w') as f:
+    f.write(jsons)
+
+########################################################################################
+# EPCC with lsf
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['Indy Desktop']=  getEPCCSiteConfig("")
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('epcc_flavours.json','w') as f:
     f.write(jsons)
 
 
