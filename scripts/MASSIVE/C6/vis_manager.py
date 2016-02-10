@@ -67,7 +67,7 @@ def newSession(args):
         retval = p.wait()
     # let user know that multinode sessions are for particular tasks
     if args.nodes > 1:
-        print "INFO: You have requested more than one vis node. This should only be used for parallel vis jobs e.g. ParaView and XLI Workflow."
+        print "INFO: You have requested more than one vis node. This should only be used rarely for parallel vis jobs e.g. ParaView and XLI Workflow. Applications like MATLAB will not run faster with more nodes and you may prevent others using desktop sessions "
 
     # TODO: things that will help the user
     #       - if system reserved for outage adjust walltime if too long and inform user
