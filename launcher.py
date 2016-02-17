@@ -1513,8 +1513,6 @@ class LauncherMainFrame(wx.Frame):
                 try:
                     if button!=None:
                         button.Enable()
-                    self.shutdown_skd_thread()
-                    #self.loginButton.Enable()
                 except:
                     pass
                 try:
@@ -1527,7 +1525,11 @@ class LauncherMainFrame(wx.Frame):
                     if button!=None:
                         button.Enable()
                     self.shutdown_skd_thread()
-                    #self.loginButton.Enable()
+                    try:
+                        if button!=None:
+                            button.Enable()
+                    except:
+                        pass
                 except:
                     pass
                 try:
@@ -1536,9 +1538,6 @@ class LauncherMainFrame(wx.Frame):
                     pass
 
                 logger.debug(self.skd.cancelMessage)
-                print self.skd.cancelMessage
-
-                print "skd canceled"
                 pass
         except Exception as e:
             print e
