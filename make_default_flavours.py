@@ -795,7 +795,40 @@ def getOtherTurboVNCConfig(configName):
     c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
     return c
 
+def getTurboVNCConfigOzViz(configName):
+    Visible={}
+    Visible['usernamePanel']=True
+    Visible['projectPanel']=False
+    Visible['loginHostPanel']=True
+    Visible['resourcePanel']=False
+    Visible['resolutionPanel']='Advanced'
+    Visible['cipherPanel']='Advanced'
+    Visible['debugCheckBoxPanel']='Advanced'
+    Visible['advancedCheckBoxPanel']=True
+    Visible['optionsDialog']=False
+    c = siteConfig.siteConfig()
+    c.visibility=Visible
+    c.listAll=siteConfig.cmdRegEx('\'/opt/TurboVNC/bin/vncserver -list\'','^(?P<vncDisplay>:[0-9]+)\s+[0-9]+\s*$',requireMatch=False)
+    c.startServer=siteConfig.cmdRegEx('\"/opt/TurboVNC/bin/vncserver -geometry {resolution}\"','^.*?started on display \S+(?P<vncDisplay>:[0-9]+)\s*$')
+    c.stop=siteConfig.cmdRegEx('\'/opt/TurboVNC/bin/vncserver -kill {vncDisplay}\'')
+    c.stopForRestart=siteConfig.cmdRegEx('\'/opt/TurboVNC/bin/vncserver -kill {vncDisplay}\'')
+    c.otp= siteConfig.cmdRegEx('\'/opt/TurboVNC/bin/vncpasswd -o -display localhost{vncDisplay}\'','^\s*Full control one-time password: (?P<vncPasswd>[0-9]+)\s*$')
+    c.agent=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -l {username} {loginHost} "echo agent_hello; bash "','agent_hello',async=True)
+    c.tunnel=siteConfig.cmdRegEx('{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -L {localPortNumber}:localhost:{remotePortNumber} -l {username} {loginHost} "echo tunnel_hello; bash"','tunnel_hello',async=True)
 
+    cmd='"export DISPLAY={vncDisplay};timeout 15 /usr/local/bin/cat_dbus_session_file.sh"'
+    regex='^DBUS_SESSION_BUS_ADDRESS=(?P<dbusSessionBusAddress>.*)$'
+    c.dbusSessionBusAddress=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='\"/usr/local/bin/get_ephemeral_port.py\"'
+    regex='^(?P<remoteWebDavPortNumber>[0-9]+)$'
+    c.webDavRemotePort=siteConfig.cmdRegEx(cmd,regex)
+
+    cmd='{sshBinary} -A -c {cipher} -t -t -oStrictHostKeyChecking=no -oExitOnForwardFailure=yes -R {remoteWebDavPortNumber}:localhost:{localWebDavPortNumber} -l {username} {loginHost} \'echo tunnel_hello; bash\''
+    regex='tunnel_hello'
+    c.webDavTunnel=siteConfig.cmdRegEx(cmd,regex,async=True)
+
+#<<<<<<< HEAD
 ##### EPCC VNC Defnitions (LFS Scheduler) ######
 def getEPCCSiteConfig(queue):
     c = getCVLSiteConfig(queue)
@@ -834,6 +867,31 @@ def getEPCCSiteConfig(queue):
     c.siteRanges['jobParams_ppn']=[1,16]
     return c
 
+#=======
+#    cmd="\"/usr/bin/ssh -oStrictHostKeyChecking=no localhost \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};echo \\\\\\\"import pexpect;child = pexpect.spawn('gvfs-mount dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}');child.expect('Password: ');child.sendline('{vncPasswd}');child.expect(pexpect.EOF);child.close();print 'gvfs-mount returned ' + str(child.exitstatus)\\\\\\\" {pipe} python\\\"\""
+#    regex='^gvfs-mount returned (?P<webDavMountingExitCode>.*)$'
+#    c.webDavMount=siteConfig.cmdRegEx(cmd,regex)
+#
+#    cmd="\"/usr/bin/ssh -oStrictHostKeyChecking=no localhost \\\"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};/usr/bin/gconftool-2 --type=Boolean --set /apps/nautilus/preferences/always_use_location_entry true {ampersand}{ampersand} DISPLAY={vncDisplay} xdg-open dav://{localUsername}@localhost:{remoteWebDavPortNumber}/{homeDirectoryWebDavShareName}\\\"\""
+#    c.openWebDavShareInRemoteFileBrowser=siteConfig.cmdRegEx(cmd)
+#
+#    cmd='"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress}; DISPLAY={vncDisplay} xwininfo -root -tree"'
+#    regex= '^\s+(?P<webDavWindowID>\S+)\s+"{homeDirectoryWebDavShareName}.*Browser.*$'
+#    c.webDavWindowID=siteConfig.cmdRegEx(cmd,regex)
+#
+#    # 1. I'm using gvfs-mount --unmount-scheme dav for now, to unmount all GVFS WebDAV mounts,
+#    #    because using "gvfs-mount --unmount " on a specific mount point from a Launcher
+#    #    subprocess doesn't seem to work reliably, even though it works fine outside of the
+#    #    Launcher.
+#    # 2. I'm using timeout with gvfs-mount, because sometimes the process never exits
+#    #    when unmounting, even though the unmounting operation is complete.
+#    cmd = '"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay};timeout 1 gvfs-mount --unmount-scheme dav"'
+#    c.webDavUnmount=siteConfig.cmdRegEx(cmd)
+#
+#    cmd = '"export DBUS_SESSION_BUS_ADDRESS={dbusSessionBusAddress};export DISPLAY={vncDisplay}; wmctrl -F -i -c {webDavWindowID}"'
+#    c.webDavCloseWindow=siteConfig.cmdRegEx(cmd)
+#    return c
+#>>>>>>> 087651ee0b4fa7617bc7477b48c219b70819d7ec
 ##### CQU VNC Definitions #####
 
 def getCQUVNCSession():
@@ -1237,6 +1295,15 @@ jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys
 with open('other_flavour.json','w') as f:
     f.write(jsons)
 
+########################################################################################
+# OzViz
+########################################################################################
+defaultSites=collections.OrderedDict()
+defaultSites['TurboVNC OzViz']=getTurboVNCConfigOzViz("")
+keys=defaultSites.keys()
+jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
+with open('ozviz_flavour.json','w') as f:
+    f.write(jsons)
 
 ##### BMRI Host Definitions ####
 defaultSites=collections.OrderedDict()

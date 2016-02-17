@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python -E
 import subprocess
 import datetime
 import os
@@ -67,7 +67,7 @@ def newSession(args):
         retval = p.wait()
     # let user know that multinode sessions are for particular tasks
     if args.nodes > 1:
-        print "INFO: You have requested more than one vis node. This should only be used for parallel vis jobs e.g. ParaView and XLI Workflow."
+        print "INFO: You have requested more than one vis node. This should only be used rarely for parallel vis jobs e.g. ParaView and XLI Workflow. Applications like MATLAB will not run faster with more nodes and you may prevent others using desktop sessions "
 
     # TODO: things that will help the user
     #       - if system reserved for outage adjust walltime if too long and inform user
@@ -209,6 +209,7 @@ def sanityCheck(args):
 
 
 #    print "INFO: Tuesday 12th Mar - we are currently experiencing issues with the scheduler. Desktop sessions may fail to start. We are working on the issue now"
+    # print "INFO: m2-login1 is experiencing issues. If you are unable to login in using m2-login1 please use m2-login2 instead"
 # if int(args.launcherversion) < 20150418:
 #      print "INFO: " + args.launcherversion
 
