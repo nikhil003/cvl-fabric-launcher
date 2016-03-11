@@ -1298,8 +1298,8 @@ defaultSites['m2 Highmem Desktop (192G) on m2-login2.massive.org.au']  = getMass
 
 for s in defaultSites.keys():
     defaultSites[s].authURL='https://autht.massive.org.au/ASync'
-    defaultSites[s].oauthclient='massive_imbl'
-    defaultSites[s].oauthclientpasswd='m1mo4MedicBL'
+    defaultSites[s].oauthclient='strudel'
+    defaultSites[s].oauthclientpasswd=''
     defaultSites[s].visibility['usernamePanel']=False
     defaultSites[s].visibility['projectPanel']=False
 
@@ -1535,12 +1535,25 @@ with open('m2cvl_reservations.json','w') as f:
 # Generic Slurm
 ########################################################################################
 defaultSites=collections.OrderedDict()
-defaultSites['MonARCH CentOS 7 (Highspeed)']=  getSiteConfigSlurm("monarch.erc.monash.edu.au","highspeed")
-defaultSites['MonARCH CentOS 7 (Highcore)']=  getSiteConfigSlurm("monarch.erc.monash.edu.au","highcore")
-defaultSites['MonARCH Ubuntu 14.04']=  getSiteConfigSlurm("monarch.erc.monash.edu.au","ubuntu")
+c=getSiteConfigSlurm("monarch.erc.monash.edu.au","highspeed,highcore")
+c.defaults['jobParams_hours']=24
+c.defaults['jobParams_ppn']=4
+defaultSites['MonARCH CentOS 7 General']=c
+c=getSiteConfigSlurm("monarch.erc.monash.edu.au","highcore")
+c.defaults['jobParams_hours']=24
+c.defaults['jobParams_ppn']=4
+defaultSites['MonARCH CentOS 7 (Highcore)']=c
+c=getSiteConfigSlurm("monarch.erc.monash.edu.au","highspeed")
+c.defaults['jobParams_hours']=24
+c.defaults['jobParams_ppn']=4
+defaultSites['MonARCH CentOS 7 (Highspeed)']=c
+c=getSiteConfigSlurm("monarch.erc.monash.edu.au","ubuntu")
+c.defaults['jobParams_hours']=24
+c.defaults['jobParams_ppn']=4
+defaultSites['MonARCH Ubuntu 14.04']=c
 keys=defaultSites.keys()
 jsons=json.dumps([keys,defaultSites],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',', ': '))
-with open('monarch_20151123.json','w') as f:
+with open('monarch_20160304.json','w') as f:
     f.write(jsons)
 
 ########################################################################################
