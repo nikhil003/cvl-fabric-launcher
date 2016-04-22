@@ -1141,7 +1141,9 @@ class LauncherMainFrame(wx.Frame):
             try:
                 a=int(jobParams['resolution'][0])
             except:
-                displaySize = wx.DisplaySize()
+                display = wx.Display(0)
+                displaySize = display.GetGeometry().GetSize()
+                # displaySize = wx.DisplaySize()
                 desiredWidth = displaySize[0] * 0.99
                 desiredHeight = displaySize[1] * 0.85
                 jobParams['resolution'] = str(int(desiredWidth)) + "x" + str(int(desiredHeight))
