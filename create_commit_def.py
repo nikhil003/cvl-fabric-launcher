@@ -22,6 +22,7 @@ f.write('LATEST_COMMIT = "' + commit + '"\n')
 f.close()
 
 import os
+cwd = os.getcwd()
 os.chdir('cvlsshutils')
 
 if sys.platform.startswith("win"):
@@ -40,7 +41,7 @@ stdout = stdout.split('\n')[0].split()
 assert stdout[0] == 'commit'
 commit = stdout[1]
 
-os.chdir('..')
+os.chdir(cwd)
 
 f = open('commit_def.py', 'a')
 f.write('LATEST_COMMIT_CVLSSHUTILS = "' + commit + '"\n')
