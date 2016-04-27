@@ -47,7 +47,8 @@
 [Setup]
 AppName={#LauncherAppName}
 AppVersion=0.6.0
-DefaultDirName={pf}\{#LauncherAppName}
+;DefaultDirName={pf}\{#LauncherAppName}
+DefaultDirName={code:GetDefaultDirName}
 DefaultGroupName={#LauncherAppName}
 UninstallDisplayIcon={app}\{#LauncherAppExeName}
 Compression=lzma2
@@ -65,8 +66,36 @@ Name: "{group}\{#LauncherAppName}"; Filename: "{app}\{#LauncherAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#LauncherAppName}}"; Filename: "{uninstallexe}"
 
 [Dirs]
-Name: "{pf}\{#LauncherAppName}\openssh-cygwin-stdin-build\tmp"; Permissions: "users-modify"
+;Name: "{pf}\{#LauncherAppName}\openssh-cygwin-stdin-build\tmp"; Permissions: "users-modify"
+Name: "{code:GetDefaultDirName}\openssh-cygwin-stdin-build\tmp"; Permissions: "users-modify"
 
 [UninstallRun]
 Filename: "{app}\kill-charade-processes.bat";
 
+[Code]
+function IsApp2Installed: boolean;
+begin
+  result := RegKeyExists(HKEY_LOCAL_MACHINE,
+    'SOFTWARE\Classes\VncViewer.Config\shell\open\command');
+end;
+
+function InitializeSetup: boolean;
+begin
+  result := IsApp2Installed;
+  if not result then
+  begin
+    result := Msgbox('Cannot find TurboVNC on your system. {#LauncherAppName} requires TurboVNC to be installed. Are you sure you want to continue ?', mbInformation, MB_YESNO) = IDYES;
+  end	
+end;
+
+function GetDefaultDirName(Param: string): string;
+begin
+  if IsAdminLoggedOn then
+  begin
+    Result := ExpandConstant('{pf}\{#LauncherAppName}');
+  end
+    else
+  begin
+    Result := ExpandConstant('{userappdata}\{#LauncherAppName}');
+  end;
+end;
