@@ -221,6 +221,7 @@ Do you want me to delete the job or leave it in the queue so you can reconnect l
         self.networkError="It looks like a network error has occured. You may be able to resume your work by logging in again."
         self.helpEmailAddress="help@massive.org.au"
         self.onFirstLoginFailure="An unknown error occured. Please contact your site help desk."
+        self.selectProjectMessage="You don\'t appear to be a member of the project {project}.\n\nPlease select from one of the following:"
         for key,value in kwargs.iteritems():
             self.__dict__[key]=value
 
