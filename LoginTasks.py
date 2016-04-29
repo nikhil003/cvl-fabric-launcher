@@ -905,8 +905,8 @@ class LoginProcess():
                         else:
                             logger.debug("jobparams does not have a value for resname")
                         if (event.loginprocess.jobParams.has_key('project') and not (event.loginprocess.jobParams['project'] in grouplist)):
-                            logger.info("we have a value for project, but the user is not a member of that project")
-                            msg='You don\'t appear to be a member of the project {project}.\n\nPlease select from one of the following:'.format(**event.loginprocess.jobParams)
+                            logger.info("we have a value for project, but the user is not a member of that project")                              
+                            msg=event.loginprocess.displayStrings.selectProjectMessage.format(**event.loginprocess.jobParams)                         
                             event.loginprocess.jobParams.pop('project',None)
                             try: # check again if we really need the project field.
                                 logger.debug("trying to format the startServerCmd")
