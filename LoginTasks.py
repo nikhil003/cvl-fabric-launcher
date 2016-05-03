@@ -904,7 +904,8 @@ class LoginProcess():
                             logger.debug("jobparams has a value for resname %s"%event.loginprocess.jobParams['resname'])
                         else:
                             logger.debug("jobparams does not have a value for resname")
-                        if (event.loginprocess.jobParams.has_key('project') and not (event.loginprocess.jobParams['project'] in grouplist)):
+                        if ( (event.loginprocess.siteConfig.visibility.has_key('listProjects') and event.loginprocess.siteConfig.visibility['listProjects'])
+                              or (event.loginprocess.jobParams.has_key('project') and not (event.loginprocess.jobParams['project'] in grouplist))):
                             logger.info("we have a value for project, but the user is not a member of that project")                              
                             msg=event.loginprocess.displayStrings.selectProjectMessage.format(**event.loginprocess.jobParams)                         
                             event.loginprocess.jobParams.pop('project',None)
