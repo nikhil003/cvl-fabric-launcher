@@ -66,16 +66,6 @@ class SharedSessions:
         self.session=cvlsshutils.RequestsSessionSingleton.RequestsSessionSingleton().GetSession()
         baseURL="https://autht.massive.org.au/strudel_share/"
         kwargs={}
-        if self.username!=None:
-            kwargs['aaf_username']=self.username
-        if self.idp!=None:
-            kwargs['aaf_idp']=self.idp
-        auth=cvlsshutils.AAF_Auth.AAF_Auth(self.session,baseURL+'login',parent=self.parent,**kwargs)
-        try:
-            auth.auth_cycle()
-        except: # Exception raised probably means cancled
-            wx.CallAfter(self.endBusyCursor)
-            return
         sc=q.get()
         t.join()
         wx.CallAfter(self.endBusyCursor)
@@ -83,17 +73,9 @@ class SharedSessions:
         mydict['Saved Session']=sc
         import json
         sessionData=json.dumps(mydict,cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',',': '))
-        r = self.session.post(baseURL+'login',data={'username':'test','password':'mysupersecret'},verify=False)
-        print "posting to login"
-        print r.status_code
-        print r.text
         data={'data':sessionData}
         r = self.session.post(baseURL+'save_config',data=data,verify=False)
-        print "posting to save"
-        print r.status_code
-        print r.text
         key = json.loads(r.text)['key']
-        print "saved s sharedSesion with key %s"%key
         q=Queue.Queue()
         wx.CallAfter(lambda:self.showShareKey(key,q))
         q.get()
@@ -105,30 +87,18 @@ class SharedSessions:
         wx.CallAfter(self.beginBusyCursor)
         baseURL="https://autht.massive.org.au/strudel_share/"
         kwargs={}
-        if self.username!=None:
-            kwargs['aaf_username']=self.username
-        if self.idp!=None:
-            kwargs['aaf_idp']=self.idp
-        auth=cvlsshutils.AAF_Auth.AAF_Auth(self.session,baseURL,parent=self.parent,**kwargs)
-        auth.auth_cycle()
-        r = self.session.post(baseURL+'login',verify=False)
-        print r.status_code
-        print r.text
         success=False
         canceled=False
         while not success and not canceled:
             q=Queue.Queue()
             wx.CallAfter(self.getPassphrase,q)
             key=q.get()
-            print key
             if key!=None:
                 r = self.session.get(baseURL+'get_config',params={'key':key},verify=False)
                 if r.status_code == 200:
                     success=True
             else:
                 canceled=True
-        print r.text
-        print "retrieving a shared session"
         import StringIO
         import json
         f=StringIO.StringIO(json.loads(r.text)['data'])
