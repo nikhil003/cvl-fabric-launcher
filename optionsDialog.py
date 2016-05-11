@@ -96,6 +96,31 @@ class GlobalOptionsDialog(wx.Dialog):
         self.connectionRightBorderPanel = wx.Panel(self.connectionPanel, wx.ID_ANY)
         self.connectionPanelSizer.Add(self.connectionRightBorderPanel)
 
+        # TurboVNC Viewer
+        
+        self.vncViewerPanel = wx.Panel(self.connectionLeftPanel, wx.ID_ANY)
+        self.connectionLeftPanelSizer.Add(self.vncViewerPanel, flag=wx.EXPAND)
+
+        self.vncViewerGroupBox = wx.StaticBox(self.vncViewerPanel, wx.ID_ANY, label="VNC Viewer")
+        self.vncViewerGroupBox.SetFont(self.smallFont)
+        self.vncViewerGroupBoxSizer = wx.StaticBoxSizer(self.vncViewerGroupBox, wx.HORIZONTAL)
+        self.vncViewerPanel.SetSizer(self.vncViewerGroupBoxSizer)        
+        
+        if sys.platform.startswith("win"):
+             self.vncViewerFilePathTextField = wx.TextCtrl(self.vncViewerPanel, wx.ID_ANY, r"C:\Program Files\TurboVNC\vncviewer.exe", size=(400,-1))             
+        else:
+             self.vncViewerFilePathTextField = wx.TextCtrl(self.vncViewerPanel, wx.ID_ANY, "/opt/TurboVNC/bin/vncviewer", size=(400,-1))       
+        self.vncViewerFilePathTextField.SetFont(self.smallFont)  
+        self.vncViewerGroupBoxSizer.Add(self.vncViewerFilePathTextField, flag=wx.EXPAND)
+        if 'vnc' in globalOptions:
+            self.vncViewerFilePathTextField.SetValue(globalOptions['vnc'])
+      
+        spacingRightOfBrowseButton = 10
+        self.vvBrowseButton = wx.Button(self.vncViewerPanel, wx.ID_ANY, "Browse...")
+        self.vncViewerGroupBoxSizer.Add(self.vvBrowseButton, flag=wx.EXPAND|wx.RIGHT, border=spacingRightOfBrowseButton)
+        self.vvBrowseButton.SetFont(self.smallFont)
+        self.vvBrowseButton.Bind(wx.EVT_BUTTON, self.onBrowse_VNCViewer)
+      
         # Encoding group box
 
         self.encodingMethodsPresets = {}
@@ -1157,6 +1182,7 @@ Don't remember me does not store this token permantly. You will need to enter a 
 
     def saveOptions(self):
         self.okClicked = True
+        self.globalOptions['vnc'] = self.vncViewerFilePathTextField.GetValue()
         self.globalOptions['jpeg_compression'] = self.jpegCompressionCheckBox.GetValue()
         self.globalOptions['jpeg_chrominance_subsampling'] = self.jpegChrominanceSubsamplingCommandLineString[self.jpegChrominanceSubsamplingSlider.GetValue()]
         self.globalOptions['jpeg_image_quality'] = str(self.jpegImageQualitySlider.GetValue())
@@ -1285,3 +1311,13 @@ Don't remember me does not store this token permantly. You will need to enter a 
             turboVncLogFilePath = saveFileDialog.GetPath()
             self.vncViewerLogFilenameTextField.WriteText(turboVncLogFilePath)
 
+    def onBrowse_VNCViewer(self, event):
+        filters = 'TurboVNC viewer (vncviewer)|vncviewer'
+        if sys.platform.startswith("win"):
+             filters = 'TurboVNC viewer (vncviewer.exe)|vncviewer.exe'
+             
+        saveFileDialog = wx.FileDialog ( None, message = 'TurboVNC Viewer...', wildcard = filters, style = wx.SAVE)
+        if saveFileDialog.ShowModal() == wx.ID_OK:
+            turboVncViewerFilePath = saveFileDialog.GetPath()
+            self.vncViewerFilePathTextField.WriteText(turboVncViewerFilePath)
+            
