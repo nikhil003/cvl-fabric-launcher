@@ -230,6 +230,7 @@ class GlobalOptionsDialog(wx.Dialog):
 
         self.jpegChrominanceSubsamplingPanel = wx.Panel(self.innerEncodingPanel, wx.ID_ANY)
         self.jpegChrominanceSubsamplingPanelSizer = wx.FlexGridSizer(rows=2, cols=4, vgap=5,hgap=5)
+        self.jpegChrominanceSubsamplingPanelSizer.AddGrowableCol(2)
         self.jpegChrominanceSubsamplingPanel.SetSizer(self.jpegChrominanceSubsamplingPanelSizer)
         emptySpace = wx.StaticText(self.jpegChrominanceSubsamplingPanel, wx.ID_ANY, "   ")
         self.jpegChrominanceSubsamplingPanelSizer.Add(emptySpace, flag=wx.EXPAND)
@@ -239,7 +240,7 @@ class GlobalOptionsDialog(wx.Dialog):
         self.jpegChrominanceSubsamplingPanelSizer.Add(self.fastLabel, flag=wx.EXPAND)
 
         self.jpegChrominanceSubsamplingSlider = wx.Slider(self.jpegChrominanceSubsamplingPanel, wx.ID_ANY, style=wx.SL_AUTOTICKS | wx.SL_HORIZONTAL)
-        self.jpegChrominanceSubsamplingPanelSizer.Add(self.jpegChrominanceSubsamplingSlider)
+        self.jpegChrominanceSubsamplingPanelSizer.Add(self.jpegChrominanceSubsamplingSlider, flag=wx.EXPAND)
 
         self.bestLabel = wx.StaticText(self.jpegChrominanceSubsamplingPanel, wx.ID_ANY, "best")
         self.bestLabel.SetFont(self.smallFont)
@@ -266,6 +267,7 @@ class GlobalOptionsDialog(wx.Dialog):
 
         self.jpegImageQualityPanel = wx.Panel(self.innerEncodingPanel, wx.ID_ANY)
         self.jpegImageQualityPanelSizer = wx.FlexGridSizer(rows=2, cols=4, vgap=5,hgap=5)
+        self.jpegImageQualityPanelSizer.AddGrowableCol(2)
         self.jpegImageQualityPanel.SetSizer(self.jpegImageQualityPanelSizer)
         emptySpace = wx.StaticText(self.jpegImageQualityPanel, wx.ID_ANY, "   ")
         self.jpegImageQualityPanelSizer.Add(emptySpace, flag=wx.EXPAND)
@@ -284,7 +286,7 @@ class GlobalOptionsDialog(wx.Dialog):
             self.jpegImageQualitySlider.SetValue(int(globalOptions['jpeg_image_quality']))
             self.jpegImageQualityLabel.SetLabel("JPEG image quality:    " + str(self.jpegImageQualitySlider.GetValue()))
         self.jpegImageQualitySlider.Bind(wx.EVT_SLIDER, self.onAdjustEncodingMethodSliders)
-        self.jpegImageQualityPanelSizer.Add(self.jpegImageQualitySlider)
+        self.jpegImageQualityPanelSizer.Add(self.jpegImageQualitySlider, flag=wx.EXPAND)
 
         self.bestImageQualityLabel = wx.StaticText(self.jpegImageQualityPanel, wx.ID_ANY, "best")
         self.bestImageQualityLabel.SetFont(self.smallFont)
