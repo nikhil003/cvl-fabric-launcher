@@ -494,8 +494,11 @@ class LoginProcess():
                 key = None
                 queryResult = None
                 foundTurboVncInRegistry = False
+                
                 vnc = r"C:\Program Files\TurboVNC\vncviewer.exe"
-
+                if 'vnc' in self.loginprocess.globalOptions and self.loginprocess.globalOptions['vnc']!="":
+                    vnc = self.loginprocess.globalOptions['vnc']
+                  
                 import _winreg
 
                 turboVncVersionNumber = None
@@ -573,8 +576,12 @@ class LoginProcess():
 
         def getTurboVncVersionNumber(self,vnc):
 
+            vnc = "/opt/TurboVNC/bin/vncviewer"
+            if 'vnc' in self.loginprocess.globalOptions and self.loginprocess.globalOptions['vnc'] != "":
+                vnc = self.loginprocess.globalOptions['vnc']
+
             # Check TurboVNC flavour (X11 or Java) for non-Windows platforms:
-            turboVncFlavourTestCommandString = "file /opt/TurboVNC/bin/vncviewer | grep -q ASCII"
+            turboVncFlavourTestCommandString = "file " + vnc + " | grep -q ASCII"
             proc = subprocess.Popen(turboVncFlavourTestCommandString,
                 stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
                 universal_newlines=True,startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
@@ -743,6 +750,9 @@ class LoginProcess():
                 turboVncFlavour = None
             else:
                 vnc = "/opt/TurboVNC/bin/vncviewer"
+                if 'vnc' in self.loginprocess.globalOptions and self.loginprocess.globalOptions['vnc']!="":
+                    vnc = self.loginprocess.globalOptions['vnc']
+
                 if os.path.exists(vnc):
                     (vnc,turboVncVersionNumber,turboVncFlavour) = self.getTurboVncVersionNumber(vnc)
                     if not turboVncVersionNumber.startswith("0.") and not turboVncVersionNumber.startswith("1.0"):
