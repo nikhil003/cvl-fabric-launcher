@@ -425,8 +425,8 @@ class LauncherMainFrame(wx.Frame):
         widgetWidth2 = 180
         if not sys.platform.startswith("win"):
             widgetWidth2 = widgetWidth2 + 25
-        widgetWidth3 = 75
-
+        # widgetWidth3 = 75
+        widgetWidth3 = 100 # on Fedora 23 (XFCE4) the theme of the SpinCtrl will set "+" and "-" button side-by-side - this requires more space
 
         
         self.noneVisible={}
