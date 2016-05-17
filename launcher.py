@@ -1793,5 +1793,18 @@ class MyApp(wx.App):
         return True
 
 if __name__ == '__main__':
+    
+    # All multithread Xorg application need call XInitThreads before any work with Xorg or some xcb will abort with
+    #    [xcb] Most likely this is a multi-threaded client and XInitThreads has not been called
+    # As XInitThreads is not garanteed to be called on all Linux distributions (like Fedora 23), we better do it here.
+    import sys
+    if sys.platform.startswith('linux'):
+        try:
+            import ctypes
+            x11 = ctypes.cdll.LoadLibrary('libX11.so.6')
+            x11.XInitThreads()
+        except:
+            pass
+        
     app = MyApp(False) # Don't automatically redirect sys.stdout and sys.stderr to a Window.
     app.MainLoop()
