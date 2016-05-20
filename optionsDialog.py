@@ -261,7 +261,7 @@ class GlobalOptionsDialog(wx.Dialog):
         self.innerEncodingPanelSizer.Add(self.jpegChrominanceSubsamplingPanel, flag=wx.EXPAND)
 
         #self.jpegImageQualityLabel = wx.StaticText(self.innerEncodingPanel, wx.ID_ANY, "JPEG image quality:    95", style=wx.TE_READONLY)
-        self.jpegImageQualityLabel = wx.StaticText(self.innerEncodingPanel, wx.ID_ANY, "JPEG image quality:    " + str(self.encodingMethodsPresets['Tight + Perceptually Lossless JPEG (LAN)']['jpeg_image_quality']), style=wx.TE_READONLY)
+        self.jpegImageQualityLabel = wx.StaticText(self.innerEncodingPanel, wx.ID_ANY, "JPEG image quality:    " + str(self.encodingMethodsPresets['Tight + Perceptually Lossless JPEG (LAN)']['jpeg_image_quality']))
         self.jpegImageQualityLabel.SetFont(self.smallFont)
         self.innerEncodingPanelSizer.Add(self.jpegImageQualityLabel)
 
