@@ -1321,5 +1321,5 @@ Don't remember me does not store this token permantly. You will need to enter a 
         saveFileDialog = wx.FileDialog ( None, message = 'TurboVNC Viewer...', wildcard = filters, style = wx.SAVE)
         if saveFileDialog.ShowModal() == wx.ID_OK:
             turboVncViewerFilePath = saveFileDialog.GetPath()
-            self.vncViewerFilePathTextField.WriteText(turboVncViewerFilePath)
+            self.vncViewerFilePathTextField.SetValue(turboVncViewerFilePath)
             
