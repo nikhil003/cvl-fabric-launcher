@@ -37,6 +37,8 @@ Windows: http://www.python.org/ftp/python/2.7.3/python-2.7.3.msi
 3.7 pexpect
 3.8 lxml
 3.9 psutil
+3.10 boto
+3.11 paramiko
 
 
 3.1 wx
