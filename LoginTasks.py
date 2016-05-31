@@ -1576,8 +1576,8 @@ class LoginProcess():
                             logger.debug("LoginProcess.complete: User canceled login process between queueing the job and starting the job. System is probably busy. Not asking to submit a debug log .")
                             logger.dump_log(event.loginprocess.notify_window,submit_log=False)
                         else:
-                            logger.debug("LoginProcess.complete: loginprocess was canceled, asking user if they want to submit the log")
-                            logger.dump_log(event.loginprocess.notify_window,submit_log=True,jobParams=event.loginprocess.jobParams)
+                            logger.debug("LoginProcess.complete: login process was canceled. Do NOT asking user if they want to submit the log.")
+                            logger.dump_log(event.loginprocess.notify_window,submit_log=False,jobParams=event.loginprocess.jobParams)
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_COMPLETE')
                 try:
                     wx.EndBusyCursor()
