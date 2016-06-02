@@ -1093,7 +1093,7 @@ class LauncherMainFrame(wx.Frame):
         # Check for the latest version of the launcher:
         try:
             myHtmlParser = MyHtmlParser('MassiveLauncherLatestVersionNumber')
-            feed = urllib2.urlopen(LAUNCHER_URL, timeout=10)
+            feed = urllib2.urlopen(LAUNCHER_URL, timeout=2)
             html = feed.read()
             myHtmlParser.feed(html)
             myHtmlParser.close()
@@ -1109,7 +1109,7 @@ class LauncherMainFrame(wx.Frame):
             self.contacted_massive_website = False
             e=threading.Event()
             e.clear()
-            wx.CallAfter(self.createAndShowModalDialog,e,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
+            #wx.CallAfter(self.createAndShowModalDialog,e,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
             e.wait()
 
             latestVersionNumber = launcher_version_number.version_number
