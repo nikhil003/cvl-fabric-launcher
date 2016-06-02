@@ -39,5 +39,5 @@
 #
 # Enquiries: help@massive.org.au
 
-version_number = "20150417"
+version_number = "20160602"
 
