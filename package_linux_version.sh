@@ -36,20 +36,10 @@ cp help/helpfiles/* dist/launcher/help/helpfiles/
 cp help/README.txt dist/launcher/help/
 cp masterList.url dist/launcher/
 
-DIST_PATH=dist/Strudel-${VERSION}_${ARCHITECTURE}
-mkdir ${DIST_PATH}
-cp README_LINUX  ${DIST_PATH}
-cp strudel.sh    ${DIST_PATH}
-mv dist/launcher ${DIST_PATH}/bin
-
-# move libgio to subdir and add to LD_LIBRARY_PATH only if required
-for f in ${DIST_PATH}/bin/libgio-2.0.so.0; do # we could use wildcards here - currently we do not need to
-    if [ -e "$f" ]; then
-      mkdir ${DIST_PATH}/bin/libgio
-      mv ${DIST_PATH}/bin/libgio-2.0.so.0  ${DIST_PATH}/bin/libgio/
-    fi
-    break
-done
+mkdir dist/Strudel-${VERSION}_${ARCHITECTURE}
+cp README_LINUX  dist/Strudel-${VERSION}_${ARCHITECTURE}
+cp strudel.sh    dist/Strudel-${VERSION}_${ARCHITECTURE}
+mv dist/launcher dist/Strudel-${VERSION}_${ARCHITECTURE}/bin
 
 cd dist
 tar zcf Strudel_v${VERSION}_${ARCHITECTURE}.tar.gz Strudel-${VERSION}_${ARCHITECTURE}
