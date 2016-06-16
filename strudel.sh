@@ -1,6 +1,11 @@
 #!/bin/bash
 
-STRUDEL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SOURCE=${BASH_SOURCE[0]} # for zsh this would be: SOURCE=${(%):-%N}
+STRUDEL_DIR="$( cd "$( dirname "${SOURCE}" )" && pwd )"
+if [ -L "${SOURCE}" ]; then 
+  LNK_TARGET=$(readlink "${SOURCE}")
+  STRUDEL_DIR="$( cd "$( dirname "${LNK_TARGET}" )" && pwd )" 
+fi
 
 ## --- This can be a fix for systems, where libgio-2.0 is different to the build environment ---
 ## add included libgio if not avail on system - use system if avail
