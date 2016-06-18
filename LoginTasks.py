@@ -166,6 +166,7 @@ class LoginProcess():
             self.loginprocess.matchlist=[]
             try:
                 (stdout, stderr) = run_command(self.cmdRegex.getCmd(self.loginprocess.jobParams),ignore_errors=True, callback=self.loginprocess.cancel, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
+                (stdout, stderr) = self.cmdRegex.cleanupCmdOutput(stdout,stderr)
                 logger.debug("runServerCommandThread: stderr = " + stderr)
                 logger.debug("runServerCommandThread: stdout = " + stdout)
             except Exception as e:
