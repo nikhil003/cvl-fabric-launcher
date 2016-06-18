@@ -164,11 +164,8 @@ class LoginProcess():
                 logger.debug("runServerCommandThread: self.cmd.format(**self.loginprocess.jobParams) gives an exception. Why wasn't this picked up earlier?")
     
             self.loginprocess.matchlist=[]
-
-            (stdout, stderr) = run_command(self.cmdRegex.getCmd(self.loginprocess.jobParams),ignore_errors=True, callback=self.loginprocess.cancel, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)            
-            (stdout, stderr) = self.cmdRegex.cleanupCmdOutput(stdout,stderr)            
             try:
-
+                (stdout, stderr) = run_command(self.cmdRegex.getCmd(self.loginprocess.jobParams),ignore_errors=True, callback=self.loginprocess.cancel, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
                 logger.debug("runServerCommandThread: stderr = " + stderr)
                 logger.debug("runServerCommandThread: stdout = " + stdout)
             except Exception as e:
