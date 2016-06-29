@@ -293,6 +293,8 @@ class cmdRegEx():
             sshCmd = ''
         else:
             sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
+        # set marker line - this allows to ignore any output before the actual command
+        sshCmd = sshCmd + ' \'echo -e \"\\n----- strudel stdout start -----\"; echo -e \"\\n----- strudel stderr start -----\" 1>&2; \' '
         cmd=self.cmd
         if sys.platform.startswith("win"):
             escapedChars={'ampersand':'^&','pipe':'^|'}
@@ -320,10 +322,26 @@ class cmdRegEx():
 
         return string
 
+    def cleanupCmdOutput(self, stdout, stderr):    
+        import re
+
+        # remove any line in stdout above the markter line set in getCmd()
+        stdout = stdout.split('\n')
+        regex_stdout = '^----- strudel stdout start -----$'       
+        lineIndex = [i for i in range(len(stdout)) if re.search(regex_stdout, stdout[i])]
+        stdout = '\n'.join(stdout[lineIndex[0]+1:]) # +1 always allowed, as marker line includes a return at the end
+                                                
+        # remove any line in stderr above the marker line  set in getCmd()
+        stderr = stderr.split('\n')
+        regex_stderr = '^----- strudel stderr start -----$'
+        lineIndex = [i for i in range(len(stderr)) if re.search(regex_stderr, stderr[i])]
+        print lineIndex[0]
+        stderr = '\n'.join(stderr[lineIndex[0]+1:]) # +1 always allowed, as marker line includes a return at the end   
+        
+        return stdout, stderr
 
 class siteConfig():
-
-
+    
     def __init__(self,**kwargs):
         self.provision=None
         self.imageid=None
