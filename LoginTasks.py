@@ -433,6 +433,7 @@ class LoginProcess():
                     time.sleep(sleepperiod)
                 try:
                     (stdout,stderr) = run_command(self.cmdRegex.getCmd(jobParams),ignore_errors=True, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
+                    (stdout, stderr) = self.cmdRegex.cleanupCmdOutput(stdout,stderr)
                     logger.info("runLoopServerCommandThread: stderr = " + stderr)
                     logger.info("runLoopServerCommandThread: stdout = " + stdout)
                 except KeyError as e:
