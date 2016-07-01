@@ -289,12 +289,14 @@ class cmdRegEx():
     def getCmd(self,jobParam={}):
         if ('exec' in self.host):
             sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {execHost} '
+            # set marker line - this allows to ignore any output before the actual command            
+            sshCmd = sshCmd + ' \'echo -e \"\\n----- strudel stdout start -----\"; echo -e \"\\n----- strudel stderr start -----\" 1>&2; \' '            
         elif ('local' in self.host):
             sshCmd = ''
         else:
             sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
-        # set marker line - this allows to ignore any output before the actual command
-        sshCmd = sshCmd + ' \'echo -e \"\\n----- strudel stdout start -----\"; echo -e \"\\n----- strudel stderr start -----\" 1>&2; \' '
+            # set marker line - this allows to ignore any output before the actual command
+            sshCmd = sshCmd + ' \'echo -e \"\\n----- strudel stdout start -----\"; echo -e \"\\n----- strudel stderr start -----\" 1>&2; \' '
         cmd=self.cmd
         if sys.platform.startswith("win"):
             escapedChars={'ampersand':'^&','pipe':'^|'}
