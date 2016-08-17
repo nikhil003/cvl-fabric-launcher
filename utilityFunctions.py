@@ -500,8 +500,8 @@ def run_command(command,ignore_errors=False,log_output=True,callback=None,startu
         t.cancel()
         ssh_process.wait()
         if log_output:
-            logger.debug('command stdout: %s' % stdout)
-            logger.debug('command stderr: %s' % stderr)
+            logger.debug('command stdout: %s' % repr(stdout))
+            logger.debug('command stderr: %s' % repr(stderr))
         if not ignore_errors and len(stderr) > 0:
             error_message = 'Error running command: "%s" at line %d' % (command, inspect.stack()[1][2])
             logger.error('Nonempty stderr and ignore_errors == False; exiting the launcher with error dialog: ' + error_message)

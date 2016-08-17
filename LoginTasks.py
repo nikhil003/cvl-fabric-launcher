@@ -167,8 +167,8 @@ class LoginProcess():
             try:
                 (stdout, stderr) = run_command(self.cmdRegex.getCmd(self.loginprocess.jobParams),ignore_errors=True, callback=self.loginprocess.cancel, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
                 (stdout, stderr) = self.cmdRegex.cleanupCmdOutput(stdout,stderr)
-                logger.debug("runServerCommandThread: stderr = " + stderr)
-                logger.debug("runServerCommandThread: stdout = " + stdout)
+                logger.debug("runServerCommandThread: stderr = " + repr(stderr))
+                logger.debug("runServerCommandThread: stdout = " + repr(stdout))
             except Exception as e:
                 logger.error("could not format the command in runServerCommandThread %s)"%self.cmdRegex.cmd)
                 logger.error("the error returned was %s"%e)
