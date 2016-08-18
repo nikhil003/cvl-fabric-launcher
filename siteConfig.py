@@ -1,5 +1,6 @@
 import json
 import sys
+import os
 import collections
 import requests
 from logger.Logger import logger
@@ -325,20 +326,23 @@ class cmdRegEx():
         return string
 
     def cleanupCmdOutput(self, stdout, stderr):    
-        import re
+                                   
+        def cleanupSingleOutput(output, marker_line):
+            
+            # remove any line in stdout above the marker line set in getCmd()             
+            output = output.splitlines()
+            try:
+                ii=output.index(marker_line) # exception ValueError if not found
+                if not output[ii+1:]: 
+                    output.append("")
+                output = os.linesep.join(output[ii+1:])
+            except ValueError:
+                print "marker string not found"
+                output = os.linesep.join(output[:])
+            return output                                            
 
-        # remove any line in stdout above the markter line set in getCmd()
-        stdout = stdout.split('\n')
-        regex_stdout = '^----- strudel stdout start -----$'       
-        lineIndex = [i for i in range(len(stdout)) if re.search(regex_stdout, stdout[i])]
-        stdout = '\n'.join(stdout[lineIndex[0]+1:]) # +1 always allowed, as marker line includes a return at the end
-                                                
-        # remove any line in stderr above the marker line  set in getCmd()
-        stderr = stderr.split('\n')
-        regex_stderr = '^----- strudel stderr start -----$'
-        lineIndex = [i for i in range(len(stderr)) if re.search(regex_stderr, stderr[i])]
-        print lineIndex[0]
-        stderr = '\n'.join(stderr[lineIndex[0]+1:]) # +1 always allowed, as marker line includes a return at the end   
+        stdout = cleanupSingleOutput(stdout, "----- strudel stdout start -----" )
+        stderr = cleanupSingleOutput(stderr, "----- strudel stderr start -----" )     
         
         return stdout, stderr
 
