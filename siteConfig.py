@@ -290,14 +290,22 @@ class cmdRegEx():
     def getCmd(self,jobParam={}):
         if ('exec' in self.host):
             sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {execHost} '
-            # set marker line - this allows to ignore any output before the actual command            
-            sshCmd = sshCmd + ' \'echo -e \"\\n----- strudel stdout start -----\"; echo -e \"\\n----- strudel stderr start -----\" 1>&2; \' '            
+            # set marker line - this allows to ignore any output before the actual command
+            sshCmd = sshCmd + ' \'(echo -e \"\\n----- strudel stdout start -----\");\' ' + ' \'(perl -e \"print STDERR \\"\\n----- strudel stderr start -----\\"\");\' '
+			# INFO: If we echo partly to stderr here (using >&2) all output will be send to stderr on windows.
+			#       This is because redirection of streams is done by the client (windows) and windows does not support multiple redirections in one connection.
+			#       Hence, redirection cannot be used with windows:
+			#         ' \'(>&2 echo -e \"\\n----- strudel stderr start -----\"); \' '  
+			#       We must write to stderr directly:
+			#         ' \'python -c \"import os; os.write(2, \\"\\n----- strudel stderr start -----\\")\";\' '
+			#         ' \'perl -e \"print STDERR \\"\\n----- strudel stderr start -----\\"\";\' '
+			#       We choose perl as it is almost garantied to be installed on server side
         elif ('local' in self.host):
             sshCmd = ''
         else:
             sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
-            # set marker line - this allows to ignore any output before the actual command
-            sshCmd = sshCmd + ' \'echo -e \"\\n----- strudel stdout start -----\"; echo -e \"\\n----- strudel stderr start -----\" 1>&2; \' '
+            # set marker line - this allows to ignore any output before the actual command (read detailed comment above)
+            sshCmd = sshCmd + ' \'(echo -e \"\\n----- strudel stdout start -----\");\' ' + ' \'(perl -e \"print STDERR \\"\\n----- strudel stderr start -----\\"\");\' '
         cmd=self.cmd
         if sys.platform.startswith("win"):
             escapedChars={'ampersand':'^&','pipe':'^|'}
