@@ -84,7 +84,7 @@ class GlobalOptionsDialog(wx.Dialog):
             self.connectionPanelSizer.Add(self.connectionLeftPanel, flag=wx.EXPAND|wx.TOP, border=0)
         else:
             self.connectionPanelSizer.Add(self.connectionLeftPanel, flag=wx.EXPAND|wx.TOP, border=15)
-        self.connectionLeftPanelSizer = wx.FlexGridSizer(rows=3, cols=1, vgap=5, hgap=5)
+        self.connectionLeftPanelSizer = wx.FlexGridSizer(rows=4, cols=1, vgap=5, hgap=5)
 
         self.connectionRightPanel = wx.Panel(self.connectionPanel, wx.ID_ANY)
         if sys.platform.startswith("darwin"):
@@ -96,6 +96,31 @@ class GlobalOptionsDialog(wx.Dialog):
         self.connectionRightBorderPanel = wx.Panel(self.connectionPanel, wx.ID_ANY)
         self.connectionPanelSizer.Add(self.connectionRightBorderPanel)
 
+        # TurboVNC Viewer
+        
+        self.vncViewerPanel = wx.Panel(self.connectionLeftPanel, wx.ID_ANY)
+        self.connectionLeftPanelSizer.Add(self.vncViewerPanel, flag=wx.EXPAND)
+
+        self.vncViewerGroupBox = wx.StaticBox(self.vncViewerPanel, wx.ID_ANY, label="VNC Viewer")
+        self.vncViewerGroupBox.SetFont(self.smallFont)
+        self.vncViewerGroupBoxSizer = wx.StaticBoxSizer(self.vncViewerGroupBox, wx.HORIZONTAL)
+        self.vncViewerPanel.SetSizer(self.vncViewerGroupBoxSizer)        
+        
+        if sys.platform.startswith("win"):
+             self.vncViewerFilePathTextField = wx.TextCtrl(self.vncViewerPanel, wx.ID_ANY, r"C:\Program Files\TurboVNC\vncviewer.exe", size=(400,-1))             
+        else:
+             self.vncViewerFilePathTextField = wx.TextCtrl(self.vncViewerPanel, wx.ID_ANY, "/opt/TurboVNC/bin/vncviewer", size=(400,-1))       
+        self.vncViewerFilePathTextField.SetFont(self.smallFont)  
+        self.vncViewerGroupBoxSizer.Add(self.vncViewerFilePathTextField, flag=wx.EXPAND)
+        if 'vnc' in globalOptions:
+            self.vncViewerFilePathTextField.SetValue(globalOptions['vnc'])
+      
+        spacingRightOfBrowseButton = 10
+        self.vvBrowseButton = wx.Button(self.vncViewerPanel, wx.ID_ANY, "Browse...")
+        self.vncViewerGroupBoxSizer.Add(self.vvBrowseButton, flag=wx.EXPAND|wx.RIGHT, border=spacingRightOfBrowseButton)
+        self.vvBrowseButton.SetFont(self.smallFont)
+        self.vvBrowseButton.Bind(wx.EVT_BUTTON, self.onBrowse_VNCViewer)
+      
         # Encoding group box
 
         self.encodingMethodsPresets = {}
@@ -205,6 +230,7 @@ class GlobalOptionsDialog(wx.Dialog):
 
         self.jpegChrominanceSubsamplingPanel = wx.Panel(self.innerEncodingPanel, wx.ID_ANY)
         self.jpegChrominanceSubsamplingPanelSizer = wx.FlexGridSizer(rows=2, cols=4, vgap=5,hgap=5)
+        self.jpegChrominanceSubsamplingPanelSizer.AddGrowableCol(2)
         self.jpegChrominanceSubsamplingPanel.SetSizer(self.jpegChrominanceSubsamplingPanelSizer)
         emptySpace = wx.StaticText(self.jpegChrominanceSubsamplingPanel, wx.ID_ANY, "   ")
         self.jpegChrominanceSubsamplingPanelSizer.Add(emptySpace, flag=wx.EXPAND)
@@ -214,7 +240,7 @@ class GlobalOptionsDialog(wx.Dialog):
         self.jpegChrominanceSubsamplingPanelSizer.Add(self.fastLabel, flag=wx.EXPAND)
 
         self.jpegChrominanceSubsamplingSlider = wx.Slider(self.jpegChrominanceSubsamplingPanel, wx.ID_ANY, style=wx.SL_AUTOTICKS | wx.SL_HORIZONTAL)
-        self.jpegChrominanceSubsamplingPanelSizer.Add(self.jpegChrominanceSubsamplingSlider)
+        self.jpegChrominanceSubsamplingPanelSizer.Add(self.jpegChrominanceSubsamplingSlider, flag=wx.EXPAND)
 
         self.bestLabel = wx.StaticText(self.jpegChrominanceSubsamplingPanel, wx.ID_ANY, "best")
         self.bestLabel.SetFont(self.smallFont)
@@ -235,12 +261,13 @@ class GlobalOptionsDialog(wx.Dialog):
         self.innerEncodingPanelSizer.Add(self.jpegChrominanceSubsamplingPanel, flag=wx.EXPAND)
 
         #self.jpegImageQualityLabel = wx.StaticText(self.innerEncodingPanel, wx.ID_ANY, "JPEG image quality:    95", style=wx.TE_READONLY)
-        self.jpegImageQualityLabel = wx.StaticText(self.innerEncodingPanel, wx.ID_ANY, "JPEG image quality:    " + str(self.encodingMethodsPresets['Tight + Perceptually Lossless JPEG (LAN)']['jpeg_image_quality']), style=wx.TE_READONLY)
+        self.jpegImageQualityLabel = wx.StaticText(self.innerEncodingPanel, wx.ID_ANY, "JPEG image quality:    " + str(self.encodingMethodsPresets['Tight + Perceptually Lossless JPEG (LAN)']['jpeg_image_quality']))
         self.jpegImageQualityLabel.SetFont(self.smallFont)
         self.innerEncodingPanelSizer.Add(self.jpegImageQualityLabel)
 
         self.jpegImageQualityPanel = wx.Panel(self.innerEncodingPanel, wx.ID_ANY)
         self.jpegImageQualityPanelSizer = wx.FlexGridSizer(rows=2, cols=4, vgap=5,hgap=5)
+        self.jpegImageQualityPanelSizer.AddGrowableCol(2)
         self.jpegImageQualityPanel.SetSizer(self.jpegImageQualityPanelSizer)
         emptySpace = wx.StaticText(self.jpegImageQualityPanel, wx.ID_ANY, "   ")
         self.jpegImageQualityPanelSizer.Add(emptySpace, flag=wx.EXPAND)
@@ -259,7 +286,7 @@ class GlobalOptionsDialog(wx.Dialog):
             self.jpegImageQualitySlider.SetValue(int(globalOptions['jpeg_image_quality']))
             self.jpegImageQualityLabel.SetLabel("JPEG image quality:    " + str(self.jpegImageQualitySlider.GetValue()))
         self.jpegImageQualitySlider.Bind(wx.EVT_SLIDER, self.onAdjustEncodingMethodSliders)
-        self.jpegImageQualityPanelSizer.Add(self.jpegImageQualitySlider)
+        self.jpegImageQualityPanelSizer.Add(self.jpegImageQualitySlider, flag=wx.EXPAND)
 
         self.bestImageQualityLabel = wx.StaticText(self.jpegImageQualityPanel, wx.ID_ANY, "best")
         self.bestImageQualityLabel.SetFont(self.smallFont)
@@ -1157,6 +1184,7 @@ Don't remember me does not store this token permantly. You will need to enter a 
 
     def saveOptions(self):
         self.okClicked = True
+        self.globalOptions['vnc'] = self.vncViewerFilePathTextField.GetValue()
         self.globalOptions['jpeg_compression'] = self.jpegCompressionCheckBox.GetValue()
         self.globalOptions['jpeg_chrominance_subsampling'] = self.jpegChrominanceSubsamplingCommandLineString[self.jpegChrominanceSubsamplingSlider.GetValue()]
         self.globalOptions['jpeg_image_quality'] = str(self.jpegImageQualitySlider.GetValue())
@@ -1285,3 +1313,13 @@ Don't remember me does not store this token permantly. You will need to enter a 
             turboVncLogFilePath = saveFileDialog.GetPath()
             self.vncViewerLogFilenameTextField.WriteText(turboVncLogFilePath)
 
+    def onBrowse_VNCViewer(self, event):
+        filters = 'TurboVNC viewer (vncviewer)|vncviewer'
+        if sys.platform.startswith("win"):
+             filters = 'TurboVNC viewer (vncviewer.exe)|vncviewer.exe'
+             
+        saveFileDialog = wx.FileDialog ( None, message = 'TurboVNC Viewer...', wildcard = filters, style = wx.SAVE)
+        if saveFileDialog.ShowModal() == wx.ID_OK:
+            turboVncViewerFilePath = saveFileDialog.GetPath()
+            self.vncViewerFilePathTextField.SetValue(turboVncViewerFilePath)
+            

@@ -425,8 +425,8 @@ class LauncherMainFrame(wx.Frame):
         widgetWidth2 = 180
         if not sys.platform.startswith("win"):
             widgetWidth2 = widgetWidth2 + 25
-        widgetWidth3 = 75
-
+        # widgetWidth3 = 75
+        widgetWidth3 = 100 # on Fedora 23 (XFCE4) the theme of the SpinCtrl will set "+" and "-" button side-by-side - this requires more space
 
         
         self.noneVisible={}
@@ -1093,7 +1093,7 @@ class LauncherMainFrame(wx.Frame):
         # Check for the latest version of the launcher:
         try:
             myHtmlParser = MyHtmlParser('MassiveLauncherLatestVersionNumber')
-            feed = urllib2.urlopen(LAUNCHER_URL, timeout=10)
+            feed = urllib2.urlopen(LAUNCHER_URL, timeout=2)
             html = feed.read()
             myHtmlParser.feed(html)
             myHtmlParser.close()
@@ -1109,7 +1109,7 @@ class LauncherMainFrame(wx.Frame):
             self.contacted_massive_website = False
             e=threading.Event()
             e.clear()
-            wx.CallAfter(self.createAndShowModalDialog,e,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
+            #wx.CallAfter(self.createAndShowModalDialog,e,wx.MessageDialog,self,"Warning: Could not contact the MASSIVE website to check version number.\n\n", "%s"%self.programName, wx.OK | wx.ICON_INFORMATION)
             e.wait()
 
             latestVersionNumber = launcher_version_number.version_number
@@ -1793,5 +1793,18 @@ class MyApp(wx.App):
         return True
 
 if __name__ == '__main__':
+    
+    # All multithread Xorg application need call XInitThreads before any work with Xorg or some xcb will abort with
+    #    [xcb] Most likely this is a multi-threaded client and XInitThreads has not been called
+    # As XInitThreads is not garanteed to be called on all Linux distributions (like Fedora 23), we better do it here.
+    import sys
+    if sys.platform.startswith('linux'):
+        try:
+            import ctypes
+            x11 = ctypes.cdll.LoadLibrary('libX11.so.6')
+            x11.XInitThreads()
+        except:
+            pass
+        
     app = MyApp(False) # Don't automatically redirect sys.stdout and sys.stderr to a Window.
     app.MainLoop()

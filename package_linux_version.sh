@@ -36,8 +36,12 @@ cp help/helpfiles/* dist/launcher/help/helpfiles/
 cp help/README.txt dist/launcher/help/
 cp masterList.url dist/launcher/
 
+mkdir dist/Strudel-${VERSION}_${ARCHITECTURE}
+cp README_LINUX  dist/Strudel-${VERSION}_${ARCHITECTURE}
+cp strudel.sh    dist/Strudel-${VERSION}_${ARCHITECTURE}
+mv dist/launcher dist/Strudel-${VERSION}_${ARCHITECTURE}/bin
+
 cd dist
-mv launcher Strudel-${VERSION}_${ARCHITECTURE}
 tar zcf Strudel_v${VERSION}_${ARCHITECTURE}.tar.gz Strudel-${VERSION}_${ARCHITECTURE}
 cd ..
 

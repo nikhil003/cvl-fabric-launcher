@@ -1,5 +1,6 @@
 import json
 import sys
+import os
 import collections
 import requests
 from logger.Logger import logger
@@ -289,10 +290,22 @@ class cmdRegEx():
     def getCmd(self,jobParam={}):
         if ('exec' in self.host):
             sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -l {username} {execHost} '
+            # set marker line - this allows to ignore any output before the actual command
+            sshCmd = sshCmd + ' \'(echo -e \"\\n----- strudel stdout start -----\");\' ' + ' \'(perl -e \"print STDERR \\"\\n----- strudel stderr start -----\\"\");\' '
+			# INFO: If we echo partly to stderr here (using >&2) all output will be send to stderr on windows.
+			#       This is because redirection of streams is done by the client (windows) and windows does not support multiple redirections in one connection.
+			#       Hence, redirection cannot be used with windows:
+			#         ' \'(>&2 echo -e \"\\n----- strudel stderr start -----\"); \' '  
+			#       We must write to stderr directly:
+			#         ' \'python -c \"import os; os.write(2, \\"\\n----- strudel stderr start -----\\")\";\' '
+			#         ' \'perl -e \"print STDERR \\"\\n----- strudel stderr start -----\\"\";\' '
+			#       We choose perl as it is almost garantied to be installed on server side
         elif ('local' in self.host):
             sshCmd = ''
         else:
             sshCmd = '{sshBinary} -A -T -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -l {username} {loginHost} '
+            # set marker line - this allows to ignore any output before the actual command (read detailed comment above)
+            sshCmd = sshCmd + ' \'(echo -e \"\\n----- strudel stdout start -----\");\' ' + ' \'(perl -e \"print STDERR \\"\\n----- strudel stderr start -----\\"\");\' '
         cmd=self.cmd
         if sys.platform.startswith("win"):
             escapedChars={'ampersand':'^&','pipe':'^|'}
@@ -320,10 +333,29 @@ class cmdRegEx():
 
         return string
 
+    def cleanupCmdOutput(self, stdout, stderr):    
+                                   
+        def cleanupSingleOutput(output, marker_line):
+            
+            # remove any line in stdout above the marker line set in getCmd()             
+            output = output.splitlines()
+            try:
+                ii=output.index(marker_line) # exception ValueError if not found
+                if not output[ii+1:]: 
+                    output.append("")
+                output = os.linesep.join(output[ii+1:])
+            except ValueError:
+                print "marker string not found"
+                output = os.linesep.join(output[:])
+            return output                                            
+
+        stdout = cleanupSingleOutput(stdout, "----- strudel stdout start -----" )
+        stderr = cleanupSingleOutput(stderr, "----- strudel stderr start -----" )     
+        
+        return stdout, stderr
 
 class siteConfig():
-
-
+    
     def __init__(self,**kwargs):
         self.provision=None
         self.imageid=None

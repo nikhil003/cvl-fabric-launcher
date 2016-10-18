@@ -76,6 +76,7 @@ class IdentityMenu(wx.Menu):
         self.launcherMainFrame.setPrefsSection('Global Preferences',options)
         self.launcherMainFrame.savePrefs(section='Global Preferences')
         self.disableItems(self.launcherMainFrame.TEMP_SSH_KEY)
+        self.launcherMainFrame.keyModelCreated.clear()
 
     def onPermSSHKey(self,event):
         options = self.launcherMainFrame.getPrefsSection('Global Preferences')
@@ -83,6 +84,7 @@ class IdentityMenu(wx.Menu):
         self.launcherMainFrame.setPrefsSection('Global Preferences',options)
         self.launcherMainFrame.savePrefs(section='Global Preferences')
         self.disableItems(self.launcherMainFrame.PERM_SSH_KEY)
+        self.launcherMainFrame.keyModelCreated.clear()        
 
     def setRadio(self,state):
         if state == self.launcherMainFrame.PERM_SSH_KEY:
