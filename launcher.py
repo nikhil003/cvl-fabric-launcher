@@ -1195,12 +1195,9 @@ class LauncherMainFrame(wx.Frame):
         relabel['label_debug']='Show debug window'
         relabel['label_advanced']='Show Advanced Options'
         for key in relabel.keys():
-            print("relabeling",key)
-
             try:
                 window=self.FindWindowByName(key)
                 if not (window.GetLabel() == relabel[key]):
-                    print("relabeling",key)
                     shown = window.Shown
                     window.Show()
                     window.SetLabel(relabel[key])
@@ -1208,8 +1205,8 @@ class LauncherMainFrame(wx.Frame):
                         window.Hide()
 
             except Exception as e:
-                print("exception relabeling")
-                print(e)
+                logger.error("exception relabeling")
+                logger.error(e)
 
     def hideUIElements(self):
         visible={}
@@ -1240,8 +1237,8 @@ class LauncherMainFrame(wx.Frame):
                 if window is not None:
                     window.Hide()
             except Exception as e:
-                print(e)
-                print("exception hiding ",k)
+                logger.error(e)
+                logger.error("exception hiding ",k)
                 pass
 
 
@@ -1275,7 +1272,6 @@ class LauncherMainFrame(wx.Frame):
             logger.debug("sc: %s exception:%s"%(sc,e))
             visible={}
         for key in relabel.keys():
-            print("relabeling key")
             try:
                 window=self.FindWindowByName(key)
                 if not (window.GetLabel() == relabel[key]):
@@ -1285,8 +1281,8 @@ class LauncherMainFrame(wx.Frame):
                     if not shown:
                         window.Hide()
             except Exception as e:
-                print(e)
-                pass
+                logger.error(e)
+                logger.error(traceback.format_exc())
         for key in siteRanges.keys():
             try:
                 logger.debug('setting range for %s %s %s'%(key,siteRanges[key][0],siteRanges[key][1]))
@@ -1311,9 +1307,9 @@ class LauncherMainFrame(wx.Frame):
                 if visible[key]=='Advanced' and advanced==False:
                     window.Hide()
             except Exception as e:
-                print("unable to set vis for ",key)
-                print(e)
-                pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
+                logger.error("unable to set vis for ",key)
+                logger.error(e)
+                logger.error(traceback.format_exc())
         globalOptions = self.getPrefsSection("Global Preferences")
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
@@ -1828,8 +1824,8 @@ class MyApp(wx.App):
         launcherMainFrame.Show(True)
         evt=wx.PyCommandEvent(wx.wxEVT_COMMAND_MENU_SELECTED,id=launcherMainFrame.loadDefaultSessionsId)
         wx.PostEvent(launcherMainFrame.GetEventHandler(),evt)
-        t=threading.Thread(target=launcherMainFrame.checkVersionNumber)
-        t.start()
+        # t=threading.Thread(target=launcherMainFrame.checkVersionNumber)
+        # t.start()
 
         return True
 
