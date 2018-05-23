@@ -43,8 +43,8 @@
 """
 A wxPython GUI to provide easy login to the MASSIVE Desktop.
 It can be run using "python launcher.py", assuming that you
-have an appropriate (32-bit or 64-bit) version of Python 
-installed (*), wxPython, and the dependent Python modules 
+have an appropriate (32-bit or 64-bit) version of Python
+installed (*), wxPython, and the dependent Python modules
 listed in the DEPENDENCIES file.
 
 (*) wxPython 2.8.x on Mac OS X doesn't support 64-bit mode.
@@ -75,7 +75,7 @@ See: https://confluence-vre.its.monash.edu.au/display/CVL/MASSIVE+Launcher+Windo
 If you want to build a stand-alone Launcher binary for Mac or Windows
 without using a code-signing certificate, you can do so by commenting
 out the code-signing functionality in package_mac_version.py and in
-package_windows_version.bat.  In other words, sorry, this is not 
+package_windows_version.bat.  In other words, sorry, this is not
 possible at present without modifying the packaging scripts.
 
 A self-contained Linux binary distribution can be built using
@@ -198,7 +198,7 @@ class LauncherMainFrame(wx.Frame):
         for key in options.keys():
             self.prefs.set(section,key,"%s"%options[key])
         pass
-    
+
     def loadSiteDefaults(self,configName):
         try:
             site=self.sites[configName]
@@ -244,7 +244,7 @@ class LauncherMainFrame(wx.Frame):
     def savePrefsEventHandler(self,event):
         threading.Thread(target=self.savePrefs).start()
         event.Skip()
-        
+
     def savePrefs(self,window=None,section=None):
         assert self.prefs!=None
         specialSections=['Global Preferences','configured_sites']
@@ -343,8 +343,8 @@ class LauncherMainFrame(wx.Frame):
         if sys.platform.startswith("win") or sys.platform.startswith("linux"):
             self.file_menu.Append(wx.ID_EXIT, "E&xit", "Close window and exit program.")
             self.Bind(wx.EVT_MENU, self.onExit, id=wx.ID_EXIT)
-           
-            
+
+
 
         #if sys.platform.startswith("darwin"):
             ## Only do this for Mac OS X, because other platforms have
@@ -401,7 +401,7 @@ class LauncherMainFrame(wx.Frame):
         submitDebugLogMenuItemID = wx.NewId()
         self.help_menu.Append(submitDebugLogMenuItemID, "&Submit debug log")
         self.Bind(wx.EVT_MENU, self.onSubmitDebugLog, id=submitDebugLogMenuItemID)
-        # On Mac, the About menu item will automatically be moved from 
+        # On Mac, the About menu item will automatically be moved from
         # the Help menu to the "MASSIVE Launcher" menu, so we don't
         # need a separator.
         if not sys.platform.startswith("darwin"):
@@ -426,9 +426,9 @@ class LauncherMainFrame(wx.Frame):
         if not sys.platform.startswith("win"):
             widgetWidth2 = widgetWidth2 + 25
         # widgetWidth3 = 75
-        widgetWidth3 = 100 # on Fedora 23 (XFCE4) the theme of the SpinCtrl will set "+" and "-" button side-by-side - this requires more space
+        widgetWidth3 = 125 # on Fedora 23 (XFCE4) the theme of the SpinCtrl will set "+" and "-" button side-by-side - this requires more space
 
-        
+
         self.noneVisible={}
         self.noneVisible['usernamePanel']=False
         self.noneVisible['projectPanel']=False
@@ -439,6 +439,7 @@ class LauncherMainFrame(wx.Frame):
         self.noneVisible['debugCheckBoxPanel']=False
         self.noneVisible['advancedCheckBoxPanel']=False
         self.noneVisible['optionsDialog']=False
+        self.noneVisible['argsPanel']=False
 
 
         self.sites={}
@@ -479,8 +480,8 @@ class LauncherMainFrame(wx.Frame):
         self.loginFieldsPanel.GetSizer().Add(self.projectPanel, proportion=0,flag=wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT)
 
         self.resourcePanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY,name="resourcePanel")
-        #self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        self.resourcePanel.SetSizer(wx.FlexGridSizer(rows=4,cols=4))
+        # self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.resourcePanel.SetSizer(wx.FlexGridSizer(rows=2,cols=4))
 
         self.hoursLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Hours requested',name='label_hours')
         self.resourcePanel.GetSizer().Add(self.hoursLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
@@ -495,7 +496,7 @@ class LauncherMainFrame(wx.Frame):
         #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
         self.memField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=1024,name='jobParams_mem')
         self.resourcePanel.GetSizer().Add(self.memField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
-        
+
         self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes',name='label_nodes')
         self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.nodesField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="1", size=(widgetWidth3,-1), min=1,max=10,name='jobParams_nodes')
@@ -521,7 +522,7 @@ class LauncherMainFrame(wx.Frame):
         self.resolutionPanel.GetSizer().Add(self.resolutionField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.resolutionPanel,proportion=0,flag=wx.EXPAND)
 
-        
+
         self.cipherPanel = wx.Panel(self.loginFieldsPanel,name="cipherPanel")
         self.cipherPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.sshTunnelCipherLabel = wx.StaticText(self.cipherPanel, wx.ID_ANY, 'SSH tunnel cipher',name='label_cipher')
@@ -536,11 +537,19 @@ class LauncherMainFrame(wx.Frame):
         self.sshTunnelCipherComboBox = wx.ComboBox(self.cipherPanel, wx.ID_ANY, value=defaultCipher, choices=sshTunnelCiphers, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_cipher')
         self.cipherPanel.GetSizer().Add(self.sshTunnelCipherComboBox, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.cipherPanel,proportion=0,flag=wx.EXPAND)
-        
+
+        self.argsPanel = wx.Panel(self.loginFieldsPanel,name="argsPanel")
+        self.argsPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        self.argsLabel = wx.StaticText(self.argsPanel, wx.ID_ANY, 'Additional arguments',name='label_args')
+        self.argsPanel.GetSizer().Add(self.argsLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.argsField = wx.TextCtrl(self.argsPanel, wx.ID_ANY, size=(widgetWidth2, -1),name='jobParams_args')
+
+        self.argsPanel.GetSizer().Add(self.argsField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
+        self.loginFieldsPanel.GetSizer().Add(self.argsPanel,proportion=0,flag=wx.EXPAND)
 
         self.checkBoxPanel = wx.Panel(self.loginFieldsPanel,name="checkBoxPanel")
         self.checkBoxPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        
+
         p = wx.Panel(self.checkBoxPanel,name="debugCheckBoxPanel")
         p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         l = wx.StaticText(p, wx.ID_ANY, 'Show debug window',name='label_debug')
@@ -549,10 +558,10 @@ class LauncherMainFrame(wx.Frame):
         p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
         p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
         self.checkBoxPanel.GetSizer().Add(p,flag=wx.ALIGN_LEFT)
-    
+
         t=wx.StaticText(self.checkBoxPanel,label="")
         self.checkBoxPanel.GetSizer().Add(t,proportion=1,flag=wx.EXPAND)
-  
+
         p = wx.Panel(self.checkBoxPanel,name="advancedCheckBoxPanel")
         p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         l = wx.StaticText(p, wx.ID_ANY, 'Show Advanced Options',name='label_advanced')
@@ -851,7 +860,7 @@ class LauncherMainFrame(wx.Frame):
                     button=q.get()
                     if button==0:
                         retry=False
-                
+
 
         q=Queue.Queue()
 
@@ -963,7 +972,7 @@ class LauncherMainFrame(wx.Frame):
     def createAndShowModalDialog(self,event,dlgclass,*args,**kwargs):
         dlg=dlgclass(*args,**kwargs)
         # Do not use the return value from ShowModal. It seems on MacOS wx3.0, this event handler may run before the onClose method of the dialog
-        # Resulting in ShowModal returning an incorrect value. If you need the return value, pass a queue to the dialog and get the onClose method to 
+        # Resulting in ShowModal returning an incorrect value. If you need the return value, pass a queue to the dialog and get the onClose method to
         # put a value on the queue (as is done in multiButtonDialog)
         dlg.ShowModal()
         event.set()
@@ -990,7 +999,7 @@ class LauncherMainFrame(wx.Frame):
             else:
                 self.manageSites()
                 return
-            
+
         wx.CallAfter(wx.BeginBusyCursor)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
         wx.CallAfter(wx.EndBusyCursor)
@@ -1016,8 +1025,8 @@ class LauncherMainFrame(wx.Frame):
             sn=cb.GetValue()
         except:
             sn=''
-                    
-        
+
+
         if (sn==None or sn==""):
             if self.prefs.has_option("Launcher Config","siteConfigDefault"):
                 sn = self.prefs.get("Launcher Config","siteConfigDefault")
@@ -1034,10 +1043,10 @@ class LauncherMainFrame(wx.Frame):
                 if len(self.sites.keys())>0:
                     cb.SetSelection(0)
                 else:
-                    logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
+                    logger.debug("unable to set the default flavour. Apparently there are no flavours available")
             except:
-                logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
-            
+                logger.debug("unable to set the default flavour. Apparently there are no flavours available")
+
         #cb.SetSelection(0)
         if (redraw):
             self.loadSiteDefaults(configName=self.FindWindowByName('jobParams_configName').GetValue())
@@ -1130,7 +1139,7 @@ class LauncherMainFrame(wx.Frame):
         for item in window.GetChildren():
             name = item.GetName()
             if ('jobParam' in name):
-                (prefix,keyname) = name.split('_',1) 
+                (prefix,keyname) = name.split('_',1)
                 if isinstance(item,wx.RadioBox):
                     jobParams[keyname]=item.GetSelection()
                 else:
@@ -1160,7 +1169,9 @@ class LauncherMainFrame(wx.Frame):
 
 
     def onAdvancedVisibilityStateChanged(self, event):
+        self.Freeze()
         self.updateVisibility()
+        self.Thaw()
 
     def showAll(self,window=None):
         if window==None:
@@ -1186,9 +1197,16 @@ class LauncherMainFrame(wx.Frame):
         for key in relabel.keys():
             try:
                 window=self.FindWindowByName(key)
-                window.SetLabel(relabel[key])
-            except:
-                pass
+                if not (window.GetLabel() == relabel[key]):
+                    shown = window.Shown
+                    window.Show()
+                    window.SetLabel(relabel[key])
+                    if not shown:
+                        window.Hide()
+
+            except Exception as e:
+                logger.error("exception relabeling")
+                logger.error(e)
 
     def hideUIElements(self):
         visible={}
@@ -1210,14 +1228,21 @@ class LauncherMainFrame(wx.Frame):
         visible['label_hours']=False
         visible['jobParams_hours']=False
         visible['manageResButton']=False
+        visible['label_args']=False
+        visible['jobParams_args']=False
         for k in visible.keys():
-            try: 
+
+            try:
                 window=self.FindWindowByName(k)
-                window.Hide()
-            except:
+                if window is not None:
+                    window.Hide()
+            except Exception as e:
+                logger.error(e)
+                logger.error("exception hiding ",k)
                 pass
 
-        
+
+
 
     def updateVisibility(self):
         #self.showAll()
@@ -1225,6 +1250,7 @@ class LauncherMainFrame(wx.Frame):
         #self.Layout()
         self.hideUIElements()
         self.resetLabels()
+
         advanced=self.FindWindowByName('advancedCheckBox').GetValue()
         try:
             sc=None
@@ -1248,9 +1274,15 @@ class LauncherMainFrame(wx.Frame):
         for key in relabel.keys():
             try:
                 window=self.FindWindowByName(key)
-                window.SetLabel(relabel[key])
-            except:
-                pass
+                if not (window.GetLabel() == relabel[key]):
+                    shown = window.Shown
+                    window.Show()
+                    window.SetLabel(relabel[key])
+                    if not shown:
+                        window.Hide()
+            except Exception as e:
+                logger.error(e)
+                logger.error(traceback.format_exc())
         for key in siteRanges.keys():
             try:
                 logger.debug('setting range for %s %s %s'%(key,siteRanges[key][0],siteRanges[key][1]))
@@ -1268,15 +1300,20 @@ class LauncherMainFrame(wx.Frame):
                     window.Hide()
                 if visible[key]==True:
                     window.Show()
+
+
                 if visible[key]=='Advanced' and advanced==True:
                     window.Show()
                 if visible[key]=='Advanced' and advanced==False:
                     window.Hide()
-            except:
-                pass # a value in the dictionary didn't correspond to a named component of the panel. Fail silently.
+            except Exception as e:
+                logger.error("unable to set vis for ",key)
+                logger.error(e)
+                logger.error(traceback.format_exc())
         globalOptions = self.getPrefsSection("Global Preferences")
         self.logWindow.Show(self.FindWindowByName('debugCheckBox').GetValue())
         self.hiddenWindow.Hide()
+
 
     def monitorNetwork(self,url,stopEvent,log,interval=2,maxlogsize=1000,timeout=5):
         import time
@@ -1321,7 +1358,7 @@ class LauncherMainFrame(wx.Frame):
 
     def onExit(self, event):
         # Clean-up (including qdel if necessary) is now done in LoginTasks.py
-        # No longer using temporary private key file, 
+        # No longer using temporary private key file,
         # so there's no need to delete it as part of clean-up.
         if len(self.loginProcess)>0:
             dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,message=dialogs.confirmQuit.message,ButtonLabels=dialogs.confirmQuit.ButtonLabels,title="")
@@ -1361,7 +1398,7 @@ class LauncherMainFrame(wx.Frame):
         dlg.Destroy()
         options=self.getPrefsSection('Global Preferences')
         #auth_mode won't be set if, for example, this is the first use and the user displayed options then cancelled
-        if options.has_key('auth_mode'): 
+        if options.has_key('auth_mode'):
             auth_mode = int(options['auth_mode'])
             self.identity_menu.setRadio(auth_mode)
             self.identity_menu.disableItems(auth_mode)
@@ -1451,7 +1488,7 @@ class LauncherMainFrame(wx.Frame):
     def loginComplete(self,lp,oldParams,jobParams):
         shouldSave=False
         for k in jobParams:
-            if oldParams.has_key(k): 
+            if oldParams.has_key(k):
                 # This is a bit messy, but some of our parameters get converted from ints to strings
                 # Specifically nodes is requsted as an int from a SpinCtrl but is updated to a string from the output of qstat.
                 try:
@@ -1548,7 +1585,7 @@ class LauncherMainFrame(wx.Frame):
             print "skd exception"
 
             pass
-        
+
     def logStartup(self):
         import platform
         platformstr="\""
@@ -1717,7 +1754,7 @@ class LauncherMainFrame(wx.Frame):
     def missingHandler(self):
         msg="""
 Thanks for your interest in the new file transfer feature of Strudel
-In order to transfer files to your desktop you need to install an sftp client. 
+In order to transfer files to your desktop you need to install an sftp client.
 FileZilla would be a good choice on all platforms (https://filezilla-project.org/)
 On Windows this could also be winscp or Cyberduck. Mac's can use Cyberduck
 """
@@ -1770,7 +1807,7 @@ class MyApp(wx.App):
         if not os.path.exists(appUserDataDir):
             os.makedirs(appUserDataDir)
 
-        global launcherPreferencesFilePath 
+        global launcherPreferencesFilePath
         launcherPreferencesFilePath = os.path.join(appUserDataDir,"strudel.cfg")
 
         if sys.platform.startswith("win"):
@@ -1787,13 +1824,13 @@ class MyApp(wx.App):
         launcherMainFrame.Show(True)
         evt=wx.PyCommandEvent(wx.wxEVT_COMMAND_MENU_SELECTED,id=launcherMainFrame.loadDefaultSessionsId)
         wx.PostEvent(launcherMainFrame.GetEventHandler(),evt)
-        t=threading.Thread(target=launcherMainFrame.checkVersionNumber)
-        t.start()
+        # t=threading.Thread(target=launcherMainFrame.checkVersionNumber)
+        # t.start()
 
         return True
 
 if __name__ == '__main__':
-    
+
     # All multithread Xorg application need call XInitThreads before any work with Xorg or some xcb will abort with
     #    [xcb] Most likely this is a multi-threaded client and XInitThreads has not been called
     # As XInitThreads is not garanteed to be called on all Linux distributions (like Fedora 23), we better do it here.
@@ -1805,6 +1842,6 @@ if __name__ == '__main__':
             x11.XInitThreads()
         except:
             pass
-        
+
     app = MyApp(False) # Don't automatically redirect sys.stdout and sys.stderr to a Window.
     app.MainLoop()

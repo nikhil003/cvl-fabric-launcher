@@ -33,9 +33,9 @@ def showModal(dialog,loginprocess):
 
 class LoginProcess():
     """LoginProcess Class."""
-            
+
     class runAsyncServerCommandThread(Thread):
-        # Execute a command (might be start tunnel, or forward agent) wait for a regex to match and post an event. 
+        # Execute a command (might be start tunnel, or forward agent) wait for a regex to match and post an event.
         # The command will continue to execute (e.g. the tunnel will remain open) but processing will continue on other tasks
 
         def __init__(self,loginprocess,cmdRegex,nextevent,errormessage):
@@ -46,7 +46,7 @@ class LoginProcess():
             self.nextevent=nextevent
             self.errormessage=errormessage
             self.process=None
-    
+
         def stop(self):
             self._stop.set()
             if self.process!=None:
@@ -84,14 +84,14 @@ class LoginProcess():
                     pass
                 else:
                     cmd = shlex.split(cmd)
-                
+
                 self.process = subprocess.Popen(cmd, universal_newlines=True,shell=False,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
                 lastNonEmptyLine = None
                 while (not self.stopped()):
                     self.process.poll()
                     if self.process.returncode is not None and (line is None or line==""):
-                        # One of the tunnels exited prematurely. Probably a network error. 
-                        # We should attempt a clean shutdown, bearing in mind that the network might not be available, and 
+                        # One of the tunnels exited prematurely. Probably a network error.
+                        # We should attempt a clean shutdown, bearing in mind that the network might not be available, and
                         # Tell the user they can reconnect.
                         self.loginprocess.networkFaultShutdown()
                     time.sleep(0.1)
@@ -143,12 +143,12 @@ class LoginProcess():
                     logger.debug("runServerCommandThread: Line of code calling runServerCommandThread: " + "".join(frameTuple[4]))
                 except:
                     logger.debug('runServerCommandThread exception: ' + str(traceback.format_exc()))
-    
+
         def stop(self):
             if (self.cmdRegex.cmd!= None):
                 logger.debug("Stopping the runServerCommandThread cmd %s"%self.cmdRegex.getCmd(self.loginprocess.jobParams))
             self._stop.set()
-        
+
         def stopped(self):
             return self._stop.isSet()
 
@@ -162,7 +162,7 @@ class LoginProcess():
                 logger.info("runServerCommandThread: self.cmd.format(**self.loginprocess.jobParams) = " + self.cmdRegex.getCmd(self.loginprocess.jobParams))
             except:
                 logger.debug("runServerCommandThread: self.cmd.format(**self.loginprocess.jobParams) gives an exception. Why wasn't this picked up earlier?")
-    
+
             self.loginprocess.matchlist=[]
             try:
                 (stdout, stderr) = run_command(self.cmdRegex.getCmd(self.loginprocess.jobParams),ignore_errors=True, callback=self.loginprocess.cancel, startupinfo=self.loginprocess.startupinfo, creationflags=self.loginprocess.creationflags)
@@ -248,7 +248,7 @@ class LoginProcess():
             self.panel.SetSizerAndFit(self.border)
             self.Fit()
             self.password = None
-        
+
         def onOK(self,event):
             self.Close()
             self.Destroy()
@@ -265,11 +265,11 @@ class LoginProcess():
             self.loginprocess = loginprocess
             self._stop = Event()
             self.nextevent=nextevent
-    
+
         def stop(self):
             logger.debug("stopping the thread that starts the WebDAV server")
             self._stop.set()
-        
+
         def stopped(self):
             return self._stop.isSet()
 
@@ -331,7 +331,7 @@ class LoginProcess():
             self.loginprocess = loginprocess
             self._stop = Event()
             self.nextevent=nextevent
-    
+
         def stop(self):
             logger.debug("stopping the thread that starts the VNC Viewer")
             self._stop.set()
@@ -339,13 +339,13 @@ class LoginProcess():
                 self.loginprocess.turboVncProcess.kill()
             except:
                 pass
-        
+
         def stopped(self):
             return self._stop.isSet()
 
         def run(self):
             wx.CallAfter(self.loginprocess.progressDialog.Show, False)
-            
+
             if (self.loginprocess.jobParams.has_key('vncPasswd')):
 
                 try:
@@ -403,11 +403,11 @@ class LoginProcess():
             self.timeout=timeout
             for k, v in self.__dict__.iteritems():
                 logger.debug('runLoopServerCommandThread properties: %s = %s' % (str(k), str(v),))
-    
+
         def stop(self):
             logger.debug("runLoopServerCommandThread: stopping")
             self._stop.set()
-        
+
         def stopped(self):
             return self._stop.isSet()
 
@@ -439,7 +439,7 @@ class LoginProcess():
                 except KeyError as e:
                     self.loginprocess.cancel("Trying to run a command but I was missing a parameter %s"%(e))
                     return
-                
+
                 for line in stdout.splitlines(False):
                     for regexUnformatted in self.cmdRegex.regex:
                         if regexUnformatted != None:
@@ -477,30 +477,30 @@ class LoginProcess():
             if (not self.stopped() and not self.loginprocess.canceled() and not self.loginprocess._shutdown.is_set()):
                 logger.error('runLoopServerCommandThread: not stopped, not canceled, so posting the next event')
                 wx.PostEvent(self.loginprocess.notify_window.GetEventHandler(),self.nextEvent)
-        
+
     class CheckVNCVerThread(Thread):
         def __init__(self,loginprocess):
             Thread.__init__(self)
             self.loginprocess = loginprocess
             self._stop = Event()
-    
+
         def stop(self):
-            logger.debug("CheckVNCVerThread: stop called on CheckVNCVerThread") 
+            logger.debug("CheckVNCVerThread: stop called on CheckVNCVerThread")
             self._stop.set()
-        
+
         def stopped(self):
             return self._stop.isSet()
-                
+
         def getTurboVncVersionNumber_Windows(self):
             if sys.platform.startswith("win"):
                 key = None
                 queryResult = None
                 foundTurboVncInRegistry = False
-                
+
                 vnc = r"C:\Program Files\TurboVNC\vncviewer.exe"
                 if 'vnc' in self.loginprocess.globalOptions and self.loginprocess.globalOptions['vnc']!="":
                     vnc = self.loginprocess.globalOptions['vnc']
-                  
+
                 import _winreg
 
                 turboVncVersionNumber = None
@@ -596,7 +596,7 @@ class LoginProcess():
             else:
                 logger.info("X11 version of TurboVNC Viewer is installed.")
                 turboVncFlavour = "X11"
-            
+
             self.turboVncVersionNumber = "0.0"
 
             if sys.platform.startswith("darwin") and turboVncFlavour=="Java":
@@ -691,7 +691,7 @@ class LoginProcess():
             logger.debug("turboVncNotFoundDialog finished, calling loginprocess.cancel()")
 
             self.loginprocess.cancel()
-    
+
         def run(self):
             # Check for TurboVNC
 
@@ -778,7 +778,7 @@ class LoginProcess():
 
 
             logger.info("TurboVNC viewer version number = " + turboVncVersionNumber)
-            
+
             self.loginprocess.jobParams['vnc'] = vnc
             self.loginprocess.jobParams['turboVncFlavour'] = turboVncFlavour
             self.loginprocess.jobParams['vncOptionsString'] = self.loginprocess.buildVNCOptionsString()
@@ -820,7 +820,7 @@ class LoginProcess():
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_RUN_SANITY_CHECK):
                 # If we have completed KeyDistribution, we may have some updates to the jobParameters from the key distribution process
                 if event.loginprocess.skd!=None:
-                    event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict) 
+                    event.loginprocess.jobParams.update(event.loginprocess.skd.updateDict)
                 logger.info('loginProcessEvent: caught EVT_LOGINPROCESS_RUN_SANITY_CHECK')
                 event.loginprocess.updateProgressDialog( 3, "Running the sanity check script")
                 nextevent = LoginProcess.loginProcessEvent(LoginProcess.EVT_LOGINPROCESS_CHECK_RUNNING_SERVER,event.loginprocess)
@@ -905,7 +905,7 @@ class LoginProcess():
                 for match in event.loginprocess.matchlist:
                     grouplist = grouplist + match.values()
                     groups.append(match.values())
-                
+
                 logger.info('selectProject: groups = ' + str(groups))
 
                 if event.loginprocess.siteConfig.startServer.cmd!=None:
@@ -918,8 +918,8 @@ class LoginProcess():
                             logger.debug("jobparams does not have a value for resname")
                         if ( (event.loginprocess.siteConfig.visibility.has_key('listProjects') and event.loginprocess.siteConfig.visibility['listProjects'])
                               or (event.loginprocess.jobParams.has_key('project') and not (event.loginprocess.jobParams['project'] in grouplist))):
-                            logger.info("we have a value for project, but the user is not a member of that project")                              
-                            msg=event.loginprocess.displayStrings.selectProjectMessage.format(**event.loginprocess.jobParams)                         
+                            logger.info("we have a value for project, but the user is not a member of that project")
+                            msg=event.loginprocess.displayStrings.selectProjectMessage.format(**event.loginprocess.jobParams)
                             event.loginprocess.jobParams.pop('project',None)
                             try: # check again if we really need the project field.
                                 logger.debug("trying to format the startServerCmd")
@@ -1073,7 +1073,7 @@ class LoginProcess():
                 event.loginprocess.threads.append(t)
             else:
                 event.Skip()
-    
+
         def startTunnel(event):
             if (event.GetId() == LoginProcess.EVT_LOGINPROCESS_START_TUNNEL):
                 logger.debug('loginProcessEvent: caught EVT_LOGINPROCESS_START_TUNNEL')
@@ -1593,7 +1593,7 @@ class LoginProcess():
                     if hasattr(event.loginprocess, 'turboVncElapsedTimeInSeconds'):
                         if event.loginprocess.turboVncElapsedTimeInSeconds > 3:
                             os._exit(0)
-              
+
                 #wx.CallAfter(event.loginprocess.parentWindow.SetCursor, wx.StockCursor(wx.CURSOR_ARROW))
             else:
                 event.Skip()
@@ -1609,7 +1609,7 @@ class LoginProcess():
             q.put(reservation.name)
         else:
             q.put(None)
-        
+
 
 
     def shutdownReal(self,nextevent=None):
@@ -1655,7 +1655,7 @@ class LoginProcess():
                 time.sleep(0.1)
 
 
-        if (self.skd!=None): 
+        if (self.skd!=None):
            #logger.debug('loginProcessEvent: cancel: calling skd.cancel()')
            #self.skd.shutdown()
            # Calling shutdown() doesn't seem to work - shutdownReal never gets called.
@@ -1664,7 +1664,7 @@ class LoginProcess():
         if (self.provider!=None):
             logger.debug('A cloud provider was set')
             self.provider.shutdown()
-                
+
         if (self.progressDialog != None):
             wx.CallAfter(self.progressDialog.Hide)
             wx.CallAfter(self.progressDialog.Show, False)
@@ -1900,7 +1900,7 @@ class LoginProcess():
                 return None
         else:
             return None
-        
+
     def validateVncJobID(self):
         if (self.vncJobID != None and re.search("^[0-9]+\.\S+$",self.vncJobID)):
             return True
@@ -1946,6 +1946,7 @@ class LoginProcess():
         Visible['resourcePanel']=False
         Visible['resolutionPanel']=False
         Visible['cipherPanel']=False
+        Visible['argsPanel']=False
         Visible['debugCheckBoxPanel']='Advanced'
         Visible['advancedCheckBoxPanel']=True
         Visible['optionsDialog']=False
@@ -1963,7 +1964,7 @@ class LoginProcess():
         newConfig.visibility=Visible
         queue.put(newConfig)
         #return newConfig
-   
+
     def cancel(self,error=""):
         if (not self._canceled.isSet()):
             self._canceled.set()
@@ -1995,7 +1996,7 @@ class LoginProcess():
     def showModalFromThread(self,dlg,q):
         r=dlg.ShowModal()
         q.put(r)
-    
+
     def createAndShowModalDialog(self,q,dlgclass,*args,**kwargs):
         dlg=dlgclass(*args,**kwargs)
         r=dlg.ShowModal()

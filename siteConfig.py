@@ -16,20 +16,20 @@ def getMasterSites(url):
     else:
         logger.debug("Master site list unavailable status code %s"%r.status_code)
         return "%s"%r.status_code
-    
+
 class CancelException(Exception):
     pass
 class TimeoutException(Exception):
     pass
 class StatusCode(Exception):
     pass
-    
+
 class requestThread(Thread):
     def __init__(self,url,queue):
         super(requestThread,self).__init__()
         self.url=url
         self.queue=queue
-        
+
     def run(self):
         import time
         try:
@@ -61,14 +61,14 @@ class waitThread(Thread):
                     r=self.qin.get()
                 else:
                     r=None
-        
+
 # This thread will place a none object on the queue after a specified time to terminate the wait thread above
 class timerThread(Thread):
     def __init__(self,q,time):
         super(timerThread,self).__init__()
         self.q=q
         self.time=time
-    
+
     def run(self):
         import time
         time.sleep(self.time)
@@ -127,7 +127,7 @@ def getSites(prefs,path):
     t.start()
     t.join()
 
-    
+
     nback=0
     for site in siteList:
         logger.debug("retrieving the config for %s"%site)
@@ -170,8 +170,8 @@ def getSites(prefs,path):
                 logger.debug("%s"%e)
     backgroundDownloadThread(backgroundQ,nback,path).start()
     return r
-        
-        
+
+
 
 #    DEFAULT_SITES_JSON='defaultSites.json'
 #    defaultSites={}
@@ -245,7 +245,7 @@ class GenericJSONEncoder(json.JSONEncoder):
         return d
 
 class GenericJSONDecoder(json.JSONDecoder):
-    
+
     def __init__(self):
         json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
 
@@ -295,7 +295,7 @@ class cmdRegEx():
 			# INFO: If we echo partly to stderr here (using >&2) all output will be send to stderr on windows.
 			#       This is because redirection of streams is done by the client (windows) and windows does not support multiple redirections in one connection.
 			#       Hence, redirection cannot be used with windows:
-			#         ' \'(>&2 echo -e \"\\n----- strudel stderr start -----\"); \' '  
+			#         ' \'(>&2 echo -e \"\\n----- strudel stderr start -----\"); \' '
 			#       We must write to stderr directly:
 			#         ' \'python -c \"import os; os.write(2, \\"\\n----- strudel stderr start -----\\")\";\' '
 			#         ' \'perl -e \"print STDERR \\"\\n----- strudel stderr start -----\\"\";\' '
@@ -333,29 +333,29 @@ class cmdRegEx():
 
         return string
 
-    def cleanupCmdOutput(self, stdout, stderr):    
-                                   
+    def cleanupCmdOutput(self, stdout, stderr):
+
         def cleanupSingleOutput(output, marker_line):
-            
-            # remove any line in stdout above the marker line set in getCmd()             
+
+            # remove any line in stdout above the marker line set in getCmd()
             output = output.splitlines()
             try:
                 ii=output.index(marker_line) # exception ValueError if not found
-                if not output[ii+1:]: 
+                if not output[ii+1:]:
                     output.append("")
                 output = os.linesep.join(output[ii+1:])
             except ValueError:
                 print "marker string not found"
                 output = os.linesep.join(output[:])
-            return output                                            
+            return output
 
         stdout = cleanupSingleOutput(stdout, "----- strudel stdout start -----" )
-        stderr = cleanupSingleOutput(stderr, "----- strudel stderr start -----" )     
-        
+        stderr = cleanupSingleOutput(stderr, "----- strudel stderr start -----" )
+
         return stdout, stderr
 
 class siteConfig():
-    
+
     def __init__(self,**kwargs):
         self.provision=None
         self.imageid=None
