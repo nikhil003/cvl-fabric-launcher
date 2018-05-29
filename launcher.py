@@ -1307,7 +1307,7 @@ class LauncherMainFrame(wx.Frame):
                 if visible[key]=='Advanced' and advanced==False:
                     window.Hide()
             except Exception as e:
-                logger.error("unable to set vis for ",key)
+                logger.error("unable to set vis for {}".format(key))
                 logger.error(e)
                 logger.error(traceback.format_exc())
         globalOptions = self.getPrefsSection("Global Preferences")
