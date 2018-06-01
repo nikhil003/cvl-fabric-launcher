@@ -1064,8 +1064,14 @@ class LauncherMainFrame(wx.Frame):
         username = self.walkChildren(name='jobParams_aaf_username').GetValue()
         print "idp is %s"%idp
         print "username is %s"%username
+        dlg=wx.FileDialog(self, "Save your desktop session", style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
+        status = dlg.ShowModal()
+        if status == wx.ID_CANCEL:
+            logger.debug('saveSession cancelled')
+            return
+        filename=dlg.GetPath()
         s=SharedSessions.SharedSessions(self,idp=idp,username=username)
-        t=threading.Thread(target=s.shareSession,kwargs={'loginProcess':self.loginProcess})
+        t=threading.Thread(target=s.shareSession,kwargs={'loginProcess':self.loginProcess,'filename':filename})
         t.start()
 
     def transferFilesEvent(self,event):
