@@ -6,6 +6,7 @@
 # pyinstaller was unpacked.
 
 PYINSTALLERDIR=`pwd`/pyinstaller
+PYINSTALLEREXEC=`which pyinstaller`
 
 set -o nounset
 set -e
@@ -18,8 +19,10 @@ rm -fr dist
 python create_commit_def.py
 
 # PyInstaller 2.1
+echo "Running pyinstaller................"
 PATHS=`python -c 'import appdirs ; import os ; print os.path.dirname(appdirs.__file__)'`
-python ${PYINSTALLERDIR}/pyinstaller.py --paths=$PATHS launcher.py
+${PYINSTALLEREXEC} --clean --hidden-import psutil --paths=$PATHS launcher.py
+#python ${PYINSTALLERDIR}/pyinstaller.py --paths=$PATHS launcher.py
 
 cp "Strudel.desktop" 	dist/launcher/
 cp strudel.sh 		dist/launcher/
