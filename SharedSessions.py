@@ -16,7 +16,7 @@ class SharedSessions:
         self.parent=parent
         self.idp=idp
         self.username=username
-        
+
     def getPassphrase(self,queue):
         import cvlsshutils.PassphraseDialog
         dlg=cvlsshutils.PassphraseDialog.passphraseDialog(self.parent,None,wx.ID_ANY,"title","text","OK","Cancel")
@@ -49,7 +49,7 @@ class SharedSessions:
         except:
             pass
 
-    def shareSession(self,loginProcess):
+    def shareSession(self,loginProcess,filename):
         import cvlsshutils.RequestsSessionSingleton
         import cvlsshutils.AAF_Auth
         import threading
@@ -61,24 +61,16 @@ class SharedSessions:
         q=Queue.Queue()
         t=threading.Thread(target=lambda: self.parent.loginProcess[0].getSharedSession(q))
         t.start()
-            
-        wx.CallAfter(self.beginBusyCursor)
-        self.session=cvlsshutils.RequestsSessionSingleton.RequestsSessionSingleton().GetSession()
-        baseURL="https://autht.massive.org.au/strudel_share/"
-        kwargs={}
         sc=q.get()
         t.join()
         wx.CallAfter(self.endBusyCursor)
         mydict={}
         mydict['Saved Session']=sc
         import json
-        sessionData=json.dumps(mydict,cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',',': '))
-        data={'data':sessionData}
-        r = self.session.post(baseURL+'save_config',data=data,verify=False)
-        key = json.loads(r.text)['key']
-        q=Queue.Queue()
-        wx.CallAfter(lambda:self.showShareKey(key,q))
-        q.get()
+        sessionData = json.dumps([mydict.keys(),mydict],cls=siteConfig.GenericJSONEncoder,sort_keys=True,indent=4,separators=(',',': '))
+        with open(filename,'w') as f:
+            f.write(sessionData)
+
 
     def retrieveSession(self):
         import cvlsshutils.RequestsSessionSingleton
@@ -128,7 +120,7 @@ class SharedSessions:
 #        f.write(s)
 #        f.close()
 #
-#        
+#
 #
 #
 #    def saveSession(self):
