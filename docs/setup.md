@@ -1,0 +1,2 @@
+Configuring Strudel-desktop
+===========================
