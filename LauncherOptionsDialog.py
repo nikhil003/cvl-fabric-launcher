@@ -1,6 +1,11 @@
 import wx
 import sys
 
+try:
+    import wx.lib.agw.hyperlink as hl
+except ImportError:
+    hl = None
+
 import IconPys.MASSIVElogoTransparent64x64
 
 class multiButtonDialog(wx.Dialog):
@@ -25,7 +30,10 @@ class multiButtonDialog(wx.Dialog):
             self.SetIcon(MASSIVE_icon.getMASSIVElogoTransparent128x128Icon())
 
         self.dialogPanel = wx.Panel(self, wx.ID_ANY)
-        self.dialogPanel.SetSizer(wx.FlexGridSizer(cols=2,rows=2))
+        try:
+            self.dialogPanel.SetSizer(wx.FlexGridSizer(cols=2,rows=2))
+        except TypeError:
+            self.dialogPanel.SetSizer(wx.FlexGridSizer(2,2,gap=wx.Size(0,0)))
         #self.dialogPanel.SetSizer(wx.BoxSizer(wx.VERTICAL))
         self.ButtonLabels=ButtonLabels
         self.onHelp=onHelp
@@ -39,7 +47,10 @@ class multiButtonDialog(wx.Dialog):
 
         self.messagePanel = wx.Panel(self.dialogPanel)
         if sys.platform.startswith("darwin"):
-            self.messagePanel.SetSizer(wx.FlexGridSizer(cols=1,rows=2))
+            try:
+                self.messagePanel.SetSizer(wx.FlexGridSizer(cols=1,rows=2))
+            except TypeError:
+                self.messagePanel.SetSizer(wx.FlexGridSizer(2,1,gap=wx.Size(0,0)))
             self.titleLabel = wx.StaticText(self.messagePanel, wx.ID_ANY, title)
             titleFont = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
             titleFont.SetWeight(wx.BOLD)
@@ -47,7 +58,10 @@ class multiButtonDialog(wx.Dialog):
             self.titleLabel.SetFont(titleFont)
             self.messagePanel.GetSizer().Add(self.titleLabel,flag=wx.BOTTOM,border=10)
         else:
-            self.messagePanel.SetSizer(wx.FlexGridSizer(cols=1,rows=1))
+            try:
+                self.messagePanel.SetSizer(wx.FlexGridSizer(cols=1,rows=1))
+            except TypeError:
+                self.messagePanel.SetSizer(wx.FlexGridSizer(1,1,gap=wx.Size(0,0)))
         messageWidth = 330
         self.messageLabel = wx.StaticText(self.messagePanel, wx.ID_ANY, message)
         self.messageLabel.SetForegroundColour((0,0,0))
@@ -62,7 +76,14 @@ class multiButtonDialog(wx.Dialog):
         contactQueriesContactLabel.SetForegroundColour(wx.Colour(0,0,0))
         contactPanel.GetSizer().Add(contactQueriesContactLabel)
 
-        contactEmailHyperlink = wx.HyperlinkCtrl(contactPanel, id = wx.ID_ANY, label = self.helpEmailAddress, url = "mailto:"+self.helpEmailAddress)
+        if hasattr(wx, 'HyperlinkCtrl'):
+            contactEmailHyperlink = wx.HyperlinkCtrl(contactPanel, id = wx.ID_ANY, label = self.helpEmailAddress, url = "mailto:"+self.helpEmailAddress)
+        elif hasattr(wx, 'adv'):
+            if hasattr(getattr(wx, 'adv'), 'HyperlinkCtrl'):
+                contactEmailHyperlink = wx.adv.HyperlinkCtrl(contactPanel, id = wx.ID_ANY, label = self.helpEmailAddress, url = "mailto:"+self.helpEmailAddress)
+        elif hl is not None:
+            contactEmailHyperlink = hl.HyperLinkCtrl(contactPanel, id = wx.ID_ANY, label = self.helpEmailAddress, URL = "mailto:"+self.helpEmailAddress)
+
         contactEmailHyperlink.SetFont(smallFont)
         #hyperlinkPosition = wx.Point(self.contactQueriesContactLabel.GetPosition().x+self.contactQueriesContactLabel.GetSize().width+10,okButtonPosition.y)
         #hyperlinkPosition = wx.Point(self.contactQueriesContactLabel.GetPosition().x+self.contactQueriesContactLabel.GetSize().width,buttonPosition.y)

@@ -323,22 +323,41 @@ class LauncherMainFrame(wx.Frame):
         self.menu_bar  = wx.MenuBar()
 
         self.file_menu = wx.Menu()
-        self.menu_bar.Append(self.file_menu, "&File")
+        if hasattr(getattr(self, 'menu_bar'), 'Append'):
+            self.menu_bar.Append(self.file_menu, "&File")
+        elif hasattr(getattr(self, 'menu_bar'), 'AppendItem'):
+            self.menu_bar.AppendItem(self.file_menu, "&File")
+
         shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Save a shared session")
-        self.file_menu.AppendItem(shareDesktop)
+        if hasattr(getattr(self, 'file_menu'), 'Append'):
+            self.file_menu.Append(shareDesktop)
+        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+            self.file_menu.AppendItem(shareDesktop)
         self.Bind(wx.EVT_MENU, self.saveSessionEvent, id=shareDesktop.GetId())
         loadSession=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load a shared session")
-        self.file_menu.AppendItem(loadSession)
+        if hasattr(getattr(self, 'file_menu'), 'Append'):
+            self.file_menu.Append(loadSession)
+        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+            self.file_menu.AppendItem(loadSession)
         self.Bind(wx.EVT_MENU, self.loadSessionEvent, id=loadSession.GetId())
         loadDefaultSessions=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load defaults")
-        self.file_menu.AppendItem(loadDefaultSessions)
+        if hasattr(getattr(self, 'file_menu'), 'Append'):
+            self.file_menu.Append(loadDefaultSessions)
+        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+            self.file_menu.AppendItem(loadDefaultSessions)
         self.loadDefaultSessionsId=loadDefaultSessions.GetId()
         self.Bind(wx.EVT_MENU, self.loadDefaultSessionsEvent, id=loadDefaultSessions.GetId())
         manageSites=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Manage sites")
-        self.file_menu.AppendItem(manageSites)
+        if hasattr(getattr(self, 'file_menu'), 'Append'):
+            self.file_menu.Append(manageSites)
+        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+            self.file_menu.AppendItem(manageSites)
         self.Bind(wx.EVT_MENU,self.manageSitesEventHandler,id=manageSites.GetId())
         if sys.platform.startswith("win") or sys.platform.startswith("linux"):
-            self.file_menu.Append(wx.ID_EXIT, "E&xit", "Close window and exit program.")
+            if hasattr(getattr(self, 'file_menu'), 'Append'):
+                self.file_menu.Append(wx.ID_EXIT, "E&xit", "Close window and exit program.")
+            elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+                self.file_menu.AppendItem(wx.ID_EXIT, "E&xit", "Close window and exit program.")
             self.Bind(wx.EVT_MENU, self.onExit, id=wx.ID_EXIT)
            
             
@@ -477,7 +496,10 @@ class LauncherMainFrame(wx.Frame):
 
         self.resourcePanel = wx.Panel(self.loginFieldsPanel, wx.ID_ANY,name="resourcePanel")
         #self.resourcePanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        self.resourcePanel.SetSizer(wx.FlexGridSizer(rows=4,cols=4))
+        try:
+            self.resourcePanel.SetSizer(wx.FlexGridSizer(rows=4,cols=4))
+        except TypeError:
+            self.resourcePanel.SetSizer(wx.FlexGridSizer(4,4,gap=wx.Size(0,0)))
 
         self.hoursLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Hours requested',name='label_hours')
         self.resourcePanel.GetSizer().Add(self.hoursLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)

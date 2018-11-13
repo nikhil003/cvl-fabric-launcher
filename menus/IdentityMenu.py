@@ -50,17 +50,26 @@ class IdentityMenu(wx.Menu):
 
         #privacyOptionsMenuItemId = wx.NewId()
         self.authOpts=wx.MenuItem(self,wx.ID_ANY,"&Authentication options")
-        self.AppendItem(self.authOpts)
+        if hasattr(self, 'Append'):
+            self.Append(self.authOpts)
+        elif hasattr(self, 'AppendItem'):
+            self.AppendItem(self.authOpts)
         self.launcherMainFrame.Bind(wx.EVT_MENU, self.onAuthenticationOptions, id=self.authOpts.GetId())
-        
+
         self.permSSHKey = wx.MenuItem(self,wx.ID_ANY,"Remember me on this computer",kind=wx.ITEM_RADIO)
         self.launcherMainFrame.Bind(wx.EVT_MENU,self.onPermSSHKey,id=self.permSSHKey.GetId())
-        self.AppendItem(self.permSSHKey)
+        if hasattr(self, 'Append'):
+            self.Append(self.permSSHKey)
+        elif hasattr(self, 'AppendItem'):
+            self.AppendItem(self.permSSHKey)
 
         self.tempSSHKey = wx.MenuItem(self,wx.ID_ANY,"Don't remember me",kind=wx.ITEM_RADIO)
         self.launcherMainFrame.Bind(wx.EVT_MENU,self.onTempSSHKey,id=self.tempSSHKey.GetId())
-        self.AppendItem(self.tempSSHKey)
-        
+        if hasattr(self, 'Append'):
+            self.Append(self.tempSSHKey)
+        elif hasattr(self, 'AppendItem'):
+            self.AppendItem(self.tempSSHKey)
+
 
         self.AppendSeparator()
 
