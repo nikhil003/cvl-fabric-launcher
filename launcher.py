@@ -43,8 +43,8 @@
 """
 A wxPython GUI to provide easy login to the MASSIVE Desktop.
 It can be run using "python launcher.py", assuming that you
-have an appropriate (32-bit or 64-bit) version of Python 
-installed (*), wxPython, and the dependent Python modules 
+have an appropriate (32-bit or 64-bit) version of Python
+installed (*), wxPython, and the dependent Python modules
 listed in the DEPENDENCIES file.
 
 (*) wxPython 2.8.x on Mac OS X doesn't support 64-bit mode.
@@ -75,7 +75,7 @@ See: https://confluence-vre.its.monash.edu.au/display/CVL/MASSIVE+Launcher+Windo
 If you want to build a stand-alone Launcher binary for Mac or Windows
 without using a code-signing certificate, you can do so by commenting
 out the code-signing functionality in package_mac_version.py and in
-package_windows_version.bat.  In other words, sorry, this is not 
+package_windows_version.bat.  In other words, sorry, this is not
 possible at present without modifying the packaging scripts.
 
 A self-contained Linux binary distribution can be built using
@@ -198,7 +198,7 @@ class LauncherMainFrame(wx.Frame):
         for key in options.keys():
             self.prefs.set(section,key,"%s"%options[key])
         pass
-    
+
     def loadSiteDefaults(self,configName):
         try:
             site=self.sites[configName]
@@ -244,7 +244,7 @@ class LauncherMainFrame(wx.Frame):
     def savePrefsEventHandler(self,event):
         threading.Thread(target=self.savePrefs).start()
         event.Skip()
-        
+
     def savePrefs(self,window=None,section=None):
         assert self.prefs!=None
         specialSections=['Global Preferences','configured_sites']
@@ -323,34 +323,34 @@ class LauncherMainFrame(wx.Frame):
         self.menu_bar  = wx.MenuBar()
 
         self.file_menu = wx.Menu()
-        if hasattr(getattr(self, 'menu_bar'), 'Append'):
-            self.menu_bar.Append(self.file_menu, "&File")
-        elif hasattr(getattr(self, 'menu_bar'), 'AppendItem'):
+        #if hasattr(getattr(self, 'menu_bar'), 'Append'):
+        #    self.menu_bar.Append(self.file_menu, "&File")
+        if hasattr(getattr(self, 'menu_bar'), 'AppendItem'):
             self.menu_bar.AppendItem(self.file_menu, "&File")
 
         shareDesktop=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Save a shared session")
-        if hasattr(getattr(self, 'file_menu'), 'Append'):
-            self.file_menu.Append(shareDesktop)
-        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+        #if hasattr(getattr(self, 'file_menu'), 'Append'):
+        #    self.file_menu.Append(shareDesktop)
+        if hasattr(getattr(self, 'file_menu'), 'AppendItem'):
             self.file_menu.AppendItem(shareDesktop)
         self.Bind(wx.EVT_MENU, self.saveSessionEvent, id=shareDesktop.GetId())
         loadSession=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load a shared session")
-        if hasattr(getattr(self, 'file_menu'), 'Append'):
-            self.file_menu.Append(loadSession)
-        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+        #if hasattr(getattr(self, 'file_menu'), 'Append'):
+        #    self.file_menu.Append(loadSession)
+        if hasattr(getattr(self, 'file_menu'), 'AppendItem'):
             self.file_menu.AppendItem(loadSession)
         self.Bind(wx.EVT_MENU, self.loadSessionEvent, id=loadSession.GetId())
         loadDefaultSessions=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Load defaults")
-        if hasattr(getattr(self, 'file_menu'), 'Append'):
-            self.file_menu.Append(loadDefaultSessions)
-        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+        #if hasattr(getattr(self, 'file_menu'), 'Append'):
+        #    self.file_menu.Append(loadDefaultSessions)
+        if hasattr(getattr(self, 'file_menu'), 'AppendItem'):
             self.file_menu.AppendItem(loadDefaultSessions)
         self.loadDefaultSessionsId=loadDefaultSessions.GetId()
         self.Bind(wx.EVT_MENU, self.loadDefaultSessionsEvent, id=loadDefaultSessions.GetId())
         manageSites=wx.MenuItem(self.file_menu,wx.ID_ANY,"&Manage sites")
-        if hasattr(getattr(self, 'file_menu'), 'Append'):
-            self.file_menu.Append(manageSites)
-        elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
+        #if hasattr(getattr(self, 'file_menu'), 'Append'):
+        #    self.file_menu.Append(manageSites)
+        if hasattr(getattr(self, 'file_menu'), 'AppendItem'):
             self.file_menu.AppendItem(manageSites)
         self.Bind(wx.EVT_MENU,self.manageSitesEventHandler,id=manageSites.GetId())
         if sys.platform.startswith("win") or sys.platform.startswith("linux"):
@@ -359,8 +359,8 @@ class LauncherMainFrame(wx.Frame):
             elif hasattr(getattr(self, 'file_menu'), 'AppendItem'):
                 self.file_menu.AppendItem(wx.ID_EXIT, "E&xit", "Close window and exit program.")
             self.Bind(wx.EVT_MENU, self.onExit, id=wx.ID_EXIT)
-           
-            
+
+
 
         #if sys.platform.startswith("darwin"):
             ## Only do this for Mac OS X, because other platforms have
@@ -417,7 +417,7 @@ class LauncherMainFrame(wx.Frame):
         submitDebugLogMenuItemID = wx.NewId()
         self.help_menu.Append(submitDebugLogMenuItemID, "&Submit debug log")
         self.Bind(wx.EVT_MENU, self.onSubmitDebugLog, id=submitDebugLogMenuItemID)
-        # On Mac, the About menu item will automatically be moved from 
+        # On Mac, the About menu item will automatically be moved from
         # the Help menu to the "MASSIVE Launcher" menu, so we don't
         # need a separator.
         if not sys.platform.startswith("darwin"):
@@ -444,7 +444,7 @@ class LauncherMainFrame(wx.Frame):
         widgetWidth3 = 75
 
 
-        
+
         self.noneVisible={}
         self.noneVisible['usernamePanel']=False
         self.noneVisible['projectPanel']=False
@@ -514,7 +514,7 @@ class LauncherMainFrame(wx.Frame):
         #self.massiveHoursField = wx.SpinCtrl(self.massiveLoginFieldsPanel, wx.ID_ANY, value=self.massiveHoursRequested, min=1,max=336)
         self.memField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, size=(widgetWidth3,-1), min=1,max=1024,name='jobParams_mem')
         self.resourcePanel.GetSizer().Add(self.memField, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
-        
+
         self.nodesLabel = wx.StaticText(self.resourcePanel, wx.ID_ANY, 'Nodes',name='label_nodes')
         self.resourcePanel.GetSizer().Add(self.nodesLabel, proportion=1,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL,border=5)
         self.nodesField = wx.SpinCtrl(self.resourcePanel, wx.ID_ANY, value="1", size=(widgetWidth3,-1), min=1,max=10,name='jobParams_nodes')
@@ -540,7 +540,7 @@ class LauncherMainFrame(wx.Frame):
         self.resolutionPanel.GetSizer().Add(self.resolutionField, flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.resolutionPanel,proportion=0,flag=wx.EXPAND)
 
-        
+
         self.cipherPanel = wx.Panel(self.loginFieldsPanel,name="cipherPanel")
         self.cipherPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         self.sshTunnelCipherLabel = wx.StaticText(self.cipherPanel, wx.ID_ANY, 'SSH tunnel cipher',name='label_cipher')
@@ -555,11 +555,11 @@ class LauncherMainFrame(wx.Frame):
         self.sshTunnelCipherComboBox = wx.ComboBox(self.cipherPanel, wx.ID_ANY, value=defaultCipher, choices=sshTunnelCiphers, size=(widgetWidth2, -1), style=wx.CB_DROPDOWN,name='jobParams_cipher')
         self.cipherPanel.GetSizer().Add(self.sshTunnelCipherComboBox, proportion=0,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, border=5)
         self.loginFieldsPanel.GetSizer().Add(self.cipherPanel,proportion=0,flag=wx.EXPAND)
-        
+
 
         self.checkBoxPanel = wx.Panel(self.loginFieldsPanel,name="checkBoxPanel")
         self.checkBoxPanel.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        
+
         p = wx.Panel(self.checkBoxPanel,name="debugCheckBoxPanel")
         p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         l = wx.StaticText(p, wx.ID_ANY, 'Show debug window',name='label_debug')
@@ -568,10 +568,10 @@ class LauncherMainFrame(wx.Frame):
         p.GetSizer().Add(l,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
         p.GetSizer().Add(c,border=5,flag=wx.TOP|wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL)
         self.checkBoxPanel.GetSizer().Add(p,flag=wx.ALIGN_LEFT)
-    
+
         t=wx.StaticText(self.checkBoxPanel,label="")
         self.checkBoxPanel.GetSizer().Add(t,proportion=1,flag=wx.EXPAND)
-  
+
         p = wx.Panel(self.checkBoxPanel,name="advancedCheckBoxPanel")
         p.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         l = wx.StaticText(p, wx.ID_ANY, 'Show Advanced Options',name='label_advanced')
@@ -860,7 +860,7 @@ class LauncherMainFrame(wx.Frame):
                     button=q.get()
                     if button==0:
                         retry=False
-                
+
 
         q=Queue.Queue()
 
@@ -947,7 +947,7 @@ class LauncherMainFrame(wx.Frame):
     def createAndShowModalDialog(self,event,dlgclass,*args,**kwargs):
         dlg=dlgclass(*args,**kwargs)
         # Do not use the return value from ShowModal. It seems on MacOS wx3.0, this event handler may run before the onClose method of the dialog
-        # Resulting in ShowModal returning an incorrect value. If you need the return value, pass a queue to the dialog and get the onClose method to 
+        # Resulting in ShowModal returning an incorrect value. If you need the return value, pass a queue to the dialog and get the onClose method to
         # put a value on the queue (as is done in multiButtonDialog)
         dlg.ShowModal()
         event.set()
@@ -974,7 +974,7 @@ class LauncherMainFrame(wx.Frame):
             else:
                 self.manageSites()
                 return
-            
+
         wx.CallAfter(wx.BeginBusyCursor)
         self.sites=siteConfig.getSites(self.prefs,os.path.dirname(launcherPreferencesFilePath))
         wx.CallAfter(wx.EndBusyCursor)
@@ -1000,8 +1000,8 @@ class LauncherMainFrame(wx.Frame):
             sn=cb.GetValue()
         except:
             sn=''
-                    
-        
+
+
         if (sn==None or sn==""):
             if self.prefs.has_option("Launcher Config","siteConfigDefault"):
                 sn = self.prefs.get("Launcher Config","siteConfigDefault")
@@ -1018,10 +1018,10 @@ class LauncherMainFrame(wx.Frame):
                 if len(self.sites.keys())>0:
                     cb.SetSelection(0)
                 else:
-                    logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
+                    logger.debug("unable to set the default flavour. Apparently there are no flavours available")
             except:
-                logger.debug("unable to set the default flavour. Apparently there are no flavours available")  
-            
+                logger.debug("unable to set the default flavour. Apparently there are no flavours available")
+
         #cb.SetSelection(0)
         if (redraw):
             self.loadSiteDefaults(configName=self.FindWindowByName('jobParams_configName').GetValue())
@@ -1059,7 +1059,7 @@ class LauncherMainFrame(wx.Frame):
         f.write(s)
         f.close()
 
-        
+
 
 
     def saveSession(self):
@@ -1119,7 +1119,7 @@ class LauncherMainFrame(wx.Frame):
         for item in window.GetChildren():
             name = item.GetName()
             if ('jobParam' in name):
-                (prefix,keyname) = name.split('_',1) 
+                (prefix,keyname) = name.split('_',1)
                 if isinstance(item,wx.RadioBox):
                     jobParams[keyname]=item.GetSelection()
                 else:
@@ -1197,13 +1197,13 @@ class LauncherMainFrame(wx.Frame):
         visible['label_hours']=False
         visible['jobParams_hours']=False
         for k in visible.keys():
-            try: 
+            try:
                 window=self.FindWindowByName(k)
                 window.Hide()
             except:
                 pass
 
-        
+
 
     def updateVisibility(self):
         #self.showAll()
@@ -1307,7 +1307,7 @@ class LauncherMainFrame(wx.Frame):
 
     def onExit(self, event):
         # Clean-up (including qdel if necessary) is now done in LoginTasks.py
-        # No longer using temporary private key file, 
+        # No longer using temporary private key file,
         # so there's no need to delete it as part of clean-up.
         if len(self.loginProcess)>0:
             dlg=LauncherOptionsDialog.multiButtonDialog(parent=self,message=dialogs.confirmQuit.message,ButtonLabels=dialogs.confirmQuit.ButtonLabels,title="")
@@ -1341,7 +1341,7 @@ class LauncherMainFrame(wx.Frame):
         dlg.Destroy()
         options=self.getPrefsSection('Global Preferences')
         #auth_mode won't be set if, for example, this is the first use and the user displayed options then cancelled
-        if options.has_key('auth_mode'): 
+        if options.has_key('auth_mode'):
             auth_mode = int(options['auth_mode'])
             self.identity_menu.setRadio(auth_mode)
             self.identity_menu.disableItems(auth_mode)
@@ -1431,7 +1431,7 @@ class LauncherMainFrame(wx.Frame):
     def loginComplete(self,lp,oldParams,jobParams):
         shouldSave=False
         for k in jobParams:
-            if oldParams.has_key(k): 
+            if oldParams.has_key(k):
                 # This is a bit messy, but some of our parameters get converted from ints to strings
                 # Specifically nodes is requsted as an int from a SpinCtrl but is updated to a string from the output of qstat.
                 try:
@@ -1588,7 +1588,7 @@ class MyApp(wx.App):
         if not os.path.exists(appUserDataDir):
             os.makedirs(appUserDataDir)
 
-        global launcherPreferencesFilePath 
+        global launcherPreferencesFilePath
         launcherPreferencesFilePath = os.path.join(appUserDataDir,"strudel.cfg")
 
         if sys.platform.startswith("win"):

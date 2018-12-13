@@ -50,24 +50,24 @@ class IdentityMenu(wx.Menu):
 
         #privacyOptionsMenuItemId = wx.NewId()
         self.authOpts=wx.MenuItem(self,wx.ID_ANY,"&Authentication options")
-        if hasattr(self, 'Append'):
-            self.Append(self.authOpts)
-        elif hasattr(self, 'AppendItem'):
+        #if hasattr(self, 'Append'):
+        #    self.Append(self.authOpts)
+        if hasattr(self, 'AppendItem'):
             self.AppendItem(self.authOpts)
         self.launcherMainFrame.Bind(wx.EVT_MENU, self.onAuthenticationOptions, id=self.authOpts.GetId())
 
         self.permSSHKey = wx.MenuItem(self,wx.ID_ANY,"Remember me on this computer",kind=wx.ITEM_RADIO)
         self.launcherMainFrame.Bind(wx.EVT_MENU,self.onPermSSHKey,id=self.permSSHKey.GetId())
-        if hasattr(self, 'Append'):
-            self.Append(self.permSSHKey)
-        elif hasattr(self, 'AppendItem'):
+        #if hasattr(self, 'Append'):
+        #    self.Append(self.permSSHKey)
+        if hasattr(self, 'AppendItem'):
             self.AppendItem(self.permSSHKey)
 
         self.tempSSHKey = wx.MenuItem(self,wx.ID_ANY,"Don't remember me",kind=wx.ITEM_RADIO)
         self.launcherMainFrame.Bind(wx.EVT_MENU,self.onTempSSHKey,id=self.tempSSHKey.GetId())
-        if hasattr(self, 'Append'):
-            self.Append(self.tempSSHKey)
-        elif hasattr(self, 'AppendItem'):
+        #if hasattr(self, 'Append'):
+        #    self.Append(self.tempSSHKey)
+        if hasattr(self, 'AppendItem'):
             self.AppendItem(self.tempSSHKey)
 
 
@@ -100,7 +100,7 @@ class IdentityMenu(wx.Menu):
         else:
             self.permSSHKey.Check(False)
             self.tempSSHKey.Check(True)
-    
+
     def disableItems(self,state):
         if state == self.launcherMainFrame.PERM_SSH_KEY:
             enable=True
@@ -175,7 +175,7 @@ class IdentityMenu(wx.Menu):
             if dlg.ShowModal()==wx.ID_YES:
                 success = self.deleteKey()
                 if not success:
-                    dlg = wx.MessageDialog(self.launcherMainFrame, 
+                    dlg = wx.MessageDialog(self.launcherMainFrame,
                         "An error occured while attempting to delete your existing key.",
                         "Strudel", wx.OK | wx.ICON_INFORMATION)
                     dlg.ShowModal()
